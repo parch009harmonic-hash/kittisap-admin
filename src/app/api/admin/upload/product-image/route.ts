@@ -17,9 +17,9 @@ function getSupabaseEnv() {
 }
 
 export async function POST(request: NextRequest) {
-  try {
-    await requireAdmin();
+  await requireAdmin();
 
+  try {
     const formData = await request.formData();
     const file = formData.get("file");
     const productId = String(formData.get("productId") ?? "temp");

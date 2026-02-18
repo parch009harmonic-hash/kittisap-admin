@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { revalidatePath } from "next/cache";
 
 import { deleteProduct, listProducts } from "../../../../lib/db/products";
