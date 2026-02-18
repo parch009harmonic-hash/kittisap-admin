@@ -1,26 +1,137 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --ink: #0f172a;
+  --mist: #f5f7fb;
+  --sapphire: #1d4ed8;
+  --royal: #1e3a8a;
+  --steel: #334155;
+
+  --background: #f7f9fc;
+  --foreground: #0f172a;
+  --primary: #1d4ed8;
+  --primary-dark: #1e3a8a;
+  --surface: #ffffff;
+  --border: #e2e8f0;
+
+  --font-body: var(--font-sans-lao), var(--font-sans-thai), ui-sans-serif, system-ui,
+    -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-heading: var(--font-serif-lao), var(--font-serif-thai), ui-serif, Georgia,
+    "Times New Roman", serif;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-primary: var(--primary);
+  --color-primary-dark: var(--primary-dark);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
+  --color-ink: var(--ink);
+  --color-mist: var(--mist);
+  --color-sapphire: var(--sapphire);
+  --color-royal: var(--royal);
+  --color-steel: var(--steel);
+  --font-sans: var(--font-body);
+  --font-heading: var(--font-heading);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body), "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.app-safe-bottom {
+  padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
+}
+
+.app-safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+.app-surface {
+  background:
+    radial-gradient(circle at 12% 8%, rgba(29, 78, 216, 0.12), transparent 36%),
+    radial-gradient(circle at 88% 16%, rgba(14, 165, 233, 0.16), transparent 34%),
+    linear-gradient(172deg, #fcfdff 0%, #f7faff 45%, #f2f7ff 100%);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  box-shadow: 0 20px 45px -30px rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(10px);
+}
+
+.sst-container {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 72rem;
+  padding-inline: 1.5rem;
+}
+
+.sst-section {
+  padding-block: 5rem;
+}
+
+.sst-pill {
+  border-radius: 999px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  padding: 0.5rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.sst-card-soft {
+  border-radius: 1rem;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  box-shadow: 0 20px 45px -30px rgba(15, 23, 42, 0.45);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  color: #ffffff;
+  box-shadow: 0 14px 24px -14px rgba(30, 58, 138, 0.65);
+}
+
+.btn-primary:hover {
+  filter: brightness(0.98);
+}
+
+.input-base {
+  width: 100%;
+  border-radius: 0.875rem;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--foreground);
+  padding: 0.65rem 0.875rem;
+  outline: none;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.input-base:focus {
+  border-color: rgba(29, 78, 216, 0.75);
+  box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.14);
+}
+
+section {
+  scroll-margin-top: 96px;
+}
+
+img,
+picture {
+  -webkit-user-drag: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
