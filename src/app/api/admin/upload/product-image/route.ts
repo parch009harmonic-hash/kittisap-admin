@@ -2,8 +2,12 @@ import { createServerClient } from "@supabase/auth-helpers-nextjs";
 import { NextRequest, NextResponse } from "next/server";
 
 import { requireAdmin } from "../../../../../../lib/auth/admin";
+import { takeRateLimitToken } from "../../../../../../lib/security/rate-limit";
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+const MAX_CONTENT_LENGTH_BYTES = MAX_FILE_SIZE_BYTES + 512 * 1024;
+const UPLOAD_LIMIT = 20;
+const UPLOAD_WINDOW_MS = 60 * 1000;
 
 function getSupabaseEnv() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -17,12 +21,39 @@ function getSupabaseEnv() {
 }
 
 export async function POST(request: NextRequest) {
-  await requireAdmin();
+  const session = await requireAdmin();
+
+  const rate = takeRateLimitToken(`upload:${session.user.id}`, {
+    limit: UPLOAD_LIMIT,
+    windowMs: UPLOAD_WINDOW_MS,
+  });
+  if (!rate.ok) {
+    return NextResponse.json(
+      {
+        error: "Too many upload requests. Please wait and try again.",
+      },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(Math.max(Math.ceil((rate.resetAt - Date.now()) / 1000), 1)),
+        },
+      }
+    );
+  }
 
   try {
+    const contentLength = Number(request.headers.get("content-length") ?? 0);
+    if (Number.isFinite(contentLength) && contentLength > MAX_CONTENT_LENGTH_BYTES) {
+      return NextResponse.json(
+        { error: "Request payload is too large" },
+        { status: 413 }
+      );
+    }
+
     const formData = await request.formData();
     const file = formData.get("file");
-    const productId = String(formData.get("productId") ?? "temp");
+    const rawProductId = String(formData.get("productId") ?? "temp").trim();
+    const productId = /^[a-f0-9-]{36}$/i.test(rawProductId) ? rawProductId : "temp";
 
     if (!(file instanceof File)) {
       return NextResponse.json({ error: "File is required" }, { status: 400 });
@@ -66,6 +97,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       path: filePath,
       url: data.publicUrl,
+      remaining: rate.remaining,
     });
   } catch (error) {
     return NextResponse.json(
