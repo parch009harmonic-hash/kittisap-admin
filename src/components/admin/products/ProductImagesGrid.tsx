@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { DragEvent } from "react";
 
@@ -64,10 +64,10 @@ export function ProductImagesGrid({
           onDragStart={(event) => onDragStart(event, image.id)}
           onDragOver={(event) => event.preventDefault()}
           onDrop={(event) => onDrop(event, image.id)}
-          className="glass-card rounded-xl p-2"
+          className="glass-card rounded-2xl p-2.5"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={image.url} alt="Product image" className="h-28 w-full rounded-md object-cover" />
+          <img src={image.url} alt="Product image" className="h-28 w-full rounded-xl object-cover" />
           <div className="mt-2 space-y-1.5">
             <button
               type="button"
@@ -78,14 +78,14 @@ export function ProductImagesGrid({
                   : "border border-border bg-white text-ink hover:bg-mist"
               }`}
             >
-              {image.is_primary ? "Cover" : "Set as cover"}
+              {image.is_primary ? "ภาพปก / Cover" : "ตั้งเป็นภาพปก / Set as cover"}
             </button>
             <button
               type="button"
               onClick={() => onRemove(image.id)}
               className="w-full rounded-md border border-rose-200 bg-rose-50 px-2 py-1 text-xs text-rose-700 hover:bg-rose-100"
             >
-              Remove
+              ลบรูป / Remove
             </button>
           </div>
         </div>

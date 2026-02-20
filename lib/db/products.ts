@@ -1,9 +1,9 @@
-import "server-only";
+﻿import "server-only";
 
 import { ZodError, z } from "zod";
 
 import { requireAdmin } from "../auth/admin";
-import { getSupabaseServerClient } from "../supabase/server";
+import { getSupabaseServiceRoleClient } from "../supabase/service";
 import { Product, ProductImage, ProductStatus } from "../types/product";
 import { ImageInputSchema, ListProductsFilterSchema, ProductInputSchema } from "../validators/product";
 
@@ -19,6 +19,35 @@ const ProductRowSchema = ProductInputSchema.extend({
   updated_at: z.string().nullable().optional(),
 });
 
+const PRODUCT_SELECT_COLUMNS =
+  "id,sku,slug,title_th,title_en,title_lo,description_th,description_en,description_lo,price,compare_at_price,stock,status,created_at";
+
+function buildSku() {
+  const now = new Date();
+  const y = String(now.getFullYear()).slice(-2);
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  const random = Math.floor(1000 + Math.random() * 9000);
+  return `KS-${y}${m}${d}-${random}`;
+}
+
+async function generateUniqueSku(supabase: Awaited<ReturnType<typeof adminWriteClient>>) {
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const sku = buildSku();
+    const { data, error } = await supabase
+      .from("products")
+      .select("id")
+      .eq("sku", sku)
+      .maybeSingle();
+
+    if (!error && !data) {
+      return sku;
+    }
+  }
+
+  return `KS-${Date.now()}`;
+}
+
 function errorText(error: unknown, fallback: string) {
   if (error instanceof ZodError) {
     return error.issues.map((issue) => issue.message).join(", ");
@@ -27,6 +56,11 @@ function errorText(error: unknown, fallback: string) {
     return String(error.message || fallback);
   }
   return fallback;
+}
+
+function isMissingColumnError(error: unknown) {
+  const message = errorText(error, "").toLowerCase();
+  return message.includes("does not exist") && message.includes("column");
 }
 
 function mapImage(row: Record<string, unknown>): ProductImage {
@@ -83,12 +117,12 @@ function mapProduct(row: Record<string, unknown>, images: ProductImage[] = []): 
 
 async function adminReadClient() {
   await requireAdmin();
-  return getSupabaseServerClient();
+  return getSupabaseServiceRoleClient();
 }
 
 async function adminWriteClient() {
   await requireAdmin();
-  return getSupabaseServerClient();
+  return getSupabaseServiceRoleClient();
 }
 
 export async function listProducts(input: {
@@ -106,10 +140,7 @@ export async function listProducts(input: {
   const supabase = await adminReadClient();
   let query = supabase
     .from("products")
-    .select(
-      "id,sku,slug,title_th,title_en,title_lo,description_th,description_en,description_lo,price,compare_at_price,stock,status,created_at,updated_at",
-      { count: "exact" }
-    )
+    .select(PRODUCT_SELECT_COLUMNS, { count: "planned" })
     .order("created_at", { ascending: false })
     .range(from, to);
 
@@ -122,7 +153,28 @@ export async function listProducts(input: {
     query = query.eq("status", filters.status);
   }
 
-  const { data, error, count } = await query;
+  let { data, error, count } = await query;
+  if (error && isMissingColumnError(error)) {
+    let fallbackQuery = supabase
+      .from("products")
+      .select("*", { count: "planned" })
+      .order("created_at", { ascending: false })
+      .range(from, to);
+
+    if (filters.q) {
+      fallbackQuery = fallbackQuery.or(
+        `slug.ilike.%${filters.q}%,sku.ilike.%${filters.q}%,title_th.ilike.%${filters.q}%`
+      );
+    }
+    if (filters.status) {
+      fallbackQuery = fallbackQuery.eq("status", filters.status);
+    }
+
+    const fallback = await fallbackQuery;
+    data = fallback.data;
+    error = fallback.error;
+    count = fallback.count;
+  }
   if (error) {
     throw new Error(`Failed to list products: ${errorText(error, "Unknown error")}`);
   }
@@ -165,13 +217,17 @@ export async function listProducts(input: {
 
 export async function getProductById(id: string) {
   const supabase = await adminReadClient();
-  const { data: productRow, error: productError } = await supabase
+  let { data: productRow, error: productError } = await supabase
     .from("products")
-    .select(
-      "id,sku,slug,title_th,title_en,title_lo,description_th,description_en,description_lo,price,compare_at_price,stock,status,created_at,updated_at"
-    )
+    .select(PRODUCT_SELECT_COLUMNS)
     .eq("id", id)
     .maybeSingle();
+
+  if (productError && isMissingColumnError(productError)) {
+    const fallback = await supabase.from("products").select("*").eq("id", id).maybeSingle();
+    productRow = fallback.data;
+    productError = fallback.error;
+  }
 
   if (productError) {
     throw new Error(`Failed to get product: ${errorText(productError, "Unknown error")}`);
@@ -197,8 +253,13 @@ export async function getProductById(id: string) {
 export async function createProduct(data: unknown) {
   const supabase = await adminWriteClient();
   const parsed = ProductInputSchema.parse(data);
+  const normalizedSku = parsed.sku?.trim();
+  const payload = {
+    ...parsed,
+    sku: normalizedSku || (await generateUniqueSku(supabase)),
+  };
 
-  const { data: row, error } = await supabase.from("products").insert(parsed).select("id").single();
+  const { data: row, error } = await supabase.from("products").insert(payload).select("id").single();
   if (error || !row?.id) {
     throw new Error(`Failed to create product: ${errorText(error, "Unknown error")}`);
   }
@@ -208,9 +269,24 @@ export async function createProduct(data: unknown) {
 export async function updateProduct(id: string, data: unknown) {
   const supabase = await adminWriteClient();
   const parsed = ProductInputSchema.parse(data);
+  const normalizedSku = parsed.sku?.trim();
+  const payload: Record<string, unknown> = {
+    ...parsed,
+  };
+  if (normalizedSku) {
+    payload.sku = normalizedSku;
+  } else {
+    delete payload.sku;
+  }
 
-  const { error } = await supabase.from("products").update(parsed).eq("id", id);
+  const { error } = await supabase.from("products").update(payload).eq("id", id);
   if (error) {
+    const message = errorText(error, "Unknown error");
+    if (message.includes(`record "new" has no field "updated_at"`)) {
+      throw new Error(
+        "Database schema is missing products.updated_at. Please run sql/ensure-product-storage-and-columns.sql"
+      );
+    }
     throw new Error(`Failed to update product: ${errorText(error, "Unknown error")}`);
   }
 }
@@ -346,3 +422,4 @@ export async function removeImage(imageId: string) {
     await setPrimaryImage(productId, String(next.id));
   }
 }
+

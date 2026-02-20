@@ -1,6 +1,11 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 
-export default function Home() {
+import { getAppLocale } from "../../lib/i18n/locale";
+
+export default async function Home() {
+  const locale = await getAppLocale();
+  const isEnglish = locale === "en";
+
   return (
     <main className="app-surface min-h-screen">
       <section className="sst-section">
@@ -17,7 +22,9 @@ export default function Home() {
               Kittisap Admin Platform
             </h1>
             <p className="mt-3 max-w-2xl text-sm text-slate-600 md:text-base">
-              ระบบผู้ดูแลแบบ responsive สำหรับ iOS, Android และ desktop พร้อมโทนสีและรูปแบบที่ทันสมัย
+              {isEnglish
+                ? "Responsive admin platform for iOS, Android, and desktop with a modern visual design."
+                : "ระบบผู้ดูแลแบบ responsive สำหรับ iOS, Android และ desktop พร้อมโทนสีและรูปแบบที่ทันสมัย"}
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">

@@ -1,4 +1,4 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+﻿This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
 
@@ -39,3 +39,4 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 - Request tracing, access logs, and basic bot filtering are implemented in `middleware.ts`.
 - Cloudflare production hardening checklist is available at `docs/cloudflare-waf-plan.md`.
+- If `admin_settings` table is missing in Supabase, run `sql/ensure-admin-settings.sql` and follow `docs/admin-settings-setup.md`.

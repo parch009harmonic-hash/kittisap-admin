@@ -1,16 +1,31 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import {
+  Inter,
+  Kanit,
   Noto_Sans_Lao,
-  Noto_Sans_Thai,
-  Noto_Serif_Lao,
-  Noto_Serif_Thai,
+  Prompt,
 } from "next/font/google";
+import { cookies } from "next/headers";
+
+import { normalizeAdminLocale } from "../../lib/i18n/admin";
 import "./globals.css";
 
-const notoSansThai = Noto_Sans_Thai({
-  variable: "--font-sans-thai",
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+});
+
+const prompt = Prompt({
+  variable: "--font-prompt",
   subsets: ["thai", "latin"],
   weight: ["300", "400", "500", "600", "700"],
+});
+
+const kanit = Kanit({
+  variable: "--font-kanit",
+  subsets: ["thai", "latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
 const notoSansLao = Noto_Sans_Lao({
@@ -19,32 +34,30 @@ const notoSansLao = Noto_Sans_Lao({
   weight: ["300", "400", "500", "600", "700"],
 });
 
-const notoSerifThai = Noto_Serif_Thai({
-  variable: "--font-serif-thai",
-  subsets: ["thai", "latin"],
-  weight: ["400", "500", "600", "700"],
-});
-
-const notoSerifLao = Noto_Serif_Lao({
-  variable: "--font-serif-lao",
-  subsets: ["lao", "latin"],
-  weight: ["400", "500", "600", "700"],
-});
-
 export const metadata: Metadata = {
   title: "Kittisap Admin",
   description: "Kittisap Admin Dashboard",
+  manifest: "/manifest.webmanifest",
+  applicationName: "Kittisap Admin",
+  icons: {
+    icon: "/icon.png",
+    shortcut: "/icon.png",
+    apple: "/apple-icon.png",
+  },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  const locale = normalizeAdminLocale(cookieStore.get("admin_locale")?.value);
+
   return (
-    <html lang="th">
+    <html lang={locale}>
       <body
-        className={`${notoSansThai.variable} ${notoSansLao.variable} ${notoSerifThai.variable} ${notoSerifLao.variable} antialiased`}
+        className={`${inter.variable} ${prompt.variable} ${kanit.variable} ${notoSansLao.variable} antialiased`}
       >
         {children}
       </body>

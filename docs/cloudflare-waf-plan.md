@@ -1,4 +1,4 @@
-# Cloudflare WAF Plan (Production)
+﻿# Cloudflare WAF Plan (Production)
 
 ## 1) DNS and SSL
 - Proxy all public records through Cloudflare (orange cloud).

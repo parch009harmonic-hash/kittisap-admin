@@ -74,14 +74,8 @@ export default function NewProductPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <header>
-        <span className="text-xs uppercase tracking-[0.3em] text-blue-600">Products</span>
-        <h1 className="font-heading text-4xl text-slate-900">Add Product</h1>
-        <p className="mt-1 text-sm text-slate-600">เพิ่มสินค้าใหม่ / Create a new product</p>
-      </header>
-
-      <div className="sst-card-soft rounded-2xl p-5 md:p-6">
+    <div>
+      <div className="rounded-3xl border border-slate-200 bg-slate-50/70 p-3 md:p-4">
         <ProductForm mode="create" submitAction={createAction} />
       </div>
     </div>
