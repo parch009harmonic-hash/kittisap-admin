@@ -21,9 +21,9 @@ function getSupabaseEnv() {
 }
 
 export async function POST(request: NextRequest) {
-  const session = await requireAdmin();
+  const user = await requireAdmin();
 
-  const rate = takeRateLimitToken(`upload:${session.user.id}`, {
+  const rate = takeRateLimitToken(`upload:${user.id}`, {
     limit: UPLOAD_LIMIT,
     windowMs: UPLOAD_WINDOW_MS,
   });

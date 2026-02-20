@@ -7,22 +7,22 @@ type AdminRole = "admin" | "staff";
 export async function getAdminSession() {
   try {
     const supabase = await getSupabaseServerClient();
-    const { data, error } = await supabase.auth.getSession();
+    const { data, error } = await supabase.auth.getUser();
 
     if (error) {
       return null;
     }
 
-    return data.session;
+    return data.user ?? null;
   } catch {
     return null;
   }
 }
 
 export async function requireAdmin() {
-  const session = await getAdminSession();
+  const user = await getAdminSession();
 
-  if (!session) {
+  if (!user) {
     redirect("/login");
   }
 
@@ -36,7 +36,7 @@ export async function requireAdmin() {
   const { data: profile, error } = await supabase
     .from("profiles")
     .select("role")
-    .eq("id", session.user.id)
+    .eq("id", user.id)
     .maybeSingle();
 
   const allowedRoles: AdminRole[] = ["admin", "staff"];
@@ -46,5 +46,5 @@ export async function requireAdmin() {
     redirect("/login?error=not_authorized");
   }
 
-  return session;
+  return user;
 }
