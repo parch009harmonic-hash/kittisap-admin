@@ -53,6 +53,12 @@ body {
   letter-spacing: 0.01em;
 }
 
+html.admin-mobile-lock,
+body.admin-mobile-lock {
+  overflow: hidden !important;
+  height: 100%;
+}
+
 * {
   -webkit-tap-highlight-color: transparent;
 }
@@ -271,6 +277,23 @@ html[lang="th"] .admin-ui {
   padding-top: calc(0.2rem + env(safe-area-inset-top));
 }
 
+.admin-ui.os-mobile {
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.admin-ui.os-mobile .app-main {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  padding-top: 0 !important;
+}
+
+.admin-ui.os-mobile .app-main::-webkit-scrollbar {
+  display: none;
+}
+
 .admin-ui.os-mobile.os-mobile-ios .app-topbar {
   border-bottom: 1px solid rgba(125, 211, 252, 0.5);
   background: linear-gradient(120deg, rgba(29, 127, 230, 0.94), rgba(37, 99, 235, 0.92), rgba(6, 182, 212, 0.9));
@@ -323,6 +346,92 @@ html[lang="th"] .admin-ui {
 
 .admin-ui.os-mobile .settings-quicknav {
   position: static !important;
+}
+
+.dashboard-overview-card {
+  display: none;
+}
+
+.admin-ui.os-mobile .dashboard-root > header {
+  display: none;
+}
+
+.admin-ui.os-mobile .dashboard-overview-card {
+  display: none;
+}
+
+.dashboard-mobile-overview-board {
+  display: none;
+}
+
+.admin-ui.os-mobile .dashboard-mobile-overview-board {
+  display: block;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  border-color: #cfe0f5;
+  border-radius: 0 0 1.1rem 1.1rem;
+  background:
+    radial-gradient(circle at 10% -28%, rgba(59, 130, 246, 0.24), transparent 36%),
+    radial-gradient(circle at 95% -18%, rgba(14, 165, 233, 0.2), transparent 36%),
+    linear-gradient(160deg, #f9fcff 0%, #f1f7ff 52%, #edf4ff 100%);
+  box-shadow: 0 14px 24px -20px rgba(15, 23, 42, 0.44);
+  margin: 0 -0.1rem 0.45rem;
+  padding: 0.95rem 1rem 0.9rem;
+}
+
+.admin-ui.os-mobile .dashboard-kpi-grid {
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 0.85rem;
+}
+
+.admin-ui.os-mobile .dashboard-kpi-card {
+  border-radius: 1.15rem;
+  border-width: 1px;
+  box-shadow: 0 10px 20px -18px rgba(15, 23, 42, 0.46);
+  padding: 1rem;
+}
+
+.admin-ui.os-mobile .dashboard-kpi-card .dashboard-kpi-icon {
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.admin-ui.os-mobile .dashboard-kpi-label {
+  color: #1f4d91;
+  font-size: 0.92rem;
+}
+
+.admin-ui.os-mobile .dashboard-kpi-value {
+  font-size: clamp(2rem, 8.5vw, 2.3rem);
+  line-height: 1.05;
+  letter-spacing: -0.015em;
+}
+
+.admin-ui.os-mobile .dashboard-kpi-hint,
+.admin-ui.os-mobile .dashboard-kpi-today {
+  color: #3f5877;
+  font-size: 0.95rem;
+  line-height: 1.22;
+}
+
+.admin-ui.os-mobile .dashboard-kpi-revenue {
+  background: linear-gradient(165deg, #e3f7ee 0%, #d8efe6 100%);
+  border-color: #90e1ba;
+}
+
+.admin-ui.os-mobile .dashboard-kpi-orders {
+  background: linear-gradient(165deg, #eaf4ff 0%, #dcecff 100%);
+  border-color: #add2ff;
+}
+
+.admin-ui.os-mobile .dashboard-kpi-pending {
+  background: linear-gradient(165deg, #fff8e8 0%, #f7efde 100%);
+  border-color: #f1d08d;
+}
+
+.admin-ui.os-mobile .dashboard-kpi-low-stock {
+  background: linear-gradient(165deg, #f5efff 0%, #ece5ff 100%);
+  border-color: #d2c0ff;
 }
 
 .mobile-tabbar {
@@ -439,6 +548,388 @@ html[lang="th"] .admin-ui {
   border: 0 !important;
   box-shadow: none;
 }
+
+.admin-ui.os-mobile .product-detail-hero {
+  border-color: #c9dbf3;
+  border-radius: 1.2rem;
+  padding: 0.95rem;
+}
+
+.admin-ui.os-mobile .product-detail-hero-inner {
+  flex-direction: column !important;
+  align-items: stretch !important;
+  gap: 0.7rem !important;
+}
+
+.admin-ui.os-mobile .product-detail-title-wrap {
+  width: 100%;
+}
+
+.admin-ui.os-mobile .product-detail-title {
+  font-size: clamp(1.95rem, 8.8vw, 2.35rem);
+  line-height: 1.02;
+  letter-spacing: -0.01em;
+}
+
+.admin-ui.os-mobile .product-detail-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: 100%;
+  margin-top: 0.15rem;
+}
+
+.admin-ui.os-mobile .product-detail-actions a {
+  text-align: center;
+  border-radius: 999px;
+  padding-block: 0.66rem;
+  box-shadow: 0 10px 18px -16px rgba(15, 23, 42, 0.45);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-ui.os-mobile .product-detail-badges {
+  gap: 0.45rem;
+}
+
+.admin-ui.os-mobile .product-detail-badges > span {
+  max-width: 100%;
+  font-size: 0.86rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.admin-ui.os-mobile .product-detail-hero-stats {
+  grid-template-columns: 1fr !important;
+  gap: 0.55rem;
+}
+
+.admin-ui.os-mobile .product-detail-hero .rounded-full.border {
+  border-color: #cfe0f7;
+  background: #f8fbff;
+}
+
+.admin-ui.os-mobile .product-detail-hero .rounded-full.px-3.py-1.font-semibold {
+  border: 1px solid transparent;
+}
+
+.admin-ui.os-mobile .product-detail-hero-stats > article {
+  border-color: #d8e6f8;
+  background: linear-gradient(160deg, #f8fbff 0%, #eef4ff 100%);
+  min-height: 4.2rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.admin-ui.os-mobile .product-detail-hero-stats > article p:first-child {
+  color: #6782a7;
+  font-size: 0.68rem;
+}
+
+.admin-ui.os-mobile .product-detail-hero-stats > article p:last-child {
+  color: #113772;
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.admin-ui.os-mobile .product-form {
+  gap: 1rem;
+}
+
+.admin-ui.os-mobile .product-form-hero {
+  border-color: #c8dbf3;
+  border-radius: 1.1rem;
+  padding: 0.95rem;
+}
+
+.admin-ui.os-mobile .product-form-hero .pointer-events-none.absolute {
+  display: none;
+}
+
+.admin-ui.os-mobile .product-form-hero h2 {
+  font-size: 1.85rem;
+  line-height: 1.08;
+}
+
+.admin-ui.os-mobile .product-form-lang-chips {
+  width: 100%;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.admin-ui.os-mobile .product-form-section {
+  border-radius: 1.1rem;
+  border-color: #d5e4f5;
+  padding: 0.95rem;
+  box-shadow: 0 14px 26px -24px rgba(15, 23, 42, 0.48);
+}
+
+.admin-ui.os-mobile .product-form-section-head {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.admin-ui.os-mobile .product-form-section-head > div {
+  width: 100%;
+  justify-content: space-between;
+}
+
+.admin-ui.os-mobile .product-form-grid-2,
+.admin-ui.os-mobile .product-form-grid-3,
+.admin-ui.os-mobile .product-form-grid-4,
+.admin-ui.os-mobile .product-form-images-layout {
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 0.75rem !important;
+}
+
+.admin-ui.os-mobile .product-form .input-base {
+  min-height: 2.7rem;
+  border-radius: 0.9rem;
+}
+
+.admin-ui.os-mobile .product-form-inline-actions {
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.admin-ui.os-mobile .product-form-inline-actions .product-form-input-grow {
+  width: 100%;
+}
+
+.admin-ui.os-mobile .product-form-inline-actions button {
+  width: 100%;
+  min-height: 2.5rem;
+  border-radius: 0.85rem;
+}
+
+.admin-ui.os-mobile .product-form-utility-btn {
+  background: #f8fbff;
+  border-color: #d3e2f5;
+}
+
+.admin-ui.os-mobile .product-form-copy-btn {
+  display: none;
+}
+
+.admin-ui.os-mobile .product-form textarea {
+  min-height: 7.5rem;
+}
+
+.admin-ui.os-mobile .product-images-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 0.6rem;
+}
+
+.admin-ui.os-mobile .product-images-grid > div {
+  border-radius: 1rem;
+  padding: 0.55rem;
+}
+
+.admin-ui.os-mobile .product-images-grid img {
+  height: 7.4rem;
+}
+
+.admin-ui.os-mobile .product-form-actions {
+  border-color: #d4e3f5;
+  border-radius: 1rem;
+  padding: 0.6rem;
+  bottom: calc(0.75rem + env(safe-area-inset-bottom));
+}
+
+.admin-ui.os-mobile .product-form-actions > div {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+}
+
+.admin-ui.os-mobile .product-form-actions button {
+  width: 100%;
+  justify-content: center;
+  min-height: 2.75rem;
+}
+
+.product-page-hero {
+  position: relative;
+  overflow: hidden;
+  border-color: #cfe0f5;
+  background:
+    radial-gradient(circle at 8% -12%, rgba(59, 130, 246, 0.18), transparent 34%),
+    radial-gradient(circle at 95% -14%, rgba(14, 165, 233, 0.2), transparent 35%),
+    linear-gradient(160deg, #f8fbff 0%, #f1f6ff 52%, #edf4ff 100%);
+}
+
+.product-page-add-btn {
+  box-shadow: 0 14px 24px -18px rgba(194, 65, 12, 0.85);
+}
+
+.admin-ui.os-mobile .product-page-add-btn {
+  min-height: 2.75rem;
+  border-radius: 999px;
+  letter-spacing: 0;
+  text-transform: none;
+  font-size: 0.95rem;
+  font-weight: 700;
+  padding-inline: 1.1rem;
+  border: 1px solid transparent;
+}
+
+.admin-ui.os-mobile.os-mobile-ios .product-page-add-btn {
+  color: #0f172a !important;
+  border-color: rgba(148, 163, 184, 0.3);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.9), rgba(241, 245, 255, 0.72)),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0));
+  backdrop-filter: blur(16px) saturate(130%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 10px 20px -16px rgba(15, 23, 42, 0.55);
+}
+
+.admin-ui.os-mobile.os-mobile-android .product-page-add-btn {
+  color: #ffffff !important;
+  border-color: rgba(251, 146, 60, 0.42);
+  background: linear-gradient(135deg, #ff9a1f 0%, #ff7a00 100%);
+  box-shadow: 0 12px 24px -18px rgba(194, 65, 12, 0.9);
+}
+
+.product-page-filter {
+  border-color: #d8e4f5;
+}
+
+.coupon-page-add-btn {
+  box-shadow: 0 14px 24px -18px rgba(194, 65, 12, 0.85);
+}
+
+.admin-ui.os-mobile .coupon-page-add-btn {
+  min-height: 2.75rem;
+  border-radius: 999px;
+  letter-spacing: 0;
+  text-transform: none;
+  font-size: 0.95rem;
+  font-weight: 700;
+  padding-inline: 1.1rem;
+  border: 1px solid transparent;
+}
+
+.admin-ui.os-mobile.os-mobile-ios .coupon-page-add-btn {
+  color: #0f172a !important;
+  border-color: rgba(148, 163, 184, 0.3);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.9), rgba(241, 245, 255, 0.72)),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0));
+  backdrop-filter: blur(16px) saturate(130%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 10px 20px -16px rgba(15, 23, 42, 0.55);
+}
+
+.admin-ui.os-mobile.os-mobile-android .coupon-page-add-btn {
+  color: #ffffff !important;
+  border-color: rgba(251, 146, 60, 0.42);
+  background: linear-gradient(135deg, #ff9a1f 0%, #ff7a00 100%);
+  box-shadow: 0 12px 24px -18px rgba(194, 65, 12, 0.9);
+}
+
+.admin-ui.os-mobile .product-page {
+  gap: 0.9rem;
+}
+
+.admin-ui.os-mobile .product-page-hero {
+  border-radius: 1.1rem;
+  padding: 0.95rem;
+  box-shadow: 0 16px 30px -24px rgba(15, 23, 42, 0.52);
+}
+
+.admin-ui.os-mobile .product-page-hero h1 {
+  font-size: 2.2rem;
+  line-height: 1;
+}
+
+.admin-ui.os-mobile .product-page-summary {
+  margin-top: 0.45rem;
+}
+
+.admin-ui.os-mobile .product-page-filter {
+  border-radius: 1rem;
+  padding: 0.8rem;
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 0.55rem;
+}
+
+.admin-ui.os-mobile .product-page-filter .input-base,
+.admin-ui.os-mobile .product-page-filter select,
+.admin-ui.os-mobile .product-page-filter button {
+  min-height: 2.75rem;
+  border-radius: 0.9rem;
+}
+
+.admin-ui.os-mobile .product-detail-layout {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+.admin-ui.os-mobile .product-detail-media,
+.admin-ui.os-mobile .product-detail-specs,
+.admin-ui.os-mobile .product-detail-descriptions {
+  border-radius: 1.1rem;
+  border-color: #d4e2f3;
+  box-shadow: 0 14px 28px -24px rgba(15, 23, 42, 0.52);
+}
+
+.admin-ui.os-mobile .product-detail-main-image {
+  height: 17.25rem;
+  border-radius: 0.95rem;
+}
+
+.admin-ui.os-mobile .product-detail-thumbs img {
+  height: 4.2rem;
+  border-radius: 0.7rem;
+}
+
+.admin-ui.os-mobile .product-detail-specs dl {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.admin-ui.os-mobile .product-detail-specs dt {
+  letter-spacing: 0.08em;
+}
+
+.admin-ui.os-mobile .product-detail-specs dd {
+  margin-top: 0.2rem;
+  font-size: 0.95rem;
+  line-height: 1.28;
+  word-break: break-word;
+}
+
+.admin-ui.os-mobile .product-detail-detail-block {
+  background: linear-gradient(160deg, #f8fbff 0%, #eef4ff 100%);
+  border-color: #d7e4f7;
+  padding: 0.72rem 0.78rem;
+}
+
+.admin-ui.os-mobile .product-detail-desc-block {
+  background: #f8fafc;
+  border-color: #deebf8;
+}
+
+.admin-ui.os-mobile .product-detail-descriptions > p {
+  color: #57729a;
+  font-size: 0.72rem;
+}
+
+.admin-ui.os-mobile .product-detail-media p {
+  color: #4c668a;
+}
+
+.admin-ui.os-mobile .product-detail-thumbs {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.admin-ui.os-mobile .product-detail-thumbs img {
+  height: 3.8rem;
+}
+
 
 .input-base {
   width: 100%;

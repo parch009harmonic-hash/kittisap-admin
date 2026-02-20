@@ -440,8 +440,8 @@ export function ProductForm({
 
   return (
     <>
-      <form onSubmit={onSubmit} className="space-y-6">
-        <section className="relative overflow-hidden rounded-3xl border border-blue-100 bg-gradient-to-br from-blue-50 via-white to-cyan-50 p-5 shadow-sm md:p-6">
+      <form onSubmit={onSubmit} className="product-form space-y-6">
+        <section className="product-form-hero relative overflow-hidden rounded-3xl border border-blue-100 bg-gradient-to-br from-blue-50 via-white to-cyan-50 p-5 shadow-sm md:p-6">
           <div className="pointer-events-none absolute -right-16 -top-20 h-52 w-52 rounded-full bg-blue-200/30 blur-3xl" />
           <div className="pointer-events-none absolute -bottom-20 left-10 h-52 w-52 rounded-full bg-cyan-200/30 blur-3xl" />
           <div className="relative flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -456,7 +456,7 @@ export function ProductForm({
                 รองรับภาษาไทย อังกฤษ และลาว พร้อมอัปโหลดรูปหลายภาพในฟอร์มเดียว
               </p>
             </div>
-            <div className="grid grid-cols-3 gap-2 text-center text-xs">
+            <div className="product-form-lang-chips grid grid-cols-3 gap-2 text-center text-xs">
               <div className="rounded-xl border border-white/80 bg-white/80 px-3 py-2 text-slate-700 shadow-sm">
                 <p className="font-semibold text-slate-900">TH</p>
                 <p>Thai</p>
@@ -473,8 +473,8 @@ export function ProductForm({
           </div>
         </section>
 
-        <section className="space-y-4 rounded-3xl border border-slate-200 bg-white/90 p-5 shadow-sm md:p-6">
-          <div className="mb-1 flex items-center justify-between gap-3">
+        <section className="product-form-section space-y-4 rounded-3xl border border-slate-200 bg-white/90 p-5 shadow-sm md:p-6">
+          <div className="product-form-section-head mb-1 flex items-center justify-between gap-3">
             <h3 className="text-lg font-semibold text-slate-900">ข้อมูลหลักสินค้า</h3>
             <div className="flex items-center gap-2">
               <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
@@ -494,39 +494,39 @@ export function ProductForm({
             <p className="-mt-2 text-xs text-blue-600">กำลังแปลอัตโนมัติ...</p>
           ) : null}
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="product-form-grid-2 grid grid-cols-1 gap-4 md:grid-cols-2">
             <Field label="SKU" hint="รหัสสินค้า (ไม่บังคับ)">
-              <div className="flex gap-2">
+              <div className="product-form-inline-actions flex gap-2">
                 <input
                   value={form.sku}
                   onChange={(event) => setField("sku", event.target.value)}
-                  className={inputClass}
+                  className={`${inputClass} product-form-input-grow`}
                 />
                 <button
                   type="button"
                   onClick={() => copyText(form.sku, "SKU")}
-                  className="shrink-0 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                  className="product-form-copy-btn shrink-0 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
                 >
                   คัดลอก
                 </button>
                 <button
                   type="button"
                   onClick={() => setField("sku", generateClientSku())}
-                  className="shrink-0 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                  className="product-form-utility-btn shrink-0 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
                 >
                   สุ่มใหม่
                 </button>
               </div>
             </Field>
             <Field label="Slug" hint="URL ของสินค้า เช่น green-tea-50g">
-              <div className="flex gap-2">
+              <div className="product-form-inline-actions flex gap-2">
                 <input
                   value={form.slug}
                   onChange={(event) => {
                     setSlugTouched(true);
                     setField("slug", event.target.value);
                   }}
-                  className={inputClass}
+                  className={`${inputClass} product-form-input-grow`}
                   required
                 />
                 <button
@@ -535,14 +535,14 @@ export function ProductForm({
                     setSlugTouched(true);
                     setField("slug", buildAutoSlug());
                   }}
-                  className="shrink-0 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                  className="product-form-utility-btn shrink-0 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
                 >
                   อัตโนมัติ
                 </button>
                 <button
                   type="button"
                   onClick={() => copyText(form.slug, "Slug")}
-                  className="shrink-0 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                  className="product-form-copy-btn shrink-0 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
                 >
                   คัดลอก
                 </button>
@@ -550,7 +550,7 @@ export function ProductForm({
             </Field>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="product-form-grid-3 grid grid-cols-1 gap-4 md:grid-cols-3">
             <Field label="Title TH / ชื่อไทย">
               <input
                 value={form.title_th}
@@ -569,13 +569,13 @@ export function ProductForm({
                 <input
                   value={form.title_en}
                   onChange={(event) => setField("title_en", event.target.value)}
-                  className={inputClass}
+                  className={`${inputClass} product-form-input-grow`}
                   placeholder="English title"
                 />
                 <button
                   type="button"
                   onClick={() => copyText(form.title_en, "Title EN")}
-                  className="shrink-0 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                  className="product-form-copy-btn shrink-0 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
                 >
                   คัดลอก
                 </button>
@@ -586,13 +586,13 @@ export function ProductForm({
                 <input
                   value={form.title_lo}
                   onChange={(event) => setField("title_lo", event.target.value)}
-                  className={inputClass}
+                  className={`${inputClass} product-form-input-grow`}
                   placeholder="Lao title"
                 />
                 <button
                   type="button"
                   onClick={() => copyText(form.title_lo, "Title LO")}
-                  className="shrink-0 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                  className="product-form-copy-btn shrink-0 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
                 >
                   คัดลอก
                 </button>
@@ -600,7 +600,7 @@ export function ProductForm({
             </Field>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="product-form-grid-3 grid grid-cols-1 gap-4 md:grid-cols-3">
             <Field label="Description TH" hint="รายละเอียดสินค้า (ภาษาไทย)">
               <textarea
                 value={form.description_th}
@@ -621,7 +621,7 @@ export function ProductForm({
                   <button
                     type="button"
                     onClick={() => copyText(form.description_en, "Description EN")}
-                    className="rounded-xl border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                    className="product-form-copy-btn rounded-xl border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
                   >
                     คัดลอก
                   </button>
@@ -640,7 +640,7 @@ export function ProductForm({
                   <button
                     type="button"
                     onClick={() => copyText(form.description_lo, "Description LO")}
-                    className="rounded-xl border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                    className="product-form-copy-btn rounded-xl border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
                   >
                     คัดลอก
                   </button>
@@ -650,7 +650,7 @@ export function ProductForm({
           </div>
         </section>
 
-        <section className="space-y-4 rounded-3xl border border-slate-200 bg-white/90 p-5 shadow-sm md:p-6">
+        <section className="product-form-section space-y-4 rounded-3xl border border-slate-200 bg-white/90 p-5 shadow-sm md:p-6">
           <div className="mb-1 flex items-center justify-between">
             <h3 className="text-lg font-semibold text-slate-900">ราคาและสต็อก</h3>
             <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
@@ -658,7 +658,7 @@ export function ProductForm({
             </span>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+          <div className="product-form-grid-4 grid grid-cols-1 gap-4 md:grid-cols-4">
             <Field label="Price / ราคา">
               <input
                 type="number"
@@ -707,14 +707,14 @@ export function ProductForm({
           </div>
         </section>
 
-        <section className="space-y-4 rounded-3xl border border-slate-200 bg-white/90 p-5 shadow-sm md:p-6">
+        <section className="product-form-section space-y-4 rounded-3xl border border-slate-200 bg-white/90 p-5 shadow-sm md:p-6">
           <div className="mb-1 flex items-center justify-between">
             <h3 className="text-lg font-semibold text-slate-900">รูปภาพสินค้า</h3>
             <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
               Images
             </span>
           </div>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_260px]">
+          <div className="product-form-images-layout grid grid-cols-1 gap-4 md:grid-cols-[1fr_260px]">
             <div>
               <Field label="Product Images / รูปสินค้า" hint="อัปโหลดได้หลายรูป สูงสุด 5MB ต่อไฟล์">
                 <ProductImagesUploader productId={productId} onUploaded={handleUploaded} />
@@ -749,7 +749,7 @@ export function ProductForm({
           )}
         </section>
 
-        <div className="sticky bottom-3 z-10 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-lg backdrop-blur md:static md:border-0 md:bg-transparent md:p-0 md:shadow-none">
+        <div className="product-form-actions sticky bottom-3 z-10 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-lg backdrop-blur md:static md:border-0 md:bg-transparent md:p-0 md:shadow-none">
           <div className="flex justify-end gap-3">
             <button
               type="button"

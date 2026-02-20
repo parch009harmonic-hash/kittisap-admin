@@ -54,6 +54,14 @@ type SettingsText = {
 };
 
 type SectionId = "display" | "store" | "security" | "notify" | "users";
+type SettingsSection = {
+  id: SectionId;
+  title: string;
+  subtitle: string;
+  iconTone: string;
+  iconColor: string;
+  items: Array<{ id: "createUser" | AdminSettingField | "localeSwitch"; label: string }>;
+};
 
 type Option = { value: string; label: string };
 type UserRole = "admin" | "staff";
@@ -67,7 +75,7 @@ type AdminUserRecord = {
 
 async function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit, timeoutMs = 12000) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  const timeout = setTimeout(() => controller.abort("REQUEST_TIMEOUT"), timeoutMs);
   try {
     return await fetch(input, {
       ...init,
@@ -77,6 +85,25 @@ async function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit, ti
   } finally {
     clearTimeout(timeout);
   }
+}
+
+function isAbortError(error: unknown) {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+  return error.name === "AbortError" || error.message.toLowerCase().includes("aborted");
+}
+
+function toRequestErrorMessage(error: unknown, fallback: string, locale: "th" | "en") {
+  if (isAbortError(error)) {
+    return locale === "th"
+      ? "การเชื่อมต่อใช้เวลานานเกินไป กรุณาลองใหม่อีกครั้ง"
+      : "The request took too long. Please try again.";
+  }
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+  return fallback;
 }
 
 export default function SettingsClient({
@@ -97,6 +124,8 @@ export default function SettingsClient({
   const [savingField, setSavingField] = useState<AdminSettingField | null>(null);
   const [values, setValues] = useState<AdminSettings>(initialSettings);
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const [mobileSectionOpen, setMobileSectionOpen] = useState(false);
   const handleUserSuccess = useCallback((message: string) => {
     setToast({ type: "success", message });
   }, []);
@@ -106,6 +135,7 @@ export default function SettingsClient({
 
   const saveLabel = locale === "th" ? "บันทึก" : "Save";
   const cancelLabel = locale === "th" ? "ยกเลิก" : "Cancel";
+  const closeLabel = locale === "th" ? "ปิด" : "Close";
   const savedMessage = locale === "th" ? "บันทึกข้อมูลแล้ว" : "Settings saved";
   const saveFailedMessage = locale === "th" ? "บันทึกไม่สำเร็จ" : "Save failed";
 
@@ -116,57 +146,96 @@ export default function SettingsClient({
     setToast({ type: "error", message: bootstrapError });
   }, [bootstrapError]);
 
-  const sections = useMemo(
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const checkViewport = () => {
+      setIsMobileViewport(window.matchMedia("(max-width: 1023px)").matches);
+    };
+    checkViewport();
+    window.addEventListener("resize", checkViewport);
+    return () => window.removeEventListener("resize", checkViewport);
+  }, []);
+
+  useEffect(() => {
+    if (!(isMobileViewport || values.uiMode === "mobile")) {
+      setMobileSectionOpen(false);
+    }
+  }, [isMobileViewport, values.uiMode]);
+
+  const sections = useMemo<SettingsSection[]>(
     () => [
       {
-        id: "users" as const,
+        id: "users",
         title: text.createUser,
-        items: [{ id: "createUser" as const, label: text.createUser }],
+        subtitle:
+          locale === "th" ? "จัดการบัญชีทีมงานและสิทธิ์การใช้งาน" : "Manage team accounts and roles",
+        iconTone: "bg-blue-100",
+        iconColor: "text-blue-700",
+        items: [{ id: "createUser", label: text.createUser }],
       },
       {
-        id: "display" as const,
+        id: "display",
         title: text.display,
+        subtitle: locale === "th" ? "ภาษาและรูปแบบการแสดงผลระบบ" : "Language and interface style",
+        iconTone: "bg-indigo-100",
+        iconColor: "text-indigo-700",
         items: [
-          { id: "uiMode" as const, label: text.uiMode },
-          { id: "localeSwitch" as const, label: text.language },
+          { id: "uiMode", label: text.uiMode },
+          { id: "localeSwitch", label: text.language },
         ],
       },
       {
-        id: "store" as const,
+        id: "store",
         title: text.store,
+        subtitle: locale === "th" ? "ข้อมูลหลักร้านและสกุลเงิน" : "Store profile and currency",
+        iconTone: "bg-emerald-100",
+        iconColor: "text-emerald-700",
         items: [
-          { id: "storeName" as const, label: text.storeName },
-          { id: "supportPhone" as const, label: text.supportPhone },
-          { id: "currency" as const, label: text.currency },
+          { id: "storeName", label: text.storeName },
+          { id: "supportPhone", label: text.supportPhone },
+          { id: "currency", label: text.currency },
         ],
       },
       {
-        id: "security" as const,
+        id: "security",
         title: text.security,
+        subtitle: locale === "th" ? "นโยบายความปลอดภัยและเซสชัน" : "Security policy and sessions",
+        iconTone: "bg-violet-100",
+        iconColor: "text-violet-700",
         items: [
-          { id: "twoFa" as const, label: text.twoFa },
-          { id: "sessionPolicy" as const, label: text.session },
+          { id: "twoFa", label: text.twoFa },
+          { id: "sessionPolicy", label: text.session },
         ],
       },
       {
-        id: "notify" as const,
+        id: "notify",
         title: text.notify,
+        subtitle: locale === "th" ? "ตั้งค่าการแจ้งเตือนทุกช่องทาง" : "Manage all notification channels",
+        iconTone: "bg-amber-100",
+        iconColor: "text-amber-700",
         items: [
-          { id: "emailNotify" as const, label: text.emailNotify },
-          { id: "pushNotify" as const, label: text.pushNotify },
-          { id: "orderNotify" as const, label: text.orderNotify },
+          { id: "emailNotify", label: text.emailNotify },
+          { id: "pushNotify", label: text.pushNotify },
+          { id: "orderNotify", label: text.orderNotify },
         ],
       },
     ],
-    [text],
+    [locale, text],
   );
 
   const currentSection = sections.find((section) => section.id === activeSection) ?? sections[0];
+  const popupMode = isMobileViewport || values.uiMode === "mobile";
 
   const handleSwitchSection = (sectionId: SectionId) => {
     setActiveSection(sectionId);
     setEditingField(null);
     setDraftValue("");
+    if (popupMode) {
+      setMobileSectionOpen(true);
+    }
   };
 
   const startEditing = (fieldId: AdminSettingField) => {
@@ -210,7 +279,7 @@ export default function SettingsClient({
       setToast({ type: "success", message: savedMessage });
       router.refresh();
     } catch (error) {
-      const message = error instanceof Error ? error.message : saveFailedMessage;
+      const message = toRequestErrorMessage(error, saveFailedMessage, locale);
       setToast({ type: "error", message });
     } finally {
       setSavingField(null);
@@ -224,86 +293,126 @@ export default function SettingsClient({
     await commitField(editingField, draftValue);
   };
 
+  const renderCurrentSectionItems = () =>
+    currentSection.items.map((item) =>
+      item.id === "createUser" ? (
+        <CreateUserSettingItem
+          key={item.id}
+          text={text}
+          locale={locale}
+          isMobileMode={popupMode}
+          onSuccess={handleUserSuccess}
+          onError={handleUserError}
+        />
+      ) : item.id === "uiMode" ? (
+        <UiModeSettingItem
+          key={item.id}
+          label={item.label}
+          value={values.uiMode}
+          text={text}
+          locale={locale}
+          isSaving={savingField === item.id}
+          onChange={async (nextMode) => {
+            await commitField("uiMode", nextMode);
+          }}
+        />
+      ) : item.id === "localeSwitch" ? (
+        <LocaleSwitchSettingItem
+          key={item.id}
+          label={item.label}
+          locale={locale}
+          onChanged={() => {
+            router.refresh();
+          }}
+        />
+      ) : (
+        <SettingsItem
+          key={item.id}
+          fieldId={item.id as AdminSettingField}
+          label={item.label}
+          value={toDisplayValue(item.id as AdminSettingField, values, locale, text)}
+          action={text.configure}
+          saveLabel={saveLabel}
+          cancelLabel={cancelLabel}
+          isEditing={editingField === (item.id as AdminSettingField)}
+          isSaving={savingField === (item.id as AdminSettingField)}
+          draftValue={draftValue}
+          onDraftChange={setDraftValue}
+          onStartEdit={() => startEditing(item.id as AdminSettingField)}
+          onSave={saveField}
+          onCancel={cancelEditing}
+          options={getFieldOptions(item.id as AdminSettingField, locale, text)}
+        />
+      ),
+    );
+
   return (
     <div className="space-y-5">
       <section className="space-y-4">
-        <aside className="settings-quicknav sst-card-soft rounded-2xl p-4">
+        <aside className="settings-quicknav sst-card-soft rounded-2xl p-4 sm:p-5">
           <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">{text.quickMenu}</p>
-          <nav className="no-scrollbar flex gap-2 overflow-x-auto pb-1">
-            {sections.map((section) => {
+          <div className={popupMode ? "grid grid-cols-1 gap-3" : "grid grid-cols-2 gap-3 md:grid-cols-3"}>
+            {sections.map((section, index) => {
               const isActive = section.id === activeSection;
+              const isLastOddCard = !popupMode && sections.length % 2 === 1 && index === sections.length - 1;
               return (
                 <button
-                  key={section.id}
+                  key={`card-${section.id}`}
                   type="button"
                   onClick={() => handleSwitchSection(section.id)}
                   className={[
-                    "shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition-all duration-200",
+                    "group rounded-2xl border bg-white p-4 text-left transition-all duration-200",
+                    isLastOddCard ? "col-span-2 md:col-span-1" : "",
+                    "hover:-translate-y-0.5 hover:shadow-md",
                     isActive
-                      ? "border border-blue-200 bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-md shadow-blue-200"
-                      : "border border-slate-200 bg-white text-slate-700 hover:-translate-y-0.5 hover:border-blue-200 hover:text-blue-700 hover:shadow-sm",
+                      ? "border-blue-200 ring-2 ring-blue-100 shadow-md"
+                      : "border-slate-200 hover:border-blue-200",
                   ].join(" ")}
                 >
-                  {section.title}
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={[
+                        "inline-flex h-10 w-10 items-center justify-center rounded-xl",
+                        section.iconTone,
+                        section.iconColor,
+                      ].join(" ")}
+                    >
+                      <SectionGlyph id={section.id} />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-slate-900">{section.title}</p>
+                      <p className="mt-0.5 text-xs text-slate-500 max-lg:line-clamp-3">{section.subtitle}</p>
+                    </div>
+                  </div>
                 </button>
               );
             })}
-          </nav>
+          </div>
         </aside>
-
-        <SettingsSection title={currentSection.title}>
-          {currentSection.items.map((item) =>
-            item.id === "createUser" ? (
-              <CreateUserSettingItem
-                key={item.id}
-                text={text}
-                locale={locale}
-                onSuccess={handleUserSuccess}
-                onError={handleUserError}
-              />
-            ) : item.id === "uiMode" ? (
-              <UiModeSettingItem
-                key={item.id}
-                label={item.label}
-                value={values.uiMode}
-                text={text}
-                locale={locale}
-                isSaving={savingField === item.id}
-                onChange={async (nextMode) => {
-                  await commitField("uiMode", nextMode);
-                }}
-              />
-            ) : item.id === "localeSwitch" ? (
-              <LocaleSwitchSettingItem
-                key={item.id}
-                label={item.label}
-                locale={locale}
-                onChanged={() => {
-                  router.refresh();
-                }}
-              />
-            ) : (
-              <SettingsItem
-                key={item.id}
-                fieldId={item.id as AdminSettingField}
-                label={item.label}
-                value={toDisplayValue(item.id as AdminSettingField, values, locale, text)}
-                action={text.configure}
-                saveLabel={saveLabel}
-                cancelLabel={cancelLabel}
-                isEditing={editingField === (item.id as AdminSettingField)}
-                isSaving={savingField === (item.id as AdminSettingField)}
-                draftValue={draftValue}
-                onDraftChange={setDraftValue}
-                onStartEdit={() => startEditing(item.id as AdminSettingField)}
-                onSave={saveField}
-                onCancel={cancelEditing}
-                options={getFieldOptions(item.id as AdminSettingField, locale, text)}
-              />
-            ),
-          )}
-        </SettingsSection>
+        {!popupMode ? <SettingsSection title={currentSection.title}>{renderCurrentSectionItems()}</SettingsSection> : null}
       </section>
+
+      {popupMode && mobileSectionOpen ? (
+        <div className="fixed inset-0 z-[120] flex items-end bg-slate-900/35 p-2 backdrop-blur-sm sm:items-center sm:justify-center sm:p-4">
+          <div className="max-h-[92vh] w-full overflow-hidden rounded-2xl bg-white shadow-2xl sm:max-w-xl">
+            <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+              <p className="text-base font-semibold text-slate-900">{currentSection.title}</p>
+              <button
+                type="button"
+                onClick={() => setMobileSectionOpen(false)}
+                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                {closeLabel}
+              </button>
+            </div>
+            <div className="max-h-[calc(92vh-60px)] overflow-y-auto p-3 sm:p-4">
+              <SettingsSection title={currentSection.title} plain hideTitle>
+                {renderCurrentSectionItems()}
+              </SettingsSection>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <Toast
         open={Boolean(toast)}
@@ -318,15 +427,78 @@ export default function SettingsClient({
 function SettingsSection({
   title,
   children,
+  plain = false,
+  hideTitle = false,
 }: {
   title: string;
   children: ReactNode;
+  plain?: boolean;
+  hideTitle?: boolean;
 }) {
+  if (plain) {
+    return (
+      <section className="space-y-3">
+        {!hideTitle ? <h2 className="text-lg font-semibold text-slate-900">{title}</h2> : null}
+        <ul className="rounded-xl border border-slate-200 bg-white">{children}</ul>
+      </section>
+    );
+  }
+
   return (
     <article className="sst-card-soft rounded-2xl p-5">
       <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
       <ul className="mt-4 divide-y divide-slate-200 rounded-xl border border-slate-200 bg-white">{children}</ul>
     </article>
+  );
+}
+
+function SectionGlyph({ id }: { id: SectionId }) {
+  if (id === "users") {
+    return (
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+        <path d="M16 19a4 4 0 0 0-8 0" />
+        <circle cx="12" cy="9" r="3.2" />
+        <path d="M20.5 18a3.4 3.4 0 0 0-2.8-3.3" />
+        <path d="M17.4 5.5a3.2 3.2 0 0 1 0 6.3" />
+      </svg>
+    );
+  }
+
+  if (id === "display") {
+    return (
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+        <rect x="3.5" y="4.5" width="17" height="11" rx="2.5" />
+        <path d="M9 19.5h6" />
+        <path d="M12 15.5v4" />
+      </svg>
+    );
+  }
+
+  if (id === "store") {
+    return (
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+        <path d="M4 10.5h16v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8Z" />
+        <path d="M3.5 10.5 5.3 4h13.4l1.8 6.5" />
+        <path d="M8.5 13.5h7" />
+      </svg>
+    );
+  }
+
+  if (id === "security") {
+    return (
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+        <path d="M12 3.5 5 6.5v5.4c0 4.2 2.8 8 7 9.6 4.2-1.6 7-5.4 7-9.6V6.5l-7-3Z" />
+        <rect x="9.1" y="10.2" width="5.8" height="4.8" rx="1" />
+        <path d="M10 10.2V9a2 2 0 1 1 4 0v1.2" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M18 8a3 3 0 0 1-3 3h-1.2L12 13l-1.8-2H9a3 3 0 0 1 0-6h6a3 3 0 0 1 3 3Z" />
+      <path d="M6 12.5a3 3 0 0 0 3 3h1.2L12 18l1.8-2.5H15a3 3 0 1 0 0-6" />
+    </svg>
   );
 }
 
@@ -559,11 +731,13 @@ function SettingsItem({
 function CreateUserSettingItem({
   text,
   locale,
+  isMobileMode,
   onSuccess,
   onError,
 }: {
   text: SettingsText;
   locale: "th" | "en";
+  isMobileMode: boolean;
   onSuccess: (message: string) => void;
   onError: (message: string) => void;
 }) {
@@ -613,19 +787,19 @@ function CreateUserSettingItem({
   const loadUsers = useCallback(async () => {
     setLoadingUsers(true);
     try {
-      const response = await fetchWithTimeout("/api/admin/users", { method: "GET" });
+      const response = await fetchWithTimeout("/api/admin/users", { method: "GET" }, 20000);
       const result = (await response.json()) as { error?: string; users?: AdminUserRecord[] };
       if (!response.ok || !result.users) {
         throw new Error(result.error || refreshFailedText);
       }
       setUsers(result.users);
     } catch (error) {
-      const message = error instanceof Error ? error.message : refreshFailedText;
+      const message = toRequestErrorMessage(error, refreshFailedText, locale);
       onError(message);
     } finally {
       setLoadingUsers(false);
     }
-  }, [onError, refreshFailedText]);
+  }, [locale, onError, refreshFailedText]);
 
   useEffect(() => {
     void loadUsers();
@@ -669,7 +843,7 @@ function CreateUserSettingItem({
       await loadUsers();
       onSuccess(text.createUserSuccess);
     } catch (error) {
-      const message = error instanceof Error ? error.message : text.createUserFailed;
+      const message = toRequestErrorMessage(error, text.createUserFailed, locale);
       onError(message);
     } finally {
       setSubmitting(false);
@@ -721,7 +895,7 @@ function CreateUserSettingItem({
       await loadUsers();
       onSuccess(t.updateSuccess);
     } catch (error) {
-      const message = error instanceof Error ? error.message : t.updateFailed;
+      const message = toRequestErrorMessage(error, t.updateFailed, locale);
       onError(message);
     } finally {
       setSavingUserId(null);
@@ -748,7 +922,7 @@ function CreateUserSettingItem({
       await loadUsers();
       onSuccess(t.deleteSuccess);
     } catch (error) {
-      const message = error instanceof Error ? error.message : t.deleteFailed;
+      const message = toRequestErrorMessage(error, t.deleteFailed, locale);
       onError(message);
     } finally {
       setSavingUserId(null);
@@ -786,68 +960,107 @@ function CreateUserSettingItem({
             </button>
           </div>
 
-          <div className="overflow-x-auto rounded-xl border border-slate-200">
-            <table className="w-full min-w-[720px] bg-white text-sm">
-              <thead className="bg-slate-50 text-slate-700">
-                <tr>
-                  <th className="px-3 py-2 text-left font-semibold">{text.createUserName}</th>
-                  <th className="px-3 py-2 text-left font-semibold">{text.createUserEmail}</th>
-                  <th className="px-3 py-2 text-left font-semibold">{text.createUserRole}</th>
-                  <th className="px-3 py-2 text-left font-semibold">{t.createdAt}</th>
-                  <th className="px-3 py-2 text-left font-semibold">{t.action}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loadingUsers ? (
+          {isMobileMode ? (
+            <div className="space-y-2 rounded-xl border border-slate-200 bg-white p-2">
+              {loadingUsers ? (
+                <p className="px-2 py-4 text-center text-sm text-slate-500">{t.loading}</p>
+              ) : users.length === 0 ? (
+                <p className="px-2 py-4 text-center text-sm text-slate-500">{t.noData}</p>
+              ) : (
+                users.map((user) => (
+                  <article key={user.id} className="rounded-xl border border-slate-200 p-3">
+                    <p className="text-sm font-semibold text-slate-900">{user.displayName}</p>
+                    <p className="mt-1 break-all text-xs text-slate-600">{user.email}</p>
+                    <div className="mt-2 flex items-center justify-between text-xs text-slate-600">
+                      <span>{user.role === "admin" ? t.roleAdmin : t.roleStaff}</span>
+                      <span>{formatDate(user.createdAt)}</span>
+                    </div>
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => openEditUser(user)}
+                        disabled={savingUserId === user.id}
+                        className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 transition hover:bg-blue-100 disabled:opacity-60"
+                      >
+                        {t.editButton}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeletingUserId(user.id)}
+                        disabled={savingUserId === user.id}
+                        className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 disabled:opacity-60"
+                      >
+                        {t.deleteButton}
+                      </button>
+                    </div>
+                  </article>
+                ))
+              )}
+            </div>
+          ) : (
+            <div className="overflow-x-auto rounded-xl border border-slate-200">
+              <table className="w-full min-w-[720px] bg-white text-sm">
+                <thead className="bg-slate-50 text-slate-700">
                   <tr>
-                    <td colSpan={5} className="px-3 py-4 text-center text-slate-500">
-                      {t.loading}
-                    </td>
+                    <th className="px-3 py-2 text-left font-semibold">{text.createUserName}</th>
+                    <th className="px-3 py-2 text-left font-semibold">{text.createUserEmail}</th>
+                    <th className="px-3 py-2 text-left font-semibold">{text.createUserRole}</th>
+                    <th className="px-3 py-2 text-left font-semibold">{t.createdAt}</th>
+                    <th className="px-3 py-2 text-left font-semibold">{t.action}</th>
                   </tr>
-                ) : users.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-3 py-4 text-center text-slate-500">
-                      {t.noData}
-                    </td>
-                  </tr>
-                ) : (
-                  users.map((user) => (
-                    <tr key={user.id} className="border-t border-slate-100">
-                      <td className="px-3 py-2 font-medium text-slate-800">{user.displayName}</td>
-                      <td className="px-3 py-2 text-slate-700">{user.email}</td>
-                      <td className="px-3 py-2 text-slate-700">{user.role === "admin" ? t.roleAdmin : t.roleStaff}</td>
-                      <td className="px-3 py-2 text-slate-600">{formatDate(user.createdAt)}</td>
-                      <td className="px-3 py-2">
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => openEditUser(user)}
-                            disabled={savingUserId === user.id}
-                            className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 transition hover:bg-blue-100 disabled:opacity-60"
-                          >
-                            {t.editButton}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setDeletingUserId(user.id)}
-                            disabled={savingUserId === user.id}
-                            className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 disabled:opacity-60"
-                          >
-                            {t.deleteButton}
-                          </button>
-                        </div>
+                </thead>
+                <tbody>
+                  {loadingUsers ? (
+                    <tr>
+                      <td colSpan={5} className="px-3 py-4 text-center text-slate-500">
+                        {t.loading}
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                  ) : users.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-3 py-4 text-center text-slate-500">
+                        {t.noData}
+                      </td>
+                    </tr>
+                  ) : (
+                    users.map((user) => (
+                      <tr key={user.id} className="border-t border-slate-100">
+                        <td className="px-3 py-2 font-medium text-slate-800">{user.displayName}</td>
+                        <td className="px-3 py-2 text-slate-700">{user.email}</td>
+                        <td className="px-3 py-2 text-slate-700">{user.role === "admin" ? t.roleAdmin : t.roleStaff}</td>
+                        <td className="px-3 py-2 text-slate-600">{formatDate(user.createdAt)}</td>
+                        <td className="px-3 py-2">
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => openEditUser(user)}
+                              disabled={savingUserId === user.id}
+                              className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 transition hover:bg-blue-100 disabled:opacity-60"
+                            >
+                              {t.editButton}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setDeletingUserId(user.id)}
+                              disabled={savingUserId === user.id}
+                              className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 disabled:opacity-60"
+                            >
+                              {t.deleteButton}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
       </div>
 
       {creatingOpen ? (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/25 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-2xl rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl">
+          <div className={`w-full rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl ${isMobileMode ? "max-w-lg" : "max-w-2xl"}`}>
             <div className="mb-4 flex items-center justify-between">
               <div>
                 <p className="text-lg font-semibold text-slate-900">{text.createUserTitle}</p>
@@ -862,7 +1075,7 @@ function CreateUserSettingItem({
               </button>
             </div>
 
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className={`grid gap-3 ${isMobileMode ? "grid-cols-1" : "md:grid-cols-2"}`}>
               <label className="space-y-1">
                 <span className="text-xs font-semibold text-slate-600">{text.createUserName}</span>
                 <input
@@ -930,7 +1143,7 @@ function CreateUserSettingItem({
 
       {editingUser ? (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/25 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-2xl rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl">
+          <div className={`w-full rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl ${isMobileMode ? "max-w-lg" : "max-w-2xl"}`}>
             <div className="mb-4 flex items-center justify-between">
               <div>
                 <p className="text-lg font-semibold text-slate-900">{t.editTitle}</p>
@@ -945,7 +1158,7 @@ function CreateUserSettingItem({
               </button>
             </div>
 
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className={`grid gap-3 ${isMobileMode ? "grid-cols-1" : "md:grid-cols-2"}`}>
               <label className="space-y-1">
                 <span className="text-xs font-semibold text-slate-600">{text.createUserName}</span>
                 <input

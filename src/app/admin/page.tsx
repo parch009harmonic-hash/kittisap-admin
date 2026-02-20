@@ -5,21 +5,25 @@ const KPI_CARDS = [
     label: { th: "ออเดอร์วันนี้", en: "Orders Today" },
     value: "128",
     hint: { th: "+12% เทียบเมื่อวาน", en: "+12% vs yesterday" },
+    mobileTone: "dashboard-kpi-orders",
   },
   {
     label: { th: "รายได้วันนี้", en: "Revenue Today" },
     value: "THB 84,500",
     hint: { th: "+8% เทียบเมื่อวาน", en: "+8% vs yesterday" },
+    mobileTone: "dashboard-kpi-revenue",
   },
   {
     label: { th: "รอดำเนินการ", en: "Pending" },
     value: "23",
     hint: { th: "รอยืนยันคำสั่งซื้อ", en: "Need confirmation" },
+    mobileTone: "dashboard-kpi-pending",
   },
   {
     label: { th: "สต็อกต่ำ", en: "Low Stock" },
     value: "9",
     hint: { th: "สินค้าต่ำกว่าเกณฑ์", en: "Products below threshold" },
+    mobileTone: "dashboard-kpi-low-stock",
   },
 ] as const;
 
@@ -52,6 +56,7 @@ export default async function AdminDashboardPage() {
   const locale = await getAdminLocale();
   const text = {
     title: locale === "th" ? "แดชบอร์ด" : "Dashboard",
+    boardTitle: locale === "th" ? "ภาพรวม" : "Overview",
     subtitle:
       locale === "th"
         ? "ภาพรวมกิจกรรมผู้ดูแลของวันนี้"
@@ -61,21 +66,38 @@ export default async function AdminDashboardPage() {
     customer: locale === "th" ? "ลูกค้า" : "Customer",
     total: locale === "th" ? "ยอดรวม" : "Total",
     status: locale === "th" ? "สถานะ" : "Status",
+    today: locale === "th" ? "วันนี้" : "Today",
   };
 
   return (
-    <div className="space-y-6">
+    <div className="dashboard-root space-y-6">
+      <section className="dashboard-mobile-overview-board sst-card-soft rounded-2xl p-4">
+        <p className="text-xs uppercase tracking-[0.24em] text-blue-600">{text.boardTitle}</p>
+        <h2 className="mt-1 font-heading text-3xl font-semibold tracking-tight text-slate-900">{text.title}</h2>
+        <p className="mt-1 text-sm text-slate-600">{text.subtitle}</p>
+      </section>
+
       <header className="flex flex-col gap-3">
         <h1 className="font-heading text-4xl font-semibold tracking-tight text-slate-900">{text.title}</h1>
         <p className="text-sm text-slate-600">{text.subtitle}</p>
       </header>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="dashboard-overview-card sst-card-soft rounded-2xl p-4">
+        <h2 className="font-heading text-2xl font-semibold text-blue-900">{locale === "th" ? "Dashboard" : "Dashboard"}</h2>
+      </section>
+
+      <section className="dashboard-kpi-grid grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {KPI_CARDS.map((card) => (
-          <article key={card.label.en} className="sst-card-soft rounded-2xl p-5">
-            <p className="text-sm font-semibold text-slate-900">{card.label[locale]}</p>
-            <p className="mt-2 text-3xl font-semibold text-blue-700">{card.value}</p>
-            <p className="mt-1 text-xs text-slate-500">{card.hint[locale]}</p>
+          <article key={card.label.en} className={`dashboard-kpi-card sst-card-soft rounded-2xl p-5 ${card.mobileTone}`}>
+            <div className="dashboard-kpi-head flex items-start justify-between gap-2">
+              <p className="dashboard-kpi-label text-sm font-semibold text-slate-900">{card.label[locale]}</p>
+              <span className="dashboard-kpi-icon inline-flex h-8 w-8 items-center justify-center rounded-lg text-blue-700">
+                <KpiIcon label={card.label.en} />
+              </span>
+            </div>
+            <p className="dashboard-kpi-value mt-2 text-3xl font-semibold text-blue-700">{card.value}</p>
+            <p className="dashboard-kpi-hint mt-1 text-xs text-slate-500">{card.hint[locale]}</p>
+            <p className="dashboard-kpi-today mt-1 text-xs text-slate-500">{text.today}</p>
           </article>
         ))}
       </section>
@@ -112,5 +134,43 @@ export default async function AdminDashboardPage() {
         </div>
       </section>
     </div>
+  );
+}
+
+function KpiIcon({ label }: { label: string }) {
+  if (label === "Revenue Today") {
+    return (
+      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.9">
+        <rect x="3.5" y="6" width="17" height="12" rx="2.5" />
+        <circle cx="12" cy="12" r="2.2" />
+      </svg>
+    );
+  }
+
+  if (label === "Orders Today") {
+    return (
+      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.9">
+        <path d="M4 6h2l2 10h9l2-7H7.2" />
+        <circle cx="10" cy="19" r="1.2" />
+        <circle cx="17" cy="19" r="1.2" />
+      </svg>
+    );
+  }
+
+  if (label === "Pending") {
+    return (
+      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.9">
+        <circle cx="12" cy="12" r="8" />
+        <path d="M12 8v5l3 2" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.9">
+      <path d="M4 7h16" />
+      <path d="M6 11h12" />
+      <path d="M8 15h8" />
+    </svg>
   );
 }

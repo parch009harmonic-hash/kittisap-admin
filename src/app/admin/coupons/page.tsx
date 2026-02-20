@@ -12,6 +12,7 @@ type UiCoupon = {
 };
 
 const MOCK_COUPONS: UiCoupon[] = [];
+const MOCK_POINTS: { id: string; customer: string; points: number; tier: "silver" | "gold" | "platinum" }[] = [];
 
 function statusClass(status: UiCoupon["status"]) {
   if (status === "active") return "bg-emerald-100 text-emerald-700";
@@ -22,13 +23,29 @@ export default async function AdminCouponsPage() {
   const locale = await getAdminLocale();
 
   const text = {
-    section: locale === "th" ? "คูปอง" : "Coupons",
-    title: locale === "th" ? "คูปองส่วนลด" : "Coupons",
+    section: locale === "th" ? "คูปองและแต้ม" : "Coupons & Points",
+    title: locale === "th" ? "คูปองส่วนลดและแต้มสะสม" : "Coupons & Points",
     subtitle:
       locale === "th"
-        ? "จัดการโค้ดส่วนลดและโปรโมชัน"
-        : "Manage discount codes and promotions",
+        ? "จัดการโค้ดส่วนลด โปรโมชัน และระบบแต้มสะสม"
+        : "Manage coupons, promotions, and points system.",
     addCoupon: locale === "th" ? "เพิ่มคูปอง" : "Add Coupon",
+    pointsSection: locale === "th" ? "แต้มสะสมลูกค้า" : "Customer Points",
+    pointsSubtitle:
+      locale === "th"
+        ? "จัดการคะแนนสะสมและระดับสมาชิกในหน้าเดียว"
+        : "Manage loyalty points and customer tiers in one place.",
+    adjustPoints: locale === "th" ? "ปรับแต้ม" : "Adjust Points",
+    pointSearch: locale === "th" ? "ค้นหาลูกค้า..." : "Search customer...",
+    allTier: locale === "th" ? "ทุกระดับ" : "All tiers",
+    silver: locale === "th" ? "เงิน" : "Silver",
+    gold: locale === "th" ? "ทอง" : "Gold",
+    platinum: locale === "th" ? "แพลทินัม" : "Platinum",
+    noPointsTitle: locale === "th" ? "ยังไม่มีข้อมูลแต้ม" : "No points data yet",
+    noPointsText:
+      locale === "th"
+        ? "เมื่อมีการสะสมคะแนนจากออเดอร์ ข้อมูลจะแสดงที่หน้านี้"
+        : "Points will appear here once orders start accumulating rewards.",
     search: locale === "th" ? "ค้นหารหัสคูปอง..." : "Search coupon code...",
     allStatus: locale === "th" ? "ทุกสถานะ" : "All status",
     active: locale === "th" ? "ใช้งาน" : "active",
@@ -47,6 +64,7 @@ export default async function AdminCouponsPage() {
         ? "คุณสามารถเริ่มสร้างคูปองส่วนลดแรกได้ทันที"
         : "You can create your first coupon now.",
     toProducts: locale === "th" ? "ไปหน้าสินค้า" : "Go to products",
+    toOrders: locale === "th" ? "ไปหน้าคำสั่งซื้อ" : "Go to orders",
   };
 
   return (
@@ -59,9 +77,11 @@ export default async function AdminCouponsPage() {
             <h1 className="mt-1 font-heading text-4xl text-slate-900">{text.title}</h1>
             <p className="mt-2 text-sm text-slate-600">{text.subtitle}</p>
           </div>
-          <button type="button" className="btn-primary rounded-full px-5 py-2 text-sm font-semibold">
-            {text.addCoupon}
-          </button>
+          <div className="flex items-center gap-2">
+            <button type="button" className="coupon-page-add-btn btn-primary rounded-full px-5 py-2 text-sm font-semibold">
+              {text.addCoupon}
+            </button>
+          </div>
         </div>
       </header>
 
@@ -129,6 +149,46 @@ export default async function AdminCouponsPage() {
           </table>
         </div>
       )}
+
+      <section className="sst-card-soft space-y-4 rounded-2xl p-4 md:p-5">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="font-heading text-xl font-semibold text-slate-900">{text.pointsSection}</h2>
+            <p className="mt-1 text-sm text-slate-600">{text.pointsSubtitle}</p>
+          </div>
+          <button type="button" className="coupon-page-add-btn btn-primary rounded-full px-4 py-2 text-sm font-semibold">
+            {text.adjustPoints}
+          </button>
+        </div>
+
+        <form className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_220px_auto]">
+          <input type="search" placeholder={text.pointSearch} className="input-base" />
+          <select className="input-base" defaultValue="">
+            <option value="">{text.allTier}</option>
+            <option value="silver">{text.silver}</option>
+            <option value="gold">{text.gold}</option>
+            <option value="platinum">{text.platinum}</option>
+          </select>
+          <button
+            type="submit"
+            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-900 transition hover:bg-slate-50"
+          >
+            {text.filter}
+          </button>
+        </form>
+
+        {MOCK_POINTS.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-slate-200 px-6 py-10 text-center">
+            <p className="text-lg font-semibold text-slate-900">{text.noPointsTitle}</p>
+            <p className="mt-1 text-sm text-slate-600">{text.noPointsText}</p>
+            <div className="mt-4">
+              <Link href="/admin/orders" className="btn-primary inline-flex rounded-full px-4 py-2 text-sm font-semibold">
+                {text.toOrders}
+              </Link>
+            </div>
+          </div>
+        ) : null}
+      </section>
     </div>
   );
 }

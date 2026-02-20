@@ -18,21 +18,27 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
   const images = product.images ?? [];
   const heroImage = product.cover_url || images[0]?.url || null;
   const isActive = product.status === "active";
+  const updatedAtLabel = product.updated_at
+    ? new Intl.DateTimeFormat("th-TH", { dateStyle: "short", timeStyle: "short" }).format(
+        new Date(product.updated_at),
+      )
+    : "-";
 
   return (
-    <div className="space-y-6">
-      <section className="relative overflow-hidden rounded-3xl border border-blue-100 bg-gradient-to-r from-sky-50 via-white to-cyan-50 px-5 py-6 shadow-sm md:px-7">
+    <div className="product-detail-page space-y-6">
+      <section className="product-detail-hero relative overflow-hidden rounded-3xl border border-blue-100 bg-gradient-to-r from-sky-50 via-white to-cyan-50 px-5 py-6 shadow-sm md:px-7">
         <div className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-sky-200/40 blur-3xl" />
         <div className="pointer-events-none absolute -left-20 -bottom-28 h-64 w-64 rounded-full bg-cyan-200/35 blur-3xl" />
-        <div className="relative flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
-          <div className="space-y-2">
+        <div className="product-detail-hero-inner relative flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div className="product-detail-title-wrap space-y-2">
             <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-blue-700">Product Detail</p>
-            <h1 className="text-4xl font-semibold tracking-tight text-slate-900 md:text-5xl">
+            <h1 className="product-detail-title text-4xl font-semibold tracking-tight text-slate-900 md:text-5xl">
               {product.title_th}
             </h1>
-            <div className="flex flex-wrap items-center gap-2 text-sm">
+            <p className="text-sm text-slate-600">SKU: {product.sku || "-"}</p>
+            <div className="product-detail-badges flex flex-wrap items-center gap-2 text-sm">
               <span className="rounded-full border border-slate-200 bg-white px-3 py-1 font-medium text-slate-700">
-                SKU: {product.sku || "-"}
+                Slug: {product.slug}
               </span>
               <span
                 className={`rounded-full px-3 py-1 font-semibold ${
@@ -41,18 +47,21 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
               >
                 {isActive ? "Active" : "Inactive"}
               </span>
+              <span className="rounded-full border border-slate-200 bg-white px-3 py-1 font-medium text-slate-700">
+                Updated: {updatedAtLabel}
+              </span>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="product-detail-actions flex gap-2">
             <Link
               href="/admin/products"
-              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+              className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
             >
               Back
             </Link>
             <Link
               href={`/admin/products/${product.id}/edit`}
-              className="btn-primary rounded-xl px-4 py-2 text-sm font-semibold text-white"
+              className="btn-primary rounded-full px-4 py-2 text-sm font-semibold text-white"
             >
               Edit Product
             </Link>
@@ -60,14 +69,20 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
         </div>
       </section>
 
-      <section className="grid grid-cols-1 gap-4 xl:grid-cols-[360px_1fr]">
-        <aside className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+      <section className="product-detail-hero-stats grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <QuickStat label="Price" value={formatTHB(product.price)} />
+        <QuickStat label="Stock" value={String(product.stock)} />
+        <QuickStat label="Updated" value={updatedAtLabel} />
+      </section>
+
+      <section className="product-detail-layout grid grid-cols-1 gap-4 xl:grid-cols-[360px_1fr]">
+        <aside className="product-detail-media rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
           {heroImage ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={heroImage}
               alt={product.title_th}
-              className="h-72 w-full rounded-2xl border border-slate-200 object-cover md:h-[390px]"
+              className="product-detail-main-image h-72 w-full rounded-2xl border border-slate-200 object-cover md:h-[390px]"
             />
           ) : (
             <div className="flex h-72 items-center justify-center rounded-2xl border border-dashed border-slate-300 text-sm text-slate-500 md:h-[390px]">
@@ -75,7 +90,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
             </div>
           )}
           {images.length > 1 ? (
-            <div className="mt-3 grid grid-cols-3 gap-2">
+            <div className="product-detail-thumbs mt-3 grid grid-cols-3 gap-2">
               {images.slice(0, 6).map((image) => (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -90,8 +105,8 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
           <p className="mt-3 text-sm text-slate-600">{images.length} image(s)</p>
         </aside>
 
-        <div className="space-y-4">
-          <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
+        <div className="product-detail-content space-y-4">
+          <section className="product-detail-specs rounded-3xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
             <dl className="grid grid-cols-1 gap-3 text-sm md:grid-cols-2">
               <Detail label="Slug" value={product.slug} />
               <Detail label="Status" value={product.status} />
@@ -106,7 +121,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
             </dl>
           </section>
 
-          <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
+          <section className="product-detail-descriptions rounded-3xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
             <p className="mb-3 text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">Descriptions</p>
             <div className="space-y-3">
               <DescriptionBlock label="TH" value={product.description_th || "-"} />
@@ -126,7 +141,7 @@ function formatTHB(value: number) {
 
 function DescriptionBlock({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-slate-50/60 px-4 py-3">
+    <div className="product-detail-desc-block rounded-2xl border border-slate-200 bg-slate-50/60 px-4 py-3">
       <p className="mb-1 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{label}</p>
       <p className="text-sm leading-relaxed text-slate-700">{value}</p>
     </div>
@@ -135,9 +150,18 @@ function DescriptionBlock({ label, value }: { label: string; value: string }) {
 
 function Detail({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-3.5">
+    <div className="product-detail-detail-block rounded-2xl border border-slate-200 bg-slate-50/60 p-3.5">
       <dt className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">{label}</dt>
       <dd className="mt-1.5 text-base text-slate-800">{value}</dd>
     </div>
+  );
+}
+
+function QuickStat({ label, value }: { label: string; value: string }) {
+  return (
+    <article className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">{label}</p>
+      <p className="mt-1 text-base font-semibold text-blue-800">{value}</p>
+    </article>
   );
 }

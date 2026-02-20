@@ -18,7 +18,7 @@ type AdminShellProps = {
 type OsTheme = "windows" | "mobile-os";
 type MobilePlatform = "ios" | "android" | "other";
 
-type NavIcon = "dashboard" | "products" | "orders" | "coupons" | "points" | "settings";
+type NavIcon = "dashboard" | "products" | "orders" | "coupons" | "settings";
 
 type NavLinkItem = {
   href: string;
@@ -52,17 +52,10 @@ const NAV_LINKS: NavLinkItem[] = [
   },
   {
     href: "/admin/coupons",
-    label: { th: "\u0e04\u0e39\u0e1b\u0e2d\u0e07", en: "Coupons" },
+    label: { th: "\u0e04\u0e39\u0e1b\u0e2d\u0e07\u0e41\u0e25\u0e30\u0e41\u0e15\u0e49\u0e21", en: "Coupons & Points" },
     short: { th: "\u0e04", en: "C" },
-    mobileLabel: { th: "\u0e04\u0e39\u0e1b\u0e2d\u0e07", en: "Coupon" },
+    mobileLabel: { th: "\u0e04\u0e39\u0e1b\u0e2d\u0e07", en: "Coupons" },
     icon: "coupons",
-  },
-  {
-    href: "/admin/points",
-    label: { th: "\u0e41\u0e15\u0e49\u0e21", en: "Points" },
-    short: { th: "\u0e15", en: "T" },
-    mobileLabel: { th: "\u0e41\u0e15\u0e49\u0e21", en: "Point" },
-    icon: "points",
   },
   {
     href: "/admin/settings",
@@ -121,6 +114,28 @@ export function AdminShell({ children, initialLocale, initialUiMode }: AdminShel
 
     return;
   }, []);
+
+  useEffect(() => {
+    if (typeof document === "undefined") {
+      return;
+    }
+
+    const html = document.documentElement;
+    const body = document.body;
+
+    if (isMobileTheme) {
+      html.classList.add("admin-mobile-lock");
+      body.classList.add("admin-mobile-lock");
+    } else {
+      html.classList.remove("admin-mobile-lock");
+      body.classList.remove("admin-mobile-lock");
+    }
+
+    return () => {
+      html.classList.remove("admin-mobile-lock");
+      body.classList.remove("admin-mobile-lock");
+    };
+  }, [isMobileTheme]);
 
   function toggleSidebar() {
     setSidebarCollapsed((prev) => {
@@ -226,8 +241,14 @@ export function AdminShell({ children, initialLocale, initialUiMode }: AdminShel
           </aside>
         ) : null}
 
-        <div className="flex min-h-screen flex-col">
-          <main className={`app-main app-safe-bottom flex-1 px-3 py-4 sm:px-4 sm:py-5 md:px-6 md:py-6 ${isMobileTheme ? "pb-24" : ""}`}>
+        <div className={`flex flex-col ${isMobileTheme ? "h-[100dvh] overflow-hidden" : "min-h-screen"}`}>
+          <main
+            className={`app-main app-safe-bottom flex-1 ${
+              isMobileTheme
+                ? "overflow-y-auto px-3 pt-0 pb-24 sm:px-4 md:px-6"
+                : "px-3 py-4 sm:px-4 sm:py-5 md:px-6 md:py-6"
+            }`}
+          >
             {children}
           </main>
         </div>
@@ -331,12 +352,12 @@ function BottomTabBar({
   locale: AdminLocale;
   platform: MobilePlatform;
 }) {
-  const primaryLinks = NAV_LINKS.filter((link) => link.href !== "/admin/settings");
+  const primaryLinks = NAV_LINKS;
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-[70] mx-auto max-w-[500px]">
       <nav
-        className={`mobile-tabbar app-safe-bottom grid grid-cols-5 gap-1 px-2 py-2 ${
+        className={`mobile-tabbar app-safe-bottom grid ${primaryLinks.length === 4 ? "grid-cols-4" : "grid-cols-5"} gap-1 px-2 py-2 ${
         platform === "ios" ? "is-ios" : "is-android"
       }`}
       >
@@ -429,7 +450,10 @@ function MenuIcon({ icon, className }: { icon: NavIcon; className?: string }) {
     case "dashboard":
       return (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={base} aria-hidden>
-          <path d="M3 13h8V3H3v10Zm10 8h8V11h-8v10ZM3 21h8v-6H3v6Zm10-10h8V3h-8v8Z" />
+          <path d="M4 20h16" />
+          <path d="M7 17V9" />
+          <path d="M12 17V5" />
+          <path d="M17 17v-7" />
         </svg>
       );
     case "products":
@@ -453,12 +477,6 @@ function MenuIcon({ icon, className }: { icon: NavIcon; className?: string }) {
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={base} aria-hidden>
           <path d="M3 9a2 2 0 0 0 2-2h14v4a2 2 0 1 1 0 4v4H5a2 2 0 0 0-2-2V9Z" />
           <path d="M12 7v12" strokeDasharray="2 2" />
-        </svg>
-      );
-    case "points":
-      return (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={base} aria-hidden>
-          <path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3 6.4 20.2l1.1-6.2L3 9.6l6.2-.9L12 3Z" />
         </svg>
       );
     case "settings":

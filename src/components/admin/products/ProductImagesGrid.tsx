@@ -56,7 +56,7 @@ export function ProductImagesGrid({
   }
 
   return (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+    <div className="product-images-grid grid grid-cols-2 gap-3 md:grid-cols-4">
       {images.map((image) => (
         <div
           key={image.id}
