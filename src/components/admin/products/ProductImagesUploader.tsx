@@ -9,6 +9,20 @@ type ProductImagesUploaderProps = {
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 
+async function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit, timeoutMs = 20000) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(input, {
+      ...init,
+      cache: "no-store",
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 export function ProductImagesUploader({ productId, onUploaded }: ProductImagesUploaderProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,7 +51,7 @@ export function ProductImagesUploader({ productId, onUploaded }: ProductImagesUp
           formData.set("productId", productId);
         }
 
-        const response = await fetch("/api/admin/upload/product-image", {
+        const response = await fetchWithTimeout("/api/admin/upload/product-image", {
           method: "POST",
           body: formData,
         });
@@ -65,12 +79,12 @@ export function ProductImagesUploader({ productId, onUploaded }: ProductImagesUp
         accept="image/*"
         multiple
         onChange={(event) => handleUpload(event.target.files)}
-        className="input-base"
+        className="input-base bg-white"
       />
       <p className="text-xs text-steel">
         รองรับหลายรูป สูงสุด 5MB ต่อไฟล์ / Multiple images, max 5MB each.
       </p>
-      {isUploading && <p className="text-xs text-sapphire">Uploading...</p>}
+      {isUploading && <p className="text-xs text-sapphire">กำลังอัปโหลด... / Uploading...</p>}
       {error && <p className="text-xs text-red-600">{error}</p>}
     </div>
   );

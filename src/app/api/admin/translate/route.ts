@@ -1,11 +1,23 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-import { requireAdmin } from "../../../../../lib/auth/admin";
+import { requireAdminApi } from "../../../../../lib/auth/admin";
+import { takeRateLimitToken } from "../../../../../lib/security/rate-limit";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 type TranslatePayload = {
   title_th?: string;
   description_th?: string;
 };
+
+function getClientIp(request: NextRequest) {
+  const forwarded = request.headers.get("x-forwarded-for");
+  if (forwarded) {
+    return forwarded.split(",")[0]?.trim() ?? "unknown";
+  }
+  return request.headers.get("x-real-ip") ?? "unknown";
+}
 
 function pickTranslation(raw: unknown) {
   if (!Array.isArray(raw) || raw.length === 0) {
@@ -42,6 +54,7 @@ async function translateViaGoogleFree(text: string, target: "en" | "lo") {
   const response = await fetch(endpoint.toString(), {
     method: "GET",
     cache: "no-store",
+    signal: AbortSignal.timeout(10_000),
   });
 
   if (!response.ok) {
@@ -53,9 +66,28 @@ async function translateViaGoogleFree(text: string, target: "en" | "lo") {
 }
 
 export async function POST(request: NextRequest) {
-  await requireAdmin();
+  const ip = getClientIp(request);
+  const rateLimit = takeRateLimitToken(`admin-translate:${ip}`, {
+    limit: 20,
+    windowMs: 60_000,
+  });
+
+  if (!rateLimit.ok) {
+    return NextResponse.json(
+      { error: "Too many requests. Please try again shortly." },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(Math.ceil((rateLimit.resetAt - Date.now()) / 1000)),
+          "Cache-Control": "no-store, max-age=0",
+        },
+      }
+    );
+  }
 
   try {
+    await requireAdminApi();
+
     const body = (await request.json()) as TranslatePayload;
     const titleTh = String(body.title_th ?? "").trim();
     const descriptionTh = String(body.description_th ?? "").trim();
@@ -67,15 +99,23 @@ export async function POST(request: NextRequest) {
       translateViaGoogleFree(descriptionTh, "lo"),
     ]);
 
-    return NextResponse.json({
-      title_en: titleEn,
-      title_lo: titleLo,
-      description_en: descriptionEn,
-      description_lo: descriptionLo,
-    });
+    return NextResponse.json(
+      {
+        title_en: titleEn,
+        title_lo: titleLo,
+        description_en: descriptionEn,
+        description_lo: descriptionLo,
+      },
+      { headers: { "Cache-Control": "no-store, max-age=0" } }
+    );
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Auto translation failed";
+    const message = error instanceof Error ? error.message : "Auto translation failed";
+    if (message === "Unauthorized") {
+      return NextResponse.json({ error: message }, { status: 401 });
+    }
+    if (message === "Not authorized to manage users") {
+      return NextResponse.json({ error: message }, { status: 403 });
+    }
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

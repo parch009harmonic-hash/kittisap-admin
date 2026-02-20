@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 
-import { getSupabaseServerClient } from "../supabase/server";
+import { requireAdminApi } from "../auth/admin";
 import { getSupabaseServiceRoleClient } from "../supabase/service";
 
 export type AdminUserRecord = {
@@ -74,27 +74,7 @@ function isMissingProfileColumnError(error: unknown) {
 }
 
 async function assertAdminRole() {
-  const supabase = await getSupabaseServerClient();
-  const { data: authData, error: authError } = await supabase.auth.getUser();
-
-  if (authError || !authData.user) {
-    throw new Error("Unauthorized");
-  }
-
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", authData.user.id)
-    .maybeSingle();
-
-  if (error) {
-    throw new Error(`Failed to verify role: ${errorText(error, "Unknown error")}`);
-  }
-
-  const role = String(data?.role ?? "");
-  if (role !== "admin" && role !== "staff") {
-    throw new Error("Not authorized to manage users");
-  }
+  await requireAdminApi();
 }
 
 export async function createAdminUser(input: unknown) {

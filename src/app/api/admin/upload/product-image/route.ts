@@ -1,47 +1,39 @@
-import { createServerClient } from "@supabase/auth-helpers-nextjs";
 import { NextRequest, NextResponse } from "next/server";
 
-import { requireAdmin } from "../../../../../../lib/auth/admin";
+import { requireAdminApi } from "../../../../../../lib/auth/admin";
 import { takeRateLimitToken } from "../../../../../../lib/security/rate-limit";
+import { getSupabaseServiceRoleClient } from "../../../../../../lib/supabase/service";
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 const MAX_CONTENT_LENGTH_BYTES = MAX_FILE_SIZE_BYTES + 512 * 1024;
 const UPLOAD_LIMIT = 20;
 const UPLOAD_WINDOW_MS = 60 * 1000;
 
-function getSupabaseEnv() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY");
-  }
-
-  return { supabaseUrl, supabaseAnonKey };
-}
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
-  const user = await requireAdmin();
-
-  const rate = takeRateLimitToken(`upload:${user.id}`, {
-    limit: UPLOAD_LIMIT,
-    windowMs: UPLOAD_WINDOW_MS,
-  });
-  if (!rate.ok) {
-    return NextResponse.json(
-      {
-        error: "Too many upload requests. Please wait and try again.",
-      },
-      {
-        status: 429,
-        headers: {
-          "Retry-After": String(Math.max(Math.ceil((rate.resetAt - Date.now()) / 1000), 1)),
-        },
-      }
-    );
-  }
-
   try {
+    const user = await requireAdminApi();
+    const rate = takeRateLimitToken(`upload:${user.id}`, {
+      limit: UPLOAD_LIMIT,
+      windowMs: UPLOAD_WINDOW_MS,
+    });
+    if (!rate.ok) {
+      return NextResponse.json(
+        {
+          error: "Too many upload requests. Please wait and try again.",
+        },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(Math.max(Math.ceil((rate.resetAt - Date.now()) / 1000), 1)),
+            "Cache-Control": "no-store, max-age=0",
+          },
+        }
+      );
+    }
+
     const contentLength = Number(request.headers.get("content-length") ?? 0);
     if (Number.isFinite(contentLength) && contentLength > MAX_CONTENT_LENGTH_BYTES) {
       return NextResponse.json(
@@ -65,17 +57,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Image size must be 5MB or smaller" }, { status: 400 });
     }
 
-    const { supabaseUrl, supabaseAnonKey } = getSupabaseEnv();
-    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll() {
-          // Route response does not need to mutate auth cookies here.
-        },
-      },
-    });
+    const supabase = getSupabaseServiceRoleClient();
 
     const ext = file.name.split(".").pop() ?? "jpg";
     const safeExt = ext.toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
@@ -94,14 +76,24 @@ export async function POST(request: NextRequest) {
 
     const { data } = supabase.storage.from("product-images").getPublicUrl(filePath);
 
-    return NextResponse.json({
-      path: filePath,
-      url: data.publicUrl,
-      remaining: rate.remaining,
-    });
-  } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Upload failed" },
+      {
+        path: filePath,
+        url: data.publicUrl,
+        remaining: rate.remaining,
+      },
+      { headers: { "Cache-Control": "no-store, max-age=0" } }
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Upload failed";
+    if (message === "Unauthorized") {
+      return NextResponse.json({ error: message }, { status: 401 });
+    }
+    if (message === "Not authorized to manage users") {
+      return NextResponse.json({ error: message }, { status: 403 });
+    }
+    return NextResponse.json(
+      { error: message },
       { status: 500 }
     );
   }

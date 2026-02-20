@@ -1,8 +1,23 @@
-import { redirect } from "next/navigation";
+﻿import { redirect } from "next/navigation";
 
 import { getSupabaseServerClient } from "../supabase/server";
 
 type AdminRole = "admin" | "staff";
+const allowedRoles: AdminRole[] = ["admin", "staff"];
+
+async function resolveAdminRole(userId: string) {
+  const supabase = await getSupabaseServerClient();
+  const { data: profile, error } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", userId)
+    .maybeSingle();
+
+  const role = profile?.role as string | undefined;
+  const isAllowed = !error && Boolean(role) && allowedRoles.includes(role as AdminRole);
+
+  return { isAllowed, role: role ?? null, error };
+}
 
 export async function getAdminSession() {
   try {
@@ -26,24 +41,27 @@ export async function requireAdmin() {
     redirect("/login");
   }
 
-  let supabase;
   try {
-    supabase = await getSupabaseServerClient();
+    const { isAllowed } = await resolveAdminRole(user.id);
+    if (!isAllowed) {
+      redirect("/login?error=not_authorized");
+    }
   } catch {
     redirect("/login");
   }
 
-  const { data: profile, error } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle();
+  return user;
+}
 
-  const allowedRoles: AdminRole[] = ["admin", "staff"];
-  const role = profile?.role as string | undefined;
+export async function requireAdminApi() {
+  const user = await getAdminSession();
+  if (!user) {
+    throw new Error("Unauthorized");
+  }
 
-  if (error || !role || !allowedRoles.includes(role as AdminRole)) {
-    redirect("/login?error=not_authorized");
+  const { isAllowed } = await resolveAdminRole(user.id);
+  if (!isAllowed) {
+    throw new Error("Not authorized to manage users");
   }
 
   return user;

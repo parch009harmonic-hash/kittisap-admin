@@ -65,6 +65,20 @@ type AdminUserRecord = {
   createdAt: string | null;
 };
 
+async function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit, timeoutMs = 12000) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(input, {
+      ...init,
+      cache: "no-store",
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 export default function SettingsClient({
   locale,
   text,
@@ -174,7 +188,7 @@ export default function SettingsClient({
 
     setSavingField(field);
     try {
-      const response = await fetch("/api/admin/settings", {
+      const response = await fetchWithTimeout("/api/admin/settings", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -396,7 +410,7 @@ function LocaleSwitchSettingItem({
     }
     setSaving(true);
     try {
-      await fetch("/api/admin/locale", {
+      await fetchWithTimeout("/api/admin/locale", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -599,7 +613,7 @@ function CreateUserSettingItem({
   const loadUsers = useCallback(async () => {
     setLoadingUsers(true);
     try {
-      const response = await fetch("/api/admin/users", { method: "GET" });
+      const response = await fetchWithTimeout("/api/admin/users", { method: "GET" });
       const result = (await response.json()) as { error?: string; users?: AdminUserRecord[] };
       if (!response.ok || !result.users) {
         throw new Error(result.error || refreshFailedText);
@@ -629,7 +643,7 @@ function CreateUserSettingItem({
 
     setSubmitting(true);
     try {
-      const response = await fetch("/api/admin/users", {
+      const response = await fetchWithTimeout("/api/admin/users", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -686,7 +700,7 @@ function CreateUserSettingItem({
     const userId = editingUser.id;
     setSavingUserId(userId);
     try {
-      const response = await fetch("/api/admin/users", {
+      const response = await fetchWithTimeout("/api/admin/users", {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -717,7 +731,7 @@ function CreateUserSettingItem({
   const deleteUser = async (userId: string) => {
     setSavingUserId(userId);
     try {
-      const response = await fetch("/api/admin/users", {
+      const response = await fetchWithTimeout("/api/admin/users", {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",

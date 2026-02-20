@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 
 const SENSITIVE_PREFIXES = ["/admin", "/api/admin", "/auth/callback", "/login"];
 
@@ -96,8 +96,9 @@ export function middleware(request: NextRequest) {
   });
 
   response.headers.set("x-request-id", requestId);
+  const verboseLogEnabled = process.env.ADMIN_VERBOSE_REQUEST_LOG === "1";
   const shouldLog =
-    isSensitivePath(pathname) || pathname.startsWith("/api/") || request.method !== "GET";
+    request.method !== "GET" || pathname.startsWith("/api/") || verboseLogEnabled;
   if (shouldLog) {
     writeAccessLog(request, requestId, "allow");
   }

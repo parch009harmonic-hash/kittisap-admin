@@ -1,6 +1,6 @@
-﻿import "server-only";
+import "server-only";
 
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 function getSupabaseServiceEnv() {
   const supabaseUrl =
@@ -20,11 +20,22 @@ function getSupabaseServiceEnv() {
 }
 
 export function getSupabaseServiceRoleClient() {
+  if (globalThis.__kittisapSupabaseServiceClient) {
+    return globalThis.__kittisapSupabaseServiceClient;
+  }
+
   const { supabaseUrl, serviceRoleKey } = getSupabaseServiceEnv();
-  return createClient(supabaseUrl, serviceRoleKey, {
+  const client = createClient(supabaseUrl, serviceRoleKey, {
     auth: {
       persistSession: false,
       autoRefreshToken: false,
     },
   });
+
+  globalThis.__kittisapSupabaseServiceClient = client;
+  return client;
+}
+
+declare global {
+  var __kittisapSupabaseServiceClient: SupabaseClient | undefined;
 }

@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 
-import { requireAdmin } from "../auth/admin";
+import { requireAdmin, requireAdminApi } from "../auth/admin";
 import {
   AdminSettingField,
   AdminSettings,
@@ -200,8 +200,39 @@ export async function getAdminSettings() {
   return ensureRow(user.id);
 }
 
+export async function getAdminSettingsApi() {
+  const user = await requireAdminApi();
+  return ensureRow(user.id);
+}
+
 export async function updateAdminSetting(field: unknown, value: unknown) {
   const user = await requireAdmin();
+  const parsedField = SettingsFieldSchema.parse(field);
+  await ensureRow(user.id);
+
+  const supabase = getSupabaseServiceRoleClient();
+  const payload = toUpdatePayload(parsedField, value);
+  const updated = await supabase
+    .from("admin_settings")
+    .update(payload)
+    .eq("user_id", user.id)
+    .select(SETTINGS_SELECT)
+    .single();
+
+  if (updated.error) {
+    if (isMissingAdminSettingsSchema(updated.error)) {
+      throw new Error(
+        "ยังไม่พบตาราง admin_settings ในฐานข้อมูล กรุณารันไฟล์ sql/ensure-admin-settings.sql ใน Supabase SQL Editor ก่อนบันทึก"
+      );
+    }
+    throw new Error(`Failed to update settings: ${errorText(updated.error, "Unknown error")}`);
+  }
+
+  return mapRow(updated.data as unknown as Record<string, unknown>);
+}
+
+export async function updateAdminSettingApi(field: unknown, value: unknown) {
+  const user = await requireAdminApi();
   const parsedField = SettingsFieldSchema.parse(field);
   await ensureRow(user.id);
 
