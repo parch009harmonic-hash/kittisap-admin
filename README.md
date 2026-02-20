@@ -40,3 +40,4 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 - Request tracing, access logs, and basic bot filtering are implemented in `middleware.ts`.
 - Cloudflare production hardening checklist is available at `docs/cloudflare-waf-plan.md`.
 - If `admin_settings` table is missing in Supabase, run `sql/ensure-admin-settings.sql` and follow `docs/admin-settings-setup.md`.
+- Stable sync/deploy flow is documented in `docs/sync-and-deploy-checklist.md`.

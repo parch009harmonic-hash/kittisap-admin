@@ -4,10 +4,16 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "dev:reset": "powershell -ExecutionPolicy Bypass -File ..\\scripts\\dev-reset.ps1",
+    "dev:reset": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$ErrorActionPreference='SilentlyContinue'; Remove-Item -Recurse -Force .next\\dev; $pids = netstat -ano | Select-String ':3000' | ForEach-Object { ($_ -split '\\s+')[-1] } | Select-Object -Unique; foreach ($pid in $pids) { Stop-Process -Id $pid -Force }; exit 0\" && next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "npm:cache:reset": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"Remove-Item -Recurse -Force .npm-cache\\_cacache\\tmp -ErrorAction SilentlyContinue; New-Item -ItemType Directory -Path .npm-cache\\_cacache\\tmp -Force | Out-Null\"",
+    "audit:fix:safe": "npm audit fix --cache .npm-cache",
+    "sync:github": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\sync-github.ps1",
+    "cleanup:old-folders": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\cleanup-old-folders.ps1",
+    "deploy:vercel": "vercel deploy --prod",
+    "release": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\release.ps1"
   },
   "dependencies": {
     "@supabase/auth-helpers-nextjs": "^0.15.0",
