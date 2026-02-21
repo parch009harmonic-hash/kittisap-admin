@@ -3,7 +3,7 @@
 import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { AdminSettingField, AdminSettings, SessionPolicy } from "../../../../lib/types/admin-settings";
+import { AdminSettingField, AdminSettings, SessionPolicy, ThemePreset } from "../../../../lib/types/admin-settings";
 import { ConfirmModal } from "../ConfirmModal";
 import { Toast } from "../Toast";
 
@@ -37,6 +37,12 @@ type SettingsText = {
   uiAuto: string;
   uiWindows: string;
   uiMobile: string;
+  themePreset: string;
+  themePresetHint: string;
+  themeDefault: string;
+  themeOcean: string;
+  themeMint: string;
+  themeSunset: string;
   createUser: string;
   createUserTitle: string;
   createUserSubtitle: string;
@@ -47,10 +53,24 @@ type SettingsText = {
   createUserRole: string;
   createUserRoleAdmin: string;
   createUserRoleStaff: string;
+  createUserRoleDeveloper: string;
+  developerPin: string;
+  developerPinHint: string;
   createUserSubmit: string;
   createUserSubmitting: string;
   createUserSuccess: string;
   createUserFailed: string;
+  apiHealth: string;
+  apiHealthHint: string;
+  apiHealthRefresh: string;
+  apiHealthChecking: string;
+  apiHealthUp: string;
+  apiHealthDown: string;
+  apiHealthApi: string;
+  apiHealthDb: string;
+  apiHealthStorage: string;
+  apiHealthLastChecked: string;
+  apiHealthUnavailable: string;
 };
 
 type SectionId = "display" | "store" | "security" | "notify" | "users";
@@ -60,11 +80,11 @@ type SettingsSection = {
   subtitle: string;
   iconTone: string;
   iconColor: string;
-  items: Array<{ id: "createUser" | AdminSettingField | "localeSwitch"; label: string }>;
+  items: Array<{ id: "createUser" | AdminSettingField | "localeSwitch" | "themePreset"; label: string }>;
 };
 
 type Option = { value: string; label: string };
-type UserRole = "admin" | "staff";
+type UserRole = "admin" | "staff" | "developer";
 type AdminUserRecord = {
   id: string;
   email: string;
@@ -73,18 +93,87 @@ type AdminUserRecord = {
   createdAt: string | null;
 };
 
-async function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit, timeoutMs = 12000) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort("REQUEST_TIMEOUT"), timeoutMs);
-  try {
-    return await fetch(input, {
-      ...init,
-      cache: "no-store",
-      signal: controller.signal,
-    });
-  } finally {
-    clearTimeout(timeout);
+type HealthPartStatus = {
+  ok: boolean;
+  latencyMs: number | null;
+  error?: string;
+};
+
+type ApiHealthStatus = {
+  ok: boolean;
+  checkedAt: string;
+  api: HealthPartStatus;
+  db: HealthPartStatus;
+  storage: HealthPartStatus;
+  alerts?: Array<{
+    code?: string;
+    service?: string;
+    targets?: string[];
+    message?: string;
+  }>;
+};
+
+const THEME_CLASS_NAMES = [
+  "admin-theme-default",
+  "admin-theme-ocean",
+  "admin-theme-mint",
+  "admin-theme-sunset",
+] as const;
+
+function applyThemePresetToShell(preset: ThemePreset) {
+  if (typeof document === "undefined") {
+    return;
   }
+  const shell = document.querySelector(".admin-ui");
+  if (!shell) {
+    return;
+  }
+  for (const className of THEME_CLASS_NAMES) {
+    shell.classList.remove(className);
+  }
+  shell.classList.add(`admin-theme-${preset}`);
+}
+
+async function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit, timeoutMs = 12000) {
+  let lastError: unknown;
+  const maxAttempts = 2;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort("REQUEST_TIMEOUT"), timeoutMs);
+    const externalSignal = init?.signal as AbortSignal | undefined;
+    const abortFromExternal = () => controller.abort("REQUEST_ABORTED");
+
+    if (externalSignal) {
+      if (externalSignal.aborted) {
+        controller.abort("REQUEST_ABORTED");
+      } else {
+        externalSignal.addEventListener("abort", abortFromExternal, { once: true });
+      }
+    }
+
+    try {
+      return await fetch(input, {
+        ...init,
+        cache: "no-store",
+        signal: controller.signal,
+      });
+    } catch (error) {
+      lastError = error;
+      const isAbort = error instanceof Error && error.name === "AbortError";
+      const isNetwork = error instanceof TypeError;
+      const shouldRetry = (isAbort || isNetwork) && attempt + 1 < maxAttempts && !externalSignal?.aborted;
+      if (!shouldRetry) {
+        throw error;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 220));
+    } finally {
+      clearTimeout(timeout);
+      externalSignal?.removeEventListener("abort", abortFromExternal);
+    }
+  }
+
+  throw lastError ?? new Error("Request failed");
 }
 
 function isAbortError(error: unknown) {
@@ -94,7 +183,46 @@ function isAbortError(error: unknown) {
   return error.name === "AbortError" || error.message.toLowerCase().includes("aborted");
 }
 
+function parseConnectTimeoutHint(error: unknown) {
+  if (!(error instanceof Error)) {
+    return null;
+  }
+
+  const raw = error.message ?? "";
+  const lower = raw.toLowerCase();
+  const isConnectTimeout =
+    lower.includes("und_err_connect_timeout") ||
+    lower.includes("connect timeout") ||
+    lower.includes("connecttimeouterror");
+
+  if (!isConnectTimeout) {
+    return null;
+  }
+
+  const ipMatches = [...raw.matchAll(/\b(?:\d{1,3}\.){3}\d{1,3}:\d+\b/g)].map((item) => item[0]);
+  const hostMatches = [...raw.matchAll(/\b[a-z0-9-]+\.supabase\.co:\d+\b/gi)].map((item) => item[0]);
+  const targets = [...new Set([...hostMatches, ...ipMatches])];
+
+  return {
+    code: "UND_ERR_CONNECT_TIMEOUT",
+    targets,
+  };
+}
+
 function toRequestErrorMessage(error: unknown, fallback: string, locale: "th" | "en") {
+  const timeout = parseConnectTimeoutHint(error);
+  if (timeout) {
+    const targetText =
+      timeout.targets.length > 0
+        ? timeout.targets.join(", ")
+        : locale === "th"
+          ? "ปลายทางไม่ทราบชื่อ"
+          : "unknown target";
+    return locale === "th"
+      ? `เชื่อมต่อปลายทางไม่สำเร็จ (${timeout.code}) ไปยัง ${targetText} กรุณาตรวจสอบอินเทอร์เน็ต, DNS, Firewall/Proxy และสถานะ Supabase`
+      : `Connection timeout (${timeout.code}) to ${targetText}. Check network, DNS, firewall/proxy, and Supabase status.`;
+  }
+
   if (isAbortError(error)) {
     return locale === "th"
       ? "การเชื่อมต่อใช้เวลานานเกินไป กรุณาลองใหม่อีกครั้ง"
@@ -111,11 +239,13 @@ export default function SettingsClient({
   text,
   initialSettings,
   bootstrapError,
+  isDeveloperMode = false,
 }: {
   locale: "th" | "en";
   text: SettingsText;
   initialSettings: AdminSettings;
   bootstrapError: string | null;
+  isDeveloperMode?: boolean;
 }) {
   const router = useRouter();
   const [activeSection, setActiveSection] = useState<SectionId>("display");
@@ -160,10 +290,18 @@ export default function SettingsClient({
   }, []);
 
   useEffect(() => {
-    if (!(isMobileViewport || values.uiMode === "mobile")) {
+    if (!(isMobileViewport || (!isDeveloperMode && values.uiMode === "mobile"))) {
       setMobileSectionOpen(false);
     }
-  }, [isMobileViewport, values.uiMode]);
+  }, [isDeveloperMode, isMobileViewport, values.uiMode]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    applyThemePresetToShell(values.themePreset);
+    window.dispatchEvent(new CustomEvent("admin-theme-change", { detail: { preset: values.themePreset } }));
+  }, [values.themePreset]);
 
   const sections = useMemo<SettingsSection[]>(
     () => [
@@ -182,10 +320,16 @@ export default function SettingsClient({
         subtitle: locale === "th" ? "ภาษาและรูปแบบการแสดงผลระบบ" : "Language and interface style",
         iconTone: "bg-indigo-100",
         iconColor: "text-indigo-700",
-        items: [
-          { id: "uiMode", label: text.uiMode },
-          { id: "localeSwitch", label: text.language },
-        ],
+        items: isDeveloperMode
+          ? [
+              { id: "themePreset", label: text.themePreset },
+              { id: "localeSwitch", label: text.language },
+            ]
+          : [
+              { id: "uiMode", label: text.uiMode },
+              { id: "themePreset", label: text.themePreset },
+              { id: "localeSwitch", label: text.language },
+            ],
       },
       {
         id: "store",
@@ -223,11 +367,11 @@ export default function SettingsClient({
         ],
       },
     ],
-    [locale, text],
+    [isDeveloperMode, locale, text],
   );
 
   const currentSection = sections.find((section) => section.id === activeSection) ?? sections[0];
-  const popupMode = isMobileViewport || values.uiMode === "mobile";
+  const popupMode = isMobileViewport || (!isDeveloperMode && values.uiMode === "mobile");
 
   const handleSwitchSection = (sectionId: SectionId) => {
     setActiveSection(sectionId);
@@ -277,7 +421,6 @@ export default function SettingsClient({
       setEditingField(null);
       setDraftValue("");
       setToast({ type: "success", message: savedMessage });
-      router.refresh();
     } catch (error) {
       const message = toRequestErrorMessage(error, saveFailedMessage, locale);
       setToast({ type: "error", message });
@@ -325,6 +468,32 @@ export default function SettingsClient({
             router.refresh();
           }}
         />
+      ) : item.id === "themePreset" ? (
+        <ThemePresetSettingItem
+          key={item.id}
+          label={item.label}
+          hint={text.themePresetHint}
+          value={values.themePreset}
+          isSaving={savingField === "themePreset"}
+          saveLabel={saveLabel}
+          cancelLabel={cancelLabel}
+          options={[
+            { value: "default", label: text.themeDefault, dot: "bg-slate-400" },
+            { value: "ocean", label: text.themeOcean, dot: "bg-blue-500" },
+            { value: "mint", label: text.themeMint, dot: "bg-emerald-500" },
+            { value: "sunset", label: text.themeSunset, dot: "bg-orange-500" },
+          ]}
+          onPreviewChange={(next) => {
+            applyThemePresetToShell(next);
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(new CustomEvent("admin-theme-change", { detail: { preset: next } }));
+            }
+          }}
+          onSave={async (next) => {
+            if (next === values.themePreset) return;
+            await commitField("themePreset", next);
+          }}
+        />
       ) : (
         <SettingsItem
           key={item.id}
@@ -348,6 +517,7 @@ export default function SettingsClient({
 
   return (
     <div className="space-y-5">
+      <ApiHealthCard text={text} locale={locale} />
       <section className="space-y-4">
         <aside className="settings-quicknav sst-card-soft rounded-2xl p-4 sm:p-5">
           <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">{text.quickMenu}</p>
@@ -452,6 +622,123 @@ function SettingsSection({
   );
 }
 
+function ApiHealthCard({ text, locale }: { text: SettingsText; locale: "th" | "en" }) {
+  const [health, setHealth] = useState<ApiHealthStatus | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadHealth = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetchWithTimeout("/api/admin/health", { method: "GET" }, 10000);
+      const result = (await response.json()) as ApiHealthStatus & { error?: string };
+      if (!response.ok || !result.checkedAt) {
+        const alert = result.alerts?.[0];
+        if (alert?.code === "UND_ERR_CONNECT_TIMEOUT") {
+          const targetText = alert.targets && alert.targets.length > 0 ? alert.targets.join(", ") : "unknown target";
+          throw new Error(
+            locale === "th"
+              ? `Timeout (${alert.code}) ที่ ${targetText} กรุณาตรวจสอบอินเทอร์เน็ตและสถานะ Supabase`
+              : `Timeout (${alert.code}) at ${targetText}. Check network and Supabase status.`,
+          );
+        }
+        throw new Error(result.error || text.apiHealthUnavailable);
+      }
+      setHealth({
+        ok: Boolean(result.ok),
+        checkedAt: result.checkedAt,
+        api: result.api,
+        db: result.db,
+        storage: result.storage,
+      });
+    } catch (fetchError) {
+      setError(toRequestErrorMessage(fetchError, text.apiHealthUnavailable, locale));
+    } finally {
+      setLoading(false);
+    }
+  }, [locale, text.apiHealthUnavailable]);
+
+  useEffect(() => {
+    void loadHealth();
+    const timer = window.setInterval(() => {
+      void loadHealth();
+    }, 30000);
+    return () => window.clearInterval(timer);
+  }, [loadHealth]);
+
+  function formatCheckedAt(value: string | undefined) {
+    if (!value) {
+      return "-";
+    }
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return "-";
+    }
+    return new Intl.DateTimeFormat(locale === "th" ? "th-TH" : "en-US", {
+      dateStyle: "short",
+      timeStyle: "medium",
+    }).format(date);
+  }
+
+  return (
+    <section className="sst-card-soft rounded-2xl p-4 sm:p-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-slate-900">{text.apiHealth}</p>
+          <p className="mt-0.5 text-xs text-slate-500">{text.apiHealthHint}</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => void loadHealth()}
+          disabled={loading}
+          className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
+        >
+          {loading ? text.apiHealthChecking : text.apiHealthRefresh}
+        </button>
+      </div>
+
+      <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <HealthBadge label={text.apiHealthApi} status={health?.api} text={text} />
+        <HealthBadge label={text.apiHealthDb} status={health?.db} text={text} />
+        <HealthBadge label={text.apiHealthStorage} status={health?.storage} text={text} />
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
+        <span>
+          {text.apiHealthLastChecked}: {formatCheckedAt(health?.checkedAt)}
+        </span>
+        {error ? <span className="text-rose-600">{error}</span> : null}
+      </div>
+    </section>
+  );
+}
+
+function HealthBadge({
+  label,
+  status,
+  text,
+}: {
+  label: string;
+  status: HealthPartStatus | undefined;
+  text: SettingsText;
+}) {
+  const ok = Boolean(status?.ok);
+  return (
+    <article
+      className={`rounded-xl border px-3 py-2 ${
+        ok ? "border-emerald-200 bg-emerald-50/70 text-emerald-700" : "border-rose-200 bg-rose-50/70 text-rose-700"
+      }`}
+    >
+      <p className="text-xs font-semibold">{label}</p>
+      <p className="mt-1 text-sm font-bold">{ok ? text.apiHealthUp : text.apiHealthDown}</p>
+      <p className="mt-0.5 text-xs">
+        {status?.latencyMs != null ? `${status.latencyMs} ms` : "-"}
+      </p>
+    </article>
+  );
+}
+
 function SectionGlyph({ id }: { id: SectionId }) {
   if (id === "users") {
     return (
@@ -536,6 +823,109 @@ function UiModeSettingItem({
         />
       </div>
       <p className="text-xs text-slate-500">{getUiModeHint(locale, value)}</p>
+    </li>
+  );
+}
+
+function ThemePresetSettingItem({
+  label,
+  hint,
+  value,
+  isSaving,
+  saveLabel,
+  cancelLabel,
+  options,
+  onPreviewChange,
+  onSave,
+}: {
+  label: string;
+  hint: string;
+  value: ThemePreset;
+  isSaving: boolean;
+  saveLabel: string;
+  cancelLabel: string;
+  options: Array<{ value: ThemePreset; label: string; dot: string }>;
+  onPreviewChange: (next: ThemePreset) => void;
+  onSave: (next: ThemePreset) => Promise<void>;
+}) {
+  const [draft, setDraft] = useState<ThemePreset>(value);
+
+  useEffect(() => {
+    setDraft(value);
+  }, [value]);
+
+  const isDirty = draft !== value;
+
+  const previewTone =
+    draft === "ocean"
+      ? "from-cyan-100 via-sky-50 to-blue-100 border-sky-200"
+      : draft === "mint"
+        ? "from-emerald-100 via-teal-50 to-green-100 border-emerald-200"
+        : draft === "sunset"
+          ? "from-orange-100 via-amber-50 to-rose-100 border-orange-200"
+          : "from-slate-100 via-sky-50 to-indigo-100 border-slate-200";
+
+  function choose(next: ThemePreset) {
+    setDraft(next);
+    onPreviewChange(next);
+  }
+
+  function cancelDraft() {
+    setDraft(value);
+    onPreviewChange(value);
+  }
+
+  return (
+    <li className="flex flex-col gap-3 px-4 py-4">
+      <p className="text-sm font-semibold text-slate-800">{label}</p>
+      <p className="-mt-1 text-xs text-slate-500">{hint}</p>
+      <div className={`rounded-xl border bg-gradient-to-r p-3 shadow-sm ${previewTone}`}>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">Preview Theme</p>
+        <div className="mt-2 flex items-center gap-2">
+          <span className="inline-flex h-7 w-16 rounded-lg bg-white/90 shadow-sm" />
+          <span className="inline-flex h-7 w-10 rounded-lg bg-white/80 shadow-sm" />
+          <span className="inline-flex h-7 w-7 rounded-lg bg-white/80 shadow-sm" />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {options.map((option) => {
+          const active = option.value === draft;
+          return (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => choose(option.value)}
+              disabled={isSaving}
+              className={`inline-flex items-center justify-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition ${
+                active
+                  ? "border-blue-300 bg-blue-50 text-blue-700 shadow-sm"
+                  : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+              } disabled:opacity-60`}
+            >
+              <span className={`inline-flex h-2.5 w-2.5 rounded-full ${option.dot}`} />
+              <span>{option.label}</span>
+            </button>
+          );
+        })}
+      </div>
+      <div className="flex items-center justify-end gap-2">
+        <button
+          type="button"
+          onClick={cancelDraft}
+          disabled={isSaving || !isDirty}
+          className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
+        >
+          {cancelLabel}
+        </button>
+        <button
+          type="button"
+          onClick={() => void onSave(draft)}
+          disabled={isSaving || !isDirty}
+          className="btn-primary rounded-lg px-3 py-1.5 text-xs font-semibold disabled:opacity-60"
+        >
+          {saveLabel}
+        </button>
+      </div>
     </li>
   );
 }
@@ -745,6 +1135,7 @@ function CreateUserSettingItem({
     listTitle: locale === "th" ? "รายการผู้ใช้" : "User List",
     noData: locale === "th" ? "ยังไม่มีผู้ใช้ในระบบ" : "No users found.",
     createButton: locale === "th" ? "สร้าง user" : "Create User",
+    resetButton: locale === "th" ? "รีเซ็ต" : "Reset",
     editButton: locale === "th" ? "แก้ไข" : "Edit",
     saveButton: locale === "th" ? "บันทึก" : "Save",
     deleteButton: locale === "th" ? "ลบ" : "Delete",
@@ -760,6 +1151,7 @@ function CreateUserSettingItem({
     confirmDeleteMessage: locale === "th" ? "คุณต้องการลบผู้ใช้นี้ใช่หรือไม่" : "Are you sure you want to delete this user?",
     roleAdmin: text.createUserRoleAdmin,
     roleStaff: text.createUserRoleStaff,
+    roleDeveloper: text.createUserRoleDeveloper,
     editTitle: locale === "th" ? "แก้ไขผู้ใช้" : "Edit User",
     newPassword: locale === "th" ? "รหัสผ่านใหม่" : "New Password",
     newPasswordHint:
@@ -772,16 +1164,19 @@ function CreateUserSettingItem({
   const [creatingOpen, setCreatingOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<AdminUserRecord | null>(null);
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+  const [deletingUser, setDeletingUser] = useState<AdminUserRecord | null>(null);
   const [savingUserId, setSavingUserId] = useState<string | null>(null);
 
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [developerPin, setDeveloperPin] = useState("");
   const [role, setRole] = useState<UserRole>("staff");
   const [editDisplayName, setEditDisplayName] = useState("");
   const [editEmail, setEditEmail] = useState("");
   const [editRole, setEditRole] = useState<UserRole>("staff");
   const [editPassword, setEditPassword] = useState("");
+  const [editDeveloperPin, setEditDeveloperPin] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const loadUsers = useCallback(async () => {
@@ -805,6 +1200,25 @@ function CreateUserSettingItem({
     void loadUsers();
   }, [loadUsers]);
 
+  const resetUserPanel = async () => {
+    setCreatingOpen(false);
+    setEditingUser(null);
+    setDeletingUserId(null);
+    setDeletingUser(null);
+    setSavingUserId(null);
+    setDisplayName("");
+    setEmail("");
+    setPassword("");
+    setDeveloperPin("");
+    setRole("staff");
+    setEditDisplayName("");
+    setEditEmail("");
+    setEditRole("staff");
+    setEditPassword("");
+    setEditDeveloperPin("");
+    await loadUsers();
+  };
+
   const submit = async () => {
     if (!displayName.trim() || !email.trim() || !password.trim()) {
       onError(locale === "th" ? "กรอกข้อมูลให้ครบก่อนบันทึก" : "Please complete all fields.");
@@ -812,6 +1226,10 @@ function CreateUserSettingItem({
     }
     if (password.trim().length < 6) {
       onError(locale === "th" ? "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร" : "Password must be at least 6 characters.");
+      return;
+    }
+    if (role === "developer" && !developerPin.trim()) {
+      onError(locale === "th" ? "กรุณากรอก PIN นักพัฒนา" : "Developer PIN is required.");
       return;
     }
 
@@ -827,6 +1245,7 @@ function CreateUserSettingItem({
           email: email.trim(),
           password: password.trim(),
           role,
+          developerPin: role === "developer" ? developerPin.trim() : undefined,
         }),
       });
 
@@ -838,6 +1257,7 @@ function CreateUserSettingItem({
       setDisplayName("");
       setEmail("");
       setPassword("");
+      setDeveloperPin("");
       setRole("staff");
       setCreatingOpen(false);
       await loadUsers();
@@ -856,6 +1276,7 @@ function CreateUserSettingItem({
     setEditEmail(user.email);
     setEditRole(user.role);
     setEditPassword("");
+    setEditDeveloperPin("");
   };
 
   const updateUser = async () => {
@@ -868,6 +1289,10 @@ function CreateUserSettingItem({
     }
     if (editPassword.trim() && editPassword.trim().length < 6) {
       onError(locale === "th" ? "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร" : "Password must be at least 6 characters.");
+      return;
+    }
+    if ((editingUser.role === "developer" || editRole === "developer") && !editDeveloperPin.trim()) {
+      onError(locale === "th" ? "กรุณากรอก PIN นักพัฒนาเพื่อยืนยัน" : "Developer PIN is required for this action.");
       return;
     }
 
@@ -885,6 +1310,10 @@ function CreateUserSettingItem({
           displayName: editDisplayName.trim(),
           email: editEmail.trim(),
           password: editPassword.trim() || undefined,
+          developerPin:
+            editingUser.role === "developer" || editRole === "developer"
+              ? editDeveloperPin.trim()
+              : undefined,
         }),
       });
       const result = (await response.json()) as { error?: string };
@@ -902,7 +1331,13 @@ function CreateUserSettingItem({
     }
   };
 
-  const deleteUser = async (userId: string) => {
+  const deleteUser = async (user: AdminUserRecord) => {
+    const userId = user.id;
+    const developerPinForDelete = user.role === "developer" ? editDeveloperPin.trim() : "";
+    if (user.role === "developer" && !developerPinForDelete) {
+      onError(locale === "th" ? "กรุณากรอก PIN นักพัฒนาเพื่อยืนยันการลบ" : "Developer PIN is required to delete this user.");
+      return;
+    }
     setSavingUserId(userId);
     try {
       const response = await fetchWithTimeout("/api/admin/users", {
@@ -912,6 +1347,7 @@ function CreateUserSettingItem({
         },
         body: JSON.stringify({
           userId,
+          developerPin: user.role === "developer" ? developerPinForDelete : undefined,
         }),
       });
       const result = (await response.json()) as { error?: string };
@@ -919,6 +1355,8 @@ function CreateUserSettingItem({
         throw new Error(result.error || t.deleteFailed);
       }
       setDeletingUserId(null);
+      setDeletingUser(null);
+      setEditDeveloperPin("");
       await loadUsers();
       onSuccess(t.deleteSuccess);
     } catch (error) {
@@ -951,13 +1389,22 @@ function CreateUserSettingItem({
               <p className="text-sm font-semibold text-slate-800">{t.listTitle}</p>
               <p className="text-xs text-slate-500">{text.createUserSubtitle}</p>
             </div>
-            <button
-              type="button"
-              onClick={() => setCreatingOpen(true)}
-              className="btn-primary rounded-lg px-4 py-2 text-sm font-semibold"
-            >
-              {t.createButton}
-            </button>
+            <div className="ml-auto flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setCreatingOpen(true)}
+                className="btn-primary rounded-lg px-4 py-2 text-sm font-semibold"
+              >
+                {t.createButton}
+              </button>
+              <button
+                type="button"
+                onClick={() => void resetUserPanel()}
+                className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                {t.resetButton}
+              </button>
+            </div>
           </div>
 
           {isMobileMode ? (
@@ -972,7 +1419,13 @@ function CreateUserSettingItem({
                     <p className="text-sm font-semibold text-slate-900">{user.displayName}</p>
                     <p className="mt-1 break-all text-xs text-slate-600">{user.email}</p>
                     <div className="mt-2 flex items-center justify-between text-xs text-slate-600">
-                      <span>{user.role === "admin" ? t.roleAdmin : t.roleStaff}</span>
+                      <span>
+                        {user.role === "admin"
+                          ? t.roleAdmin
+                          : user.role === "developer"
+                            ? t.roleDeveloper
+                            : t.roleStaff}
+                      </span>
                       <span>{formatDate(user.createdAt)}</span>
                     </div>
                     <div className="mt-3 grid grid-cols-2 gap-2">
@@ -986,7 +1439,11 @@ function CreateUserSettingItem({
                       </button>
                       <button
                         type="button"
-                        onClick={() => setDeletingUserId(user.id)}
+                        onClick={() => {
+                          setDeletingUserId(user.id);
+                          setDeletingUser(user);
+                          setEditDeveloperPin("");
+                        }}
                         disabled={savingUserId === user.id}
                         className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 disabled:opacity-60"
                       >
@@ -1027,7 +1484,13 @@ function CreateUserSettingItem({
                       <tr key={user.id} className="border-t border-slate-100">
                         <td className="px-3 py-2 font-medium text-slate-800">{user.displayName}</td>
                         <td className="px-3 py-2 text-slate-700">{user.email}</td>
-                        <td className="px-3 py-2 text-slate-700">{user.role === "admin" ? t.roleAdmin : t.roleStaff}</td>
+                        <td className="px-3 py-2 text-slate-700">
+                          {user.role === "admin"
+                            ? t.roleAdmin
+                            : user.role === "developer"
+                              ? t.roleDeveloper
+                              : t.roleStaff}
+                        </td>
                         <td className="px-3 py-2 text-slate-600">{formatDate(user.createdAt)}</td>
                         <td className="px-3 py-2">
                           <div className="flex items-center gap-2">
@@ -1041,7 +1504,11 @@ function CreateUserSettingItem({
                             </button>
                             <button
                               type="button"
-                              onClick={() => setDeletingUserId(user.id)}
+                              onClick={() => {
+                                setDeletingUserId(user.id);
+                                setDeletingUser(user);
+                                setEditDeveloperPin("");
+                              }}
                               disabled={savingUserId === user.id}
                               className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 disabled:opacity-60"
                             >
@@ -1115,9 +1582,22 @@ function CreateUserSettingItem({
                   className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                 >
                   <option value="staff">{text.createUserRoleStaff}</option>
+                  <option value="developer">{text.createUserRoleDeveloper}</option>
                   <option value="admin">{text.createUserRoleAdmin}</option>
                 </select>
               </label>
+              {role === "developer" ? (
+                <label className="space-y-1">
+                  <span className="text-xs font-semibold text-slate-600">{text.developerPin}</span>
+                  <input
+                    type="password"
+                    value={developerPin}
+                    onChange={(event) => setDeveloperPin(event.target.value)}
+                    className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                  />
+                  <p className="text-xs text-slate-500">{text.developerPinHint}</p>
+                </label>
+              ) : null}
             </div>
 
             <div className="mt-5 flex justify-end gap-2">
@@ -1187,9 +1667,22 @@ function CreateUserSettingItem({
                   className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                 >
                   <option value="staff">{text.createUserRoleStaff}</option>
+                  <option value="developer">{text.createUserRoleDeveloper}</option>
                   <option value="admin">{text.createUserRoleAdmin}</option>
                 </select>
               </label>
+              {editingUser.role === "developer" || editRole === "developer" ? (
+                <label className="space-y-1">
+                  <span className="text-xs font-semibold text-slate-600">{text.developerPin}</span>
+                  <input
+                    type="password"
+                    value={editDeveloperPin}
+                    onChange={(event) => setEditDeveloperPin(event.target.value)}
+                    className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                  />
+                  <p className="text-xs text-slate-500">{text.developerPinHint}</p>
+                </label>
+              ) : null}
 
               <label className="space-y-1">
                 <span className="text-xs font-semibold text-slate-600">{t.newPassword}</span>
@@ -1230,14 +1723,32 @@ function CreateUserSettingItem({
         message={t.confirmDeleteMessage}
         confirmText={t.deleteButton}
         cancelText={t.closeButton}
-        onCancel={() => setDeletingUserId(null)}
+        confirmDisabled={Boolean(deletingUser?.role === "developer" && !editDeveloperPin.trim())}
+        onCancel={() => {
+          setDeletingUserId(null);
+          setDeletingUser(null);
+          setEditDeveloperPin("");
+        }}
         onConfirm={() => {
-          if (!deletingUserId) {
+          if (!deletingUser) {
             return;
           }
-          void deleteUser(deletingUserId);
+          void deleteUser(deletingUser);
         }}
-      />
+      >
+        {deletingUser?.role === "developer" ? (
+          <label className="space-y-1">
+            <span className="text-xs font-semibold text-slate-600">{text.developerPin}</span>
+            <input
+              type="password"
+              value={editDeveloperPin}
+              onChange={(event) => setEditDeveloperPin(event.target.value)}
+              className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+            />
+            <p className="text-xs text-slate-500">{text.developerPinHint}</p>
+          </label>
+        ) : null}
+      </ConfirmModal>
     </li>
   );
 }
@@ -1281,6 +1792,13 @@ function parseDraftValue(
       return { ok: true, value: draft };
     }
     return { ok: false, message: "Invalid UI mode" };
+  }
+
+  if (fieldId === "themePreset") {
+    if (draft === "default" || draft === "ocean" || draft === "mint" || draft === "sunset") {
+      return { ok: true, value: draft };
+    }
+    return { ok: false, message: "Invalid theme preset" };
   }
 
   if (!clean) {
@@ -1365,3 +1883,6 @@ function toDisplayValue(fieldId: AdminSettingField, values: AdminSettings, local
 
   return String(value);
 }
+
+
+

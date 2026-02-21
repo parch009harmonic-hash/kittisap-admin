@@ -65,7 +65,30 @@ export default async function AdminCouponsPage() {
         : "You can create your first coupon now.",
     toProducts: locale === "th" ? "ไปหน้าสินค้า" : "Go to products",
     toOrders: locale === "th" ? "ไปหน้าคำสั่งซื้อ" : "Go to orders",
+    coupon: locale === "th" ? "คูปอง" : "Coupon",
+    useCoupon: locale === "th" ? "ใช้คูปอง" : "Use Coupon",
+    availability: locale === "th" ? "การใช้งาน" : "Availability",
+    beginDate: locale === "th" ? "เริ่มต้น" : "Begin date",
+    expiryDate: locale === "th" ? "หมดอายุ" : "Expiration date",
+    condition: locale === "th" ? "เงื่อนไข" : "Condition",
+    limit: locale === "th" ? "จำนวนสิทธิ์" : "Limit",
+    validOn: locale === "th" ? "ใช้ได้กับ" : "Valid on",
+    everyday: locale === "th" ? "ทุกวัน" : "Everyday",
+    noCouponYet: locale === "th" ? "ยังไม่มีคูปองในระบบ" : "No coupon in the system yet",
   };
+
+  const featuredCoupon = MOCK_COUPONS[0] ?? null;
+  const couponTitle = featuredCoupon
+    ? featuredCoupon.type === "percent"
+      ? locale === "th"
+        ? `ส่วนลด ${featuredCoupon.value}`
+        : `${featuredCoupon.value} Discount`
+      : locale === "th"
+        ? `ส่วนลด ${featuredCoupon.value}`
+        : `Save ${featuredCoupon.value}`
+    : locale === "th"
+      ? "คูปองสำหรับลูกค้า"
+      : "Customer coupon";
 
   return (
     <div className="space-y-6">
@@ -99,6 +122,36 @@ export default async function AdminCouponsPage() {
           {text.filter}
         </button>
       </form>
+
+      <section className="coupon-mobile-preview sst-card-soft md:hidden">
+        <div className="coupon-mobile-preview-head">
+          <span>{text.coupon}</span>
+          <span>{featuredCoupon ? featuredCoupon.code : text.noCouponYet}</span>
+        </div>
+        <div className="coupon-mobile-preview-media" />
+        <button type="button" className="coupon-mobile-preview-btn">
+          {text.useCoupon}
+        </button>
+        <p className="coupon-mobile-preview-title">{couponTitle}</p>
+        <div className="coupon-mobile-preview-info">
+          <h3>{text.availability}</h3>
+          <dl>
+            <dt>{text.beginDate}</dt>
+            <dd>{featuredCoupon ? featuredCoupon.usage : "-"}</dd>
+            <dt>{text.expiryDate}</dt>
+            <dd>{featuredCoupon?.status === "expired" ? text.expired : text.active}</dd>
+          </dl>
+        </div>
+        <div className="coupon-mobile-preview-info">
+          <h3>{text.condition}</h3>
+          <dl>
+            <dt>{text.limit}</dt>
+            <dd>{featuredCoupon ? featuredCoupon.value : "-"}</dd>
+            <dt>{text.validOn}</dt>
+            <dd>{text.everyday}</dd>
+          </dl>
+        </div>
+      </section>
 
       {MOCK_COUPONS.length === 0 ? (
         <div className="sst-card-soft rounded-2xl border border-dashed border-slate-200 px-6 py-12 text-center">

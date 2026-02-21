@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useRouter } from "next/navigation";
-import { FormEvent, ReactNode, useEffect, useMemo, useState, useTransition } from "react";
+import { FormEvent, ReactNode, useEffect, useMemo, useRef, useState, useTransition } from "react";
 
 import { Product, ProductImage, ProductInput } from "../../../../lib/types/product";
 import { ProductInputSchema } from "../../../../lib/validators/product";
@@ -72,17 +72,49 @@ function fallbackSlugFromSku(sku: string) {
 }
 
 async function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit, timeoutMs = 12000) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    return await fetch(input, {
-      ...init,
-      cache: "no-store",
-      signal: controller.signal,
-    });
-  } finally {
-    clearTimeout(timeout);
+  let lastError: unknown;
+  const maxAttempts = 2;
+  const externalSignal = init?.signal as AbortSignal | undefined;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort("REQUEST_TIMEOUT"), timeoutMs);
+    const abortFromExternal = () => controller.abort("REQUEST_ABORTED");
+
+    if (externalSignal) {
+      if (externalSignal.aborted) {
+        controller.abort("REQUEST_ABORTED");
+      } else {
+        externalSignal.addEventListener("abort", abortFromExternal, { once: true });
+      }
+    }
+
+    try {
+      return await fetch(input, {
+        ...init,
+        cache: "no-store",
+        signal: controller.signal,
+      });
+    } catch (error) {
+      lastError = error;
+      const isAbort = error instanceof Error && error.name === "AbortError";
+      const isNetwork = error instanceof TypeError;
+      const shouldRetry = (isAbort || isNetwork) && attempt + 1 < maxAttempts && !externalSignal?.aborted;
+      if (!shouldRetry) {
+        throw error;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 220));
+    } finally {
+      clearTimeout(timeout);
+      externalSignal?.removeEventListener("abort", abortFromExternal);
+    }
   }
+
+  throw lastError ?? new Error("Request failed");
+}
+
+function isAbortError(error: unknown) {
+  return error instanceof Error && (error.name === "AbortError" || error.message.toLowerCase().includes("aborted"));
 }
 
 export function ProductForm({
@@ -116,6 +148,8 @@ export function ProductForm({
       }))
       .sort((a, b) => a.sort - b.sort)
   );
+  const manualTranslateControllerRef = useRef<AbortController | null>(null);
+  const autoTranslateControllerRef = useRef<AbortController | null>(null);
 
   const previewCover = useMemo(() => {
     const primary = images.find((image) => image.is_primary);
@@ -153,12 +187,13 @@ export function ProductForm({
     return fallbackSlugFromSku(form.sku) || "product";
   }
 
-  async function requestTranslation(titleTh: string, descriptionTh: string) {
+  async function requestTranslation(titleTh: string, descriptionTh: string, signal?: AbortSignal) {
     const response = await fetchWithTimeout("/api/admin/translate", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
+      signal,
       body: JSON.stringify({
         title_th: titleTh,
         description_th: descriptionTh,
@@ -193,7 +228,10 @@ export function ProductForm({
     setToast(null);
     setTranslating(true);
     try {
-      const result = await requestTranslation(titleTh, descriptionTh);
+      manualTranslateControllerRef.current?.abort("REPLACED");
+      const controller = new AbortController();
+      manualTranslateControllerRef.current = controller;
+      const result = await requestTranslation(titleTh, descriptionTh, controller.signal);
 
       setForm((prev) => ({
         ...prev,
@@ -204,9 +242,13 @@ export function ProductForm({
       }));
       setToast({ type: "success", message: "แปลอัตโนมัติแล้ว / Auto translated" });
     } catch (translateError) {
+      if (isAbortError(translateError)) {
+        return;
+      }
       setError(translateError instanceof Error ? translateError.message : "Auto translation failed");
       setToast({ type: "error", message: "แปลอัตโนมัติไม่สำเร็จ" });
     } finally {
+      manualTranslateControllerRef.current = null;
       setTranslating(false);
     }
   }
@@ -227,7 +269,10 @@ export function ProductForm({
     const timer = setTimeout(async () => {
       setAutoTranslating(true);
       try {
-        const result = await requestTranslation(titleTh, descriptionTh);
+        autoTranslateControllerRef.current?.abort("REPLACED");
+        const controller = new AbortController();
+        autoTranslateControllerRef.current = controller;
+        const result = await requestTranslation(titleTh, descriptionTh, controller.signal);
         if (canceled) {
           return;
         }
@@ -239,9 +284,13 @@ export function ProductForm({
           description_lo: String(result.description_lo ?? prev.description_lo),
         }));
         setLastAutoSource(source);
-      } catch {
+      } catch (error) {
+        if (isAbortError(error)) {
+          return;
+        }
         // Ignore background translation errors to avoid noisy UX while typing.
       } finally {
+        autoTranslateControllerRef.current = null;
         if (!canceled) {
           setAutoTranslating(false);
         }
@@ -251,8 +300,16 @@ export function ProductForm({
     return () => {
       canceled = true;
       clearTimeout(timer);
+      autoTranslateControllerRef.current?.abort("COMPONENT_CLEANUP");
     };
   }, [form.title_th, form.description_th, lastAutoSource]);
+
+  useEffect(() => {
+    return () => {
+      manualTranslateControllerRef.current?.abort("COMPONENT_CLEANUP");
+      autoTranslateControllerRef.current?.abort("COMPONENT_CLEANUP");
+    };
+  }, []);
 
   async function handleUploaded(newItems: Array<{ url: string }>) {
     setError(null);

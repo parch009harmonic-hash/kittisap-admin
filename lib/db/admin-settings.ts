@@ -9,6 +9,7 @@ import {
   DefaultLanguage,
   getDefaultAdminSettings,
   SessionPolicy,
+  ThemePreset,
   UiMode,
 } from "../types/admin-settings";
 import { getSupabaseServiceRoleClient } from "../supabase/service";
@@ -26,13 +27,32 @@ const SettingsFieldSchema = z.enum([
   "pushNotify",
   "orderNotify",
   "uiMode",
+  "themePreset",
 ]);
 
 const SessionPolicySchema = z.enum(["7d", "30d", "never"]);
 const DefaultLanguageSchema = z.enum(["th", "en"]);
 const UiModeSchema = z.enum(["auto", "windows", "mobile"]);
+const ThemePresetSchema = z.enum(["default", "ocean", "mint", "sunset"]);
 
-const SETTINGS_SELECT = [
+const SETTINGS_SELECT_WITH_THEME = [
+  "user_id",
+  "display_name",
+  "contact_email",
+  "default_language",
+  "store_name",
+  "support_phone",
+  "currency",
+  "security_2fa_enabled",
+  "session_policy",
+  "notify_email_enabled",
+  "notify_browser_enabled",
+  "notify_order_enabled",
+  "ui_mode",
+  "theme_preset",
+].join(",");
+
+const SETTINGS_SELECT_LEGACY = [
   "user_id",
   "display_name",
   "contact_email",
@@ -66,6 +86,17 @@ function isMissingAdminSettingsSchema(error: unknown) {
   );
 }
 
+function isMissingThemePresetColumn(error: unknown) {
+  const message = errorText(error, "").toLowerCase();
+  return message.includes("theme_preset") && (message.includes("column") || message.includes("does not exist"));
+}
+
+function withoutThemePreset(payload: Record<string, unknown>) {
+  const rest = { ...payload };
+  delete rest.theme_preset;
+  return rest;
+}
+
 function dbDefaults(userId: string) {
   const defaults = getDefaultAdminSettings();
   return {
@@ -82,6 +113,7 @@ function dbDefaults(userId: string) {
     notify_browser_enabled: defaults.pushNotify,
     notify_order_enabled: defaults.orderNotify,
     ui_mode: defaults.uiMode,
+    theme_preset: defaults.themePreset,
   };
 }
 
@@ -94,6 +126,7 @@ function mapRow(row: Record<string, unknown> | null | undefined): AdminSettings 
   const language = DefaultLanguageSchema.safeParse(row.default_language);
   const sessionPolicy = SessionPolicySchema.safeParse(row.session_policy);
   const uiMode = UiModeSchema.safeParse(row.ui_mode);
+  const themePreset = ThemePresetSchema.safeParse(row.theme_preset);
 
   return {
     displayName: String(row.display_name ?? defaults.displayName),
@@ -108,16 +141,43 @@ function mapRow(row: Record<string, unknown> | null | undefined): AdminSettings 
     pushNotify: Boolean(row.notify_browser_enabled ?? defaults.pushNotify),
     orderNotify: Boolean(row.notify_order_enabled ?? defaults.orderNotify),
     uiMode: (uiMode.success ? uiMode.data : defaults.uiMode) as UiMode,
+    themePreset: (themePreset.success ? themePreset.data : defaults.themePreset) as ThemePreset,
+  };
+}
+
+async function selectByUserId(userId: string) {
+  const supabase = getSupabaseServiceRoleClient();
+
+  const full = await supabase
+    .from("admin_settings")
+    .select(SETTINGS_SELECT_WITH_THEME)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (!full.error) {
+    return { data: full.data as Record<string, unknown> | null, hasThemeColumn: true, error: null as unknown };
+  }
+
+  if (!isMissingThemePresetColumn(full.error)) {
+    return { data: null, hasThemeColumn: true, error: full.error as unknown };
+  }
+
+  const legacy = await supabase
+    .from("admin_settings")
+    .select(SETTINGS_SELECT_LEGACY)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  return {
+    data: (legacy.data as Record<string, unknown> | null) ?? null,
+    hasThemeColumn: false,
+    error: legacy.error as unknown,
   };
 }
 
 async function ensureRow(userId: string) {
   const supabase = getSupabaseServiceRoleClient();
-  const existing = await supabase
-    .from("admin_settings")
-    .select(SETTINGS_SELECT)
-    .eq("user_id", userId)
-    .maybeSingle();
+  const existing = await selectByUserId(userId);
 
   if (existing.error) {
     if (isMissingAdminSettingsSchema(existing.error)) {
@@ -127,13 +187,16 @@ async function ensureRow(userId: string) {
   }
 
   if (existing.data) {
-    return mapRow(existing.data as unknown as Record<string, unknown>);
+    return mapRow(existing.data);
   }
+
+  const insertPayload = existing.hasThemeColumn ? dbDefaults(userId) : withoutThemePreset(dbDefaults(userId));
+  const selectColumns = existing.hasThemeColumn ? SETTINGS_SELECT_WITH_THEME : SETTINGS_SELECT_LEGACY;
 
   const inserted = await supabase
     .from("admin_settings")
-    .insert(dbDefaults(userId))
-    .select(SETTINGS_SELECT)
+    .insert(insertPayload)
+    .select(selectColumns)
     .single();
 
   if (inserted.error) {
@@ -159,6 +222,8 @@ function validateFieldValue(field: AdminSettingField, value: unknown) {
       return z.boolean().parse(value);
     case "uiMode":
       return UiModeSchema.parse(value);
+    case "themePreset":
+      return ThemePresetSchema.parse(value);
     default:
       return z.string().trim().min(1).max(255).parse(value);
   }
@@ -190,9 +255,60 @@ function toUpdatePayload(field: AdminSettingField, value: unknown) {
       return { notify_order_enabled: validateFieldValue(field, value) };
     case "uiMode":
       return { ui_mode: validateFieldValue(field, value) };
+    case "themePreset":
+      return { theme_preset: validateFieldValue(field, value) };
     default:
       return {};
   }
+}
+
+async function updateSettingForUser(userId: string, field: AdminSettingField, value: unknown) {
+  const supabase = getSupabaseServiceRoleClient();
+  const payload = {
+    ...dbDefaults(userId),
+    ...toUpdatePayload(field, value),
+  };
+
+  const fullUpdate = await supabase
+    .from("admin_settings")
+    .upsert(payload, { onConflict: "user_id" })
+    .select(SETTINGS_SELECT_WITH_THEME)
+    .single();
+
+  if (!fullUpdate.error) {
+    return mapRow(fullUpdate.data as unknown as Record<string, unknown>);
+  }
+
+  if (!isMissingThemePresetColumn(fullUpdate.error)) {
+    if (isMissingAdminSettingsSchema(fullUpdate.error)) {
+      throw new Error(
+        "ยังไม่พบตาราง admin_settings ในฐานข้อมูล กรุณารันไฟล์ sql/ensure-admin-settings.sql ใน Supabase SQL Editor ก่อนบันทึก",
+      );
+    }
+    throw new Error(`Failed to update settings: ${errorText(fullUpdate.error, "Unknown error")}`);
+  }
+
+  if (field === "themePreset") {
+    throw new Error("ยังไม่พบคอลัมน์ theme_preset ในฐานข้อมูล กรุณารัน sql/ensure-admin-settings.sql ใน Supabase SQL Editor");
+  }
+
+  const legacyPayload = withoutThemePreset(payload);
+  const legacyUpdate = await supabase
+    .from("admin_settings")
+    .upsert(legacyPayload, { onConflict: "user_id" })
+    .select(SETTINGS_SELECT_LEGACY)
+    .single();
+
+  if (legacyUpdate.error) {
+    if (isMissingAdminSettingsSchema(legacyUpdate.error)) {
+      throw new Error(
+        "ยังไม่พบตาราง admin_settings ในฐานข้อมูล กรุณารันไฟล์ sql/ensure-admin-settings.sql ใน Supabase SQL Editor ก่อนบันทึก",
+      );
+    }
+    throw new Error(`Failed to update settings: ${errorText(legacyUpdate.error, "Unknown error")}`);
+  }
+
+  return mapRow(legacyUpdate.data as unknown as Record<string, unknown>);
 }
 
 export async function getAdminSettings() {
@@ -208,51 +324,11 @@ export async function getAdminSettingsApi() {
 export async function updateAdminSetting(field: unknown, value: unknown) {
   const user = await requireAdmin();
   const parsedField = SettingsFieldSchema.parse(field);
-  await ensureRow(user.id);
-
-  const supabase = getSupabaseServiceRoleClient();
-  const payload = toUpdatePayload(parsedField, value);
-  const updated = await supabase
-    .from("admin_settings")
-    .update(payload)
-    .eq("user_id", user.id)
-    .select(SETTINGS_SELECT)
-    .single();
-
-  if (updated.error) {
-    if (isMissingAdminSettingsSchema(updated.error)) {
-      throw new Error(
-        "ยังไม่พบตาราง admin_settings ในฐานข้อมูล กรุณารันไฟล์ sql/ensure-admin-settings.sql ใน Supabase SQL Editor ก่อนบันทึก"
-      );
-    }
-    throw new Error(`Failed to update settings: ${errorText(updated.error, "Unknown error")}`);
-  }
-
-  return mapRow(updated.data as unknown as Record<string, unknown>);
+  return updateSettingForUser(user.id, parsedField, value);
 }
 
 export async function updateAdminSettingApi(field: unknown, value: unknown) {
   const user = await requireAdminApi();
   const parsedField = SettingsFieldSchema.parse(field);
-  await ensureRow(user.id);
-
-  const supabase = getSupabaseServiceRoleClient();
-  const payload = toUpdatePayload(parsedField, value);
-  const updated = await supabase
-    .from("admin_settings")
-    .update(payload)
-    .eq("user_id", user.id)
-    .select(SETTINGS_SELECT)
-    .single();
-
-  if (updated.error) {
-    if (isMissingAdminSettingsSchema(updated.error)) {
-      throw new Error(
-        "ยังไม่พบตาราง admin_settings ในฐานข้อมูล กรุณารันไฟล์ sql/ensure-admin-settings.sql ใน Supabase SQL Editor ก่อนบันทึก"
-      );
-    }
-    throw new Error(`Failed to update settings: ${errorText(updated.error, "Unknown error")}`);
-  }
-
-  return mapRow(updated.data as unknown as Record<string, unknown>);
+  return updateSettingForUser(user.id, parsedField, value);
 }

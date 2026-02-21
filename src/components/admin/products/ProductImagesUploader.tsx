@@ -10,17 +10,44 @@ type ProductImagesUploaderProps = {
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 
 async function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit, timeoutMs = 20000) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    return await fetch(input, {
-      ...init,
-      cache: "no-store",
-      signal: controller.signal,
-    });
-  } finally {
-    clearTimeout(timeout);
+  let lastError: unknown;
+  const maxAttempts = 2;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort("REQUEST_TIMEOUT"), timeoutMs);
+    try {
+      return await fetch(input, {
+        ...init,
+        cache: "no-store",
+        signal: controller.signal,
+      });
+    } catch (error) {
+      lastError = error;
+      const isAbort = error instanceof Error && error.name === "AbortError";
+      const isNetwork = error instanceof TypeError;
+      const shouldRetry = (isAbort || isNetwork) && attempt + 1 < maxAttempts;
+      if (!shouldRetry) {
+        throw error;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 220));
+    } finally {
+      clearTimeout(timeout);
+    }
   }
+
+  throw lastError ?? new Error("Upload failed");
+}
+
+function toErrorMessage(error: unknown) {
+  if (error instanceof Error) {
+    const lowered = error.message.toLowerCase();
+    if (error.name === "AbortError" || lowered.includes("aborted")) {
+      return "การเชื่อมต่อหมดเวลา กรุณาลองใหม่อีกครั้ง / Request timed out, please try again.";
+    }
+    return error.message;
+  }
+  return "Upload failed";
 }
 
 export function ProductImagesUploader({ productId, onUploaded }: ProductImagesUploaderProps) {
@@ -66,7 +93,7 @@ export function ProductImagesUploader({ productId, onUploaded }: ProductImagesUp
 
       await onUploaded(uploaded);
     } catch (uploadError) {
-      setError(uploadError instanceof Error ? uploadError.message : "Upload failed");
+      setError(toErrorMessage(uploadError));
     } finally {
       setIsUploading(false);
     }

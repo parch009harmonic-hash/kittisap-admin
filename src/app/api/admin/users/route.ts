@@ -45,6 +45,13 @@ function mapStatus(message: string) {
   if (message === "Only admin can manage users" || message === "Not authorized to manage users") {
     return 403;
   }
+  if (
+    message.includes("Developer PIN is required") ||
+    message.includes("Developer PIN is invalid") ||
+    message.includes("Developer PIN is not configured")
+  ) {
+    return 403;
+  }
   return 500;
 }
 

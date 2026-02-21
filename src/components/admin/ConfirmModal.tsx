@@ -1,11 +1,15 @@
 "use client";
 
+import { ReactNode } from "react";
+
 type ConfirmModalProps = {
   open: boolean;
   title: string;
   message: string;
   confirmText?: string;
   cancelText?: string;
+  confirmDisabled?: boolean;
+  children?: ReactNode;
   onConfirm: () => void;
   onCancel: () => void;
 };
@@ -16,6 +20,8 @@ export function ConfirmModal({
   message,
   confirmText = "Confirm",
   cancelText = "Cancel",
+  confirmDisabled = false,
+  children,
   onConfirm,
   onCancel,
 }: ConfirmModalProps) {
@@ -28,6 +34,7 @@ export function ConfirmModal({
       <div className="glass-card w-full max-w-md rounded-2xl p-5">
         <h3 className="text-lg font-semibold text-ink">{title}</h3>
         <p className="mt-2 text-sm text-steel">{message}</p>
+        {children ? <div className="mt-3">{children}</div> : null}
         <div className="mt-5 flex justify-end gap-2">
           <button
             type="button"
@@ -39,7 +46,8 @@ export function ConfirmModal({
           <button
             type="button"
             onClick={onConfirm}
-            className="rounded-md border border-rose-200 bg-rose-50 px-3 py-1.5 text-sm text-rose-700 hover:bg-rose-100"
+            disabled={confirmDisabled}
+            className="rounded-md border border-rose-200 bg-rose-50 px-3 py-1.5 text-sm text-rose-700 hover:bg-rose-100 disabled:opacity-60"
           >
             {confirmText}
           </button>

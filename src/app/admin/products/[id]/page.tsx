@@ -1,7 +1,8 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { getProductById } from "../../../../../lib/db/products";
+import { ProductImageGallery } from "../../../../components/admin/products/ProductImageGallery";
 
 type ProductDetailPageProps = {
   params: Promise<{ id: string }>;
@@ -26,42 +27,42 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
 
   return (
     <div className="product-detail-page space-y-6">
-      <section className="product-detail-hero relative overflow-hidden rounded-3xl border border-blue-100 bg-gradient-to-r from-sky-50 via-white to-cyan-50 px-5 py-6 shadow-sm md:px-7">
+      <section className="product-detail-hero relative overflow-hidden rounded-2xl border border-blue-100 bg-gradient-to-r from-sky-50 via-white to-cyan-50 px-4 py-4 shadow-sm md:rounded-3xl md:px-6 md:py-5">
         <div className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-sky-200/40 blur-3xl" />
         <div className="pointer-events-none absolute -left-20 -bottom-28 h-64 w-64 rounded-full bg-cyan-200/35 blur-3xl" />
-        <div className="product-detail-hero-inner relative flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div className="product-detail-title-wrap space-y-2">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-blue-700">Product Detail</p>
-            <h1 className="product-detail-title text-4xl font-semibold tracking-tight text-slate-900 md:text-5xl">
+        <div className="product-detail-hero-inner relative flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <div className="product-detail-title-wrap space-y-1.5">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-blue-700">Product Detail</p>
+            <h1 className="product-detail-title text-3xl font-semibold tracking-tight text-slate-900 md:text-4xl">
               {product.title_th}
             </h1>
-            <p className="text-sm text-slate-600">SKU: {product.sku || "-"}</p>
-            <div className="product-detail-badges flex flex-wrap items-center gap-2 text-sm">
-              <span className="rounded-full border border-slate-200 bg-white px-3 py-1 font-medium text-slate-700">
+            <p className="text-[13px] text-slate-600">SKU: {product.sku || "-"}</p>
+            <div className="product-detail-badges flex flex-wrap items-center gap-1.5 text-xs md:text-sm">
+              <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 font-medium text-slate-700">
                 Slug: {product.slug}
               </span>
               <span
-                className={`rounded-full px-3 py-1 font-semibold ${
+                className={`rounded-full px-2.5 py-1 font-semibold ${
                   isActive ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
                 }`}
               >
                 {isActive ? "Active" : "Inactive"}
               </span>
-              <span className="rounded-full border border-slate-200 bg-white px-3 py-1 font-medium text-slate-700">
+              <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 font-medium text-slate-700">
                 Updated: {updatedAtLabel}
               </span>
             </div>
           </div>
-          <div className="product-detail-actions flex gap-2">
+          <div className="product-detail-actions flex gap-2 md:pb-0.5">
             <Link
               href="/admin/products"
-              className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
             >
               Back
             </Link>
             <Link
               href={`/admin/products/${product.id}/edit`}
-              className="btn-primary rounded-full px-4 py-2 text-sm font-semibold text-white"
+              className="btn-primary rounded-xl px-4 py-2 text-sm font-semibold text-white"
             >
               Edit Product
             </Link>
@@ -77,32 +78,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
 
       <section className="product-detail-layout grid grid-cols-1 gap-4 xl:grid-cols-[360px_1fr]">
         <aside className="product-detail-media rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-          {heroImage ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={heroImage}
-              alt={product.title_th}
-              className="product-detail-main-image h-72 w-full rounded-2xl border border-slate-200 object-cover md:h-[390px]"
-            />
-          ) : (
-            <div className="flex h-72 items-center justify-center rounded-2xl border border-dashed border-slate-300 text-sm text-slate-500 md:h-[390px]">
-              No cover image
-            </div>
-          )}
-          {images.length > 1 ? (
-            <div className="product-detail-thumbs mt-3 grid grid-cols-3 gap-2">
-              {images.slice(0, 6).map((image) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  key={image.id}
-                  src={image.url}
-                  alt={product.title_th}
-                  className="h-20 w-full rounded-xl border border-slate-200 object-cover"
-                />
-              ))}
-            </div>
-          ) : null}
-          <p className="mt-3 text-sm text-slate-600">{images.length} image(s)</p>
+          <ProductImageGallery title={product.title_th} heroImage={heroImage} images={images} />
         </aside>
 
         <div className="product-detail-content space-y-4">
@@ -165,3 +141,8 @@ function QuickStat({ label, value }: { label: string; value: string }) {
     </article>
   );
 }
+
+
+
+
+

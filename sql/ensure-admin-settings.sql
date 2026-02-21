@@ -13,6 +13,7 @@ create table if not exists public.admin_settings (
   notify_browser_enabled boolean not null default false,
   notify_order_enabled boolean not null default true,
   ui_mode text not null default 'auto',
+  theme_preset text not null default 'default',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -31,6 +32,7 @@ alter table public.admin_settings
   add column if not exists notify_browser_enabled boolean not null default false,
   add column if not exists notify_order_enabled boolean not null default true,
   add column if not exists ui_mode text not null default 'auto',
+  add column if not exists theme_preset text not null default 'default',
   add column if not exists created_at timestamptz not null default now(),
   add column if not exists updated_at timestamptz not null default now();
 
@@ -42,6 +44,17 @@ begin
     alter table public.admin_settings
       add constraint admin_settings_default_language_check
       check (default_language in ('th', 'en'));
+  end if;
+end $$;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'admin_settings_theme_preset_check'
+  ) then
+    alter table public.admin_settings
+      add constraint admin_settings_theme_preset_check
+      check (theme_preset in ('default', 'ocean', 'mint', 'sunset'));
   end if;
 end $$;
 

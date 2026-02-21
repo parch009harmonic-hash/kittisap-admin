@@ -25,16 +25,23 @@ export function ProductsTableClient({ products, onDelete, locale }: ProductsTabl
   const [mobileLayout, setMobileLayout] = useState(false);
 
   useEffect(() => {
+    const media = window.matchMedia("(max-width: 767px)");
+
     const updateMode = () => {
       const root = document.querySelector(".admin-ui");
       const mobileTheme = root?.classList.contains("os-mobile") ?? false;
-      const smallViewport = window.matchMedia("(max-width: 767px)").matches;
+      const smallViewport = media.matches;
       setMobileLayout(mobileTheme || smallViewport);
     };
 
     updateMode();
+    media.addEventListener("change", updateMode);
     window.addEventListener("resize", updateMode);
-    return () => window.removeEventListener("resize", updateMode);
+
+    return () => {
+      media.removeEventListener("change", updateMode);
+      window.removeEventListener("resize", updateMode);
+    };
   }, []);
 
   if (products.length === 0) {
@@ -46,86 +53,28 @@ export function ProductsTableClient({ products, onDelete, locale }: ProductsTabl
   }
 
   const target = products.find((item) => item.id === confirmId) || null;
+  const sourceItems = products.filter((item) => item.status === "active");
+  const mobileItems = sourceItems.length > 0 ? sourceItems : products;
+  const hotItems = mobileItems.slice(0, 6);
+  const recommendedItems = mobileItems.slice(6, 12);
+
   return (
     <>
-      {mobileLayout ? <div className="space-y-3">
-        {products.map((product) => (
-          <article key={`m-${product.id}`} className="sst-card-soft rounded-2xl p-3.5">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <span
-                  className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${
-                    product.status === "active" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"
-                  }`}
-                >
-                  {locale === "th" ? (product.status === "active" ? "ใช้งาน" : "ปิดใช้งาน") : product.status}
-                </span>
-                <Link href={`/admin/products/${product.id}`} className="mt-1 block line-clamp-2 text-base font-semibold text-slate-900">
-                  {product.title_th}
-                </Link>
-              </div>
-              <p className="shrink-0 text-lg font-semibold text-blue-700">THB {product.price.toLocaleString()}</p>
-            </div>
+      {mobileLayout ? (
+        <div className="product-mobile-showcase space-y-4">
+          <MobileProductSection
+            products={hotItems}
+            locale={locale}
+          />
 
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              <div className="rounded-xl bg-slate-50 px-2.5 py-2">
-                <p className="text-[11px] text-slate-500">{locale === "th" ? "SKU" : "SKU"}</p>
-                <p className="mt-0.5 truncate text-sm font-semibold text-slate-800">{product.sku || "-"}</p>
-              </div>
-              <div className="rounded-xl bg-slate-50 px-2.5 py-2">
-                <p className="text-[11px] text-slate-500">{locale === "th" ? "สต็อก" : "Stock"}</p>
-                <p className="mt-0.5 text-sm font-semibold text-slate-800">{product.stock}</p>
-              </div>
-              <div className="rounded-xl bg-slate-50 px-2.5 py-2">
-                <p className="text-[11px] text-slate-500">{locale === "th" ? "slug" : "Slug"}</p>
-                <p className="mt-0.5 truncate text-sm font-semibold text-slate-800">{product.slug}</p>
-              </div>
-              <div className="rounded-xl bg-slate-50 px-2.5 py-2">
-                <p className="text-[11px] text-slate-500">{locale === "th" ? "อัปเดต" : "Updated"}</p>
-                <p className="mt-0.5 text-sm font-semibold text-slate-800">
-                  {product.updated_at
-                    ? new Intl.DateTimeFormat(locale === "th" ? "th-TH" : "en-US", {
-                        dateStyle: "short",
-                        timeStyle: "short",
-                      }).format(new Date(product.updated_at))
-                    : "-"}
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-3 grid grid-cols-3 gap-2">
-              <Link
-                href={`/admin/products/${product.id}`}
-                className="rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-center text-xs font-semibold text-slate-900 hover:bg-slate-50"
-              >
-                {locale === "th" ? "\u0e14\u0e39" : "View"}
-              </Link>
-              <Link
-                href={`/admin/products/${product.id}/edit`}
-                className="rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-center text-xs font-semibold text-slate-900 hover:bg-slate-50"
-              >
-                {locale === "th" ? "\u0e41\u0e01\u0e49\u0e44\u0e02" : "Edit"}
-              </Link>
-              <form
-                action={onDelete}
-                ref={(node) => {
-                  if (node) formsRef.current.set(product.id, node);
-                  else formsRef.current.delete(product.id);
-                }}
-              >
-                <input type="hidden" name="id" value={product.id} />
-                <button
-                  type="button"
-                  onClick={() => setConfirmId(product.id)}
-                  className="w-full rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-100"
-                >
-                  {locale === "th" ? "\u0e25\u0e1a" : "Delete"}
-                </button>
-              </form>
-            </div>
-          </article>
-        ))}
-      </div> : null}
+          {recommendedItems.length > 0 ? (
+            <MobileProductSection
+              products={recommendedItems}
+              locale={locale}
+            />
+          ) : null}
+        </div>
+      ) : null}
 
       {!mobileLayout ? <div>
         <AdminTable
@@ -140,7 +89,13 @@ export function ProductsTableClient({ products, onDelete, locale }: ProductsTabl
               <td className="px-5 py-3">
                 {product.cover_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={product.cover_url} alt={product.title_th} className="h-10 w-10 rounded-md object-cover" />
+                  <img
+                    src={product.cover_url}
+                    alt={product.title_th}
+                    className="h-10 w-10 rounded-md object-cover"
+                    loading="lazy"
+                    decoding="async"
+                  />
                 ) : (
                   <div className="flex h-10 w-10 items-center justify-center rounded-md border border-dashed border-slate-200 text-[10px] text-slate-500">
                     N/A
@@ -219,5 +174,56 @@ export function ProductsTableClient({ products, onDelete, locale }: ProductsTabl
         }}
       />
     </>
+  );
+}
+
+function MobileProductSection({
+  products,
+  locale,
+}: {
+  products: Product[];
+  locale: AdminLocale;
+}) {
+  return (
+    <section className="space-y-2">
+      <div className="product-mobile-card-row">
+        {products.map((product) => (
+          <article key={`showcase-${product.id}`} className="product-mobile-showcase-card">
+            <Link href={`/admin/products/${product.id}`} className="block">
+              {typeof product.compare_at_price === "number" && product.compare_at_price > product.price ? (
+                <span className="product-mobile-sale-badge">
+                  {Math.round(((product.compare_at_price - product.price) / product.compare_at_price) * 100)}% OFF
+                </span>
+              ) : null}
+              <div className="product-mobile-image-wrap">
+                {product.cover_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={product.cover_url}
+                    alt={product.title_th}
+                    loading="lazy"
+                    decoding="async"
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="grid h-full w-full place-items-center text-xs text-slate-400">NO IMAGE</div>
+                )}
+              </div>
+              <p className="mt-1 line-clamp-2 text-xs font-semibold text-slate-900">{product.title_th}</p>
+            </Link>
+            <div className="mt-2 flex items-center justify-between gap-2">
+              <p className="text-[11px] font-semibold text-blue-700">THB {product.price.toLocaleString()}</p>
+              <Link href={`/admin/products/${product.id}/edit`} className="product-mobile-cart-btn" aria-label={locale === "th" ? "แก้ไขสินค้า" : "Edit product"}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" className="h-3.5 w-3.5" aria-hidden>
+                  <path d="M4 6h2l2 10h9l2-7H7.2" />
+                  <circle cx="10" cy="19" r="1.2" />
+                  <circle cx="17" cy="19" r="1.2" />
+                </svg>
+              </Link>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
   );
 }

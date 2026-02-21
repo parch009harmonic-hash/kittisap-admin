@@ -1,6 +1,7 @@
-﻿export type SessionPolicy = "7d" | "30d" | "never";
+export type SessionPolicy = "7d" | "30d" | "never";
 export type DefaultLanguage = "th" | "en";
 export type UiMode = "auto" | "windows" | "mobile";
+export type ThemePreset = "default" | "ocean" | "mint" | "sunset";
 
 export type AdminSettings = {
   displayName: string;
@@ -15,6 +16,7 @@ export type AdminSettings = {
   pushNotify: boolean;
   orderNotify: boolean;
   uiMode: UiMode;
+  themePreset: ThemePreset;
 };
 
 export function getDefaultAdminSettings(): AdminSettings {
@@ -31,6 +33,7 @@ export function getDefaultAdminSettings(): AdminSettings {
     pushNotify: false,
     orderNotify: true,
     uiMode: "auto",
+    themePreset: "default",
   };
 }
 
@@ -46,4 +49,5 @@ export type AdminSettingField =
   | "emailNotify"
   | "pushNotify"
   | "orderNotify"
-  | "uiMode";
+  | "uiMode"
+  | "themePreset";

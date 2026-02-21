@@ -35,11 +35,8 @@ export default async function AdminProductsPage({ searchParams }: ProductsPagePr
 
   return (
     <div className="product-page space-y-6">
-      <header className="product-page-hero sst-card-soft flex flex-col gap-4 rounded-3xl p-5 md:flex-row md:items-center md:justify-between">
+      <header className="product-page-hero product-page-topbar sst-card-soft flex flex-col gap-4 rounded-3xl p-5 md:flex-row md:items-center md:justify-between">
         <div>
-          <span className="text-xs uppercase tracking-[0.3em] text-blue-600">
-            {locale === "th" ? "\u0e2a\u0e34\u0e19\u0e04\u0e49\u0e32" : "Products"}
-          </span>
           <h1 className="font-heading text-3xl text-slate-900 md:text-4xl">{locale === "th" ? "\u0e2a\u0e34\u0e19\u0e04\u0e49\u0e32" : "Products"}</h1>
           <p className="mt-1 text-sm text-slate-600">
             {locale === "th" ? "\u0e08\u0e31\u0e14\u0e01\u0e32\u0e23\u0e2a\u0e34\u0e19\u0e04\u0e49\u0e32" : "Product catalog management"}
@@ -117,7 +114,7 @@ export default async function AdminProductsPage({ searchParams }: ProductsPagePr
 
       <ProductsTableClient products={products} onDelete={deleteAction} locale={locale} />
 
-      <div className="sst-card-soft flex flex-col gap-3 rounded-2xl p-3 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between sm:p-0 sm:shadow-none sm:border-0">
+      <div className="product-page-pagination sst-card-soft flex flex-col gap-3 rounded-2xl p-3 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between sm:p-0 sm:shadow-none sm:border-0">
         <p>
           {locale === "th" ? "\u0e2b\u0e19\u0e49\u0e32" : "Page"} {result.page} / {result.totalPages} ({result.total}{" "}
           {locale === "th" ? "\u0e23\u0e32\u0e22\u0e01\u0e32\u0e23" : "items"})

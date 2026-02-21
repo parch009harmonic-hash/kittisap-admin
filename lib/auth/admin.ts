@@ -1,68 +1,182 @@
-﻿import { redirect } from "next/navigation";
+import { User } from "@supabase/supabase-js";
+import { redirect } from "next/navigation";
 
 import { getSupabaseServerClient } from "../supabase/server";
 
-type AdminRole = "admin" | "staff";
-const allowedRoles: AdminRole[] = ["admin", "staff"];
+export type AdminRole = "admin" | "staff" | "developer";
+const allowedRoles: AdminRole[] = ["admin", "staff", "developer"];
+
+function isTransientNetworkError(error: unknown) {
+  const message = error instanceof Error ? error.message.toLowerCase() : String(error ?? "").toLowerCase();
+  return (
+    message.includes("enotfound") ||
+    message.includes("eai_again") ||
+    message.includes("fetch failed") ||
+    message.includes("connect timeout") ||
+    message.includes("und_err_connect_timeout")
+  );
+}
+
+function isSupabaseNetworkUnstable(error: unknown) {
+  return isTransientNetworkError(error);
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function retryOnTransient<T>(task: () => Promise<T>, attempts = 3, delayMs = 250): Promise<T> {
+  let lastError: unknown;
+  for (let i = 0; i < attempts; i += 1) {
+    try {
+      return await task();
+    } catch (error) {
+      lastError = error;
+      if (!isTransientNetworkError(error) || i === attempts - 1) {
+        throw error;
+      }
+      await sleep(delayMs * (i + 1));
+    }
+  }
+  throw lastError;
+}
 
 async function resolveAdminRole(userId: string) {
   const supabase = await getSupabaseServerClient();
-  const { data: profile, error } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", userId)
-    .maybeSingle();
+  const { data: profile, error } = await retryOnTransient(async () => {
+    return await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", userId)
+      .maybeSingle();
+  });
 
   const role = profile?.role as string | undefined;
-  const isAllowed = !error && Boolean(role) && allowedRoles.includes(role as AdminRole);
+  const normalizedRole = (role ?? "") as AdminRole;
+  const isAllowed = !error && Boolean(role) && allowedRoles.includes(normalizedRole);
 
-  return { isAllowed, role: role ?? null, error };
+  return { isAllowed, role: isAllowed ? normalizedRole : null, error };
 }
+
+export type AdminActor = {
+  user: User;
+  role: AdminRole;
+};
 
 export async function getAdminSession() {
   try {
     const supabase = await getSupabaseServerClient();
-    const { data, error } = await supabase.auth.getUser();
+    const { data, error } = await retryOnTransient(async () => await supabase.auth.getUser());
 
     if (error) {
+      if (isSupabaseNetworkUnstable(error)) {
+        throw new Error("Network unstable");
+      }
       return null;
     }
 
     return data.user ?? null;
-  } catch {
+  } catch (error) {
+    if (isSupabaseNetworkUnstable(error)) {
+      throw new Error("Network unstable");
+    }
     return null;
   }
 }
 
-export async function requireAdmin() {
+export async function getAdminActor(): Promise<AdminActor | null> {
   const user = await getAdminSession();
-
   if (!user) {
-    redirect("/login");
+    return null;
   }
 
+  const roleResult = await resolveAdminRole(user.id);
+  if (!roleResult.isAllowed || !roleResult.role) {
+    return null;
+  }
+
+  return {
+    user,
+    role: roleResult.role,
+  };
+}
+
+export async function requireAdmin() {
+  let actor: AdminActor | null = null;
   try {
-    const { isAllowed } = await resolveAdminRole(user.id);
-    if (!isAllowed) {
-      redirect("/login?error=not_authorized");
+    actor = await getAdminActor();
+  } catch (error) {
+    if (isSupabaseNetworkUnstable(error) || (error instanceof Error && error.message === "Network unstable")) {
+      redirect("/login?error=network_unstable");
     }
-  } catch {
-    redirect("/login");
+    throw error;
+  }
+  if (!actor) {
+    redirect("/login?error=not_authorized");
   }
 
-  return user;
+  return actor.user;
 }
 
 export async function requireAdminApi() {
-  const user = await getAdminSession();
-  if (!user) {
+  let actor: AdminActor | null = null;
+  try {
+    actor = await getAdminActor();
+  } catch (error) {
+    if (isSupabaseNetworkUnstable(error) || (error instanceof Error && error.message === "Network unstable")) {
+      throw new Error("Network unstable");
+    }
+    throw error;
+  }
+  if (!actor) {
     throw new Error("Unauthorized");
   }
 
-  const { isAllowed } = await resolveAdminRole(user.id);
-  if (!isAllowed) {
-    throw new Error("Not authorized to manage users");
+  return actor.user;
+}
+
+export async function requireDeveloper(options?: { allowAdmin?: boolean }) {
+  const allowAdmin = options?.allowAdmin ?? false;
+  let actor: AdminActor | null = null;
+  try {
+    actor = await getAdminActor();
+  } catch (error) {
+    if (isSupabaseNetworkUnstable(error) || (error instanceof Error && error.message === "Network unstable")) {
+      redirect("/login?error=network_unstable");
+    }
+    throw error;
   }
 
-  return user;
+  if (!actor) {
+    redirect("/login?error=not_authorized");
+  }
+
+  if (actor.role === "developer" || (allowAdmin && actor.role === "admin")) {
+    return actor;
+  }
+
+  redirect("/admin?error=developer_only");
+}
+
+export async function requireDeveloperApi(options?: { allowAdmin?: boolean }) {
+  const allowAdmin = options?.allowAdmin ?? false;
+  let actor: AdminActor | null = null;
+  try {
+    actor = await getAdminActor();
+  } catch (error) {
+    if (isSupabaseNetworkUnstable(error) || (error instanceof Error && error.message === "Network unstable")) {
+      throw new Error("Network unstable");
+    }
+    throw error;
+  }
+
+  if (!actor) {
+    throw new Error("Unauthorized");
+  }
+
+  if (actor.role === "developer" || (allowAdmin && actor.role === "admin")) {
+    return actor;
+  }
+
+  throw new Error("Developer only");
 }

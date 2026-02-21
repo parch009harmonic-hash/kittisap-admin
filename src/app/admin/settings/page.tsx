@@ -1,10 +1,13 @@
-﻿import { getAdminSettings } from "../../../../lib/db/admin-settings";
+﻿import { getAdminActor } from "../../../../lib/auth/admin";
+import { getAdminSettings } from "../../../../lib/db/admin-settings";
 import { getAdminLocale } from "../../../../lib/i18n/admin";
 import { getDefaultAdminSettings } from "../../../../lib/types/admin-settings";
 import SettingsClient from "../../../components/admin/settings/SettingsClient";
 
 export default async function AdminSettingsPage() {
   const locale = await getAdminLocale();
+  const actor = await getAdminActor();
+  const isDeveloperMode = actor?.role === "developer";
   let initialSettings = getDefaultAdminSettings();
   let bootstrapError: string | null = null;
 
@@ -47,6 +50,13 @@ export default async function AdminSettingsPage() {
     uiAuto: locale === "th" ? "อัตโนมัติ" : "Auto",
     uiWindows: locale === "th" ? "Windows" : "Windows",
     uiMobile: locale === "th" ? "Mobile" : "Mobile",
+    themePreset: locale === "th" ? "ธีมสีพื้นหลัง" : "Theme Preset",
+    themePresetHint:
+      locale === "th" ? "เลือกโทนสีพื้นหลังของระบบ" : "Choose a background color theme for the app.",
+    themeDefault: locale === "th" ? "ค่าเริ่มต้น" : "Default",
+    themeOcean: locale === "th" ? "น้ำทะเล" : "Ocean",
+    themeMint: locale === "th" ? "มิ้นต์" : "Mint",
+    themeSunset: locale === "th" ? "ซันเซ็ต" : "Sunset",
     createUser: locale === "th" ? "สร้าง user" : "Create User",
     createUserTitle: locale === "th" ? "สร้างผู้ใช้ใหม่" : "Create a New User",
     createUserSubtitle:
@@ -61,10 +71,30 @@ export default async function AdminSettingsPage() {
     createUserRole: locale === "th" ? "สิทธิ์การใช้งาน" : "Role",
     createUserRoleAdmin: locale === "th" ? "แอดมิน" : "Admin",
     createUserRoleStaff: locale === "th" ? "พนักงาน" : "Staff",
+    createUserRoleDeveloper: locale === "th" ? "นักพัฒนา" : "Developer",
+    developerPin: locale === "th" ? "รหัส PIN นักพัฒนา" : "Developer PIN",
+    developerPinHint:
+      locale === "th"
+        ? "ใช้ยืนยันก่อนสร้าง/แก้ไข/ลบผู้ใช้สิทธิ์นักพัฒนา"
+        : "Required to create, edit, or delete developer users.",
     createUserSubmit: locale === "th" ? "สร้างผู้ใช้" : "Create User",
     createUserSubmitting: locale === "th" ? "กำลังสร้าง..." : "Creating...",
     createUserSuccess: locale === "th" ? "สร้างผู้ใช้สำเร็จ" : "User created successfully.",
     createUserFailed: locale === "th" ? "สร้างผู้ใช้ไม่สำเร็จ" : "Failed to create user.",
+    apiHealth: locale === "th" ? "สถานะระบบ API" : "API Health",
+    apiHealthHint:
+      locale === "th"
+        ? "ตรวจสอบการเชื่อมต่อ API, ฐานข้อมูล และ Storage แบบเรียลไทม์"
+        : "Live status for API, database, and storage connectivity.",
+    apiHealthRefresh: locale === "th" ? "รีเฟรช" : "Refresh",
+    apiHealthChecking: locale === "th" ? "กำลังตรวจสอบ..." : "Checking...",
+    apiHealthUp: locale === "th" ? "ปกติ" : "Healthy",
+    apiHealthDown: locale === "th" ? "มีปัญหา" : "Issue",
+    apiHealthApi: locale === "th" ? "API" : "API",
+    apiHealthDb: locale === "th" ? "ฐานข้อมูล" : "Database",
+    apiHealthStorage: locale === "th" ? "สตอเรจ" : "Storage",
+    apiHealthLastChecked: locale === "th" ? "ตรวจล่าสุด" : "Last checked",
+    apiHealthUnavailable: locale === "th" ? "ไม่สามารถตรวจสอบได้" : "Unavailable",
   };
 
   return (
@@ -73,6 +103,10 @@ export default async function AdminSettingsPage() {
       text={text}
       initialSettings={initialSettings}
       bootstrapError={bootstrapError}
+      isDeveloperMode={isDeveloperMode}
     />
   );
 }
+
+
+

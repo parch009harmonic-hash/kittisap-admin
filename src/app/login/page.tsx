@@ -14,6 +14,10 @@ export default function LoginPage() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    if (params.get("error") === "network_unstable") {
+      setError("Network to Supabase unstable. โปรดตรวจสอบอินเทอร์เน็ต/DNS แล้วลองใหม่อีกครั้ง.");
+      return;
+    }
     if (params.get("error") === "not_authorized") {
       setError("ไม่มีสิทธิ์เข้าใช้งานหน้านี้ / You are not authorized.");
       return;

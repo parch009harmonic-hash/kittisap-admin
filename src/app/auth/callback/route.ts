@@ -14,6 +14,17 @@ function getSupabaseEnv() {
   return { supabaseUrl, supabaseAnonKey };
 }
 
+function isTransientNetworkError(error: unknown) {
+  const message = error instanceof Error ? error.message.toLowerCase() : String(error ?? "").toLowerCase();
+  return (
+    message.includes("enotfound") ||
+    message.includes("eai_again") ||
+    message.includes("fetch failed") ||
+    message.includes("connect timeout") ||
+    message.includes("und_err_connect_timeout")
+  );
+}
+
 function withCookies(
   source: NextResponse,
   destination: NextResponse
@@ -50,11 +61,29 @@ export async function GET(request: NextRequest) {
     },
   });
 
-  const { data: authData, error: authError } =
-    await supabase.auth.exchangeCodeForSession(code);
+  let authData:
+    | {
+        session: { user: { id: string } } | null;
+      }
+    | null = null;
+  let authError: { message?: string } | null = null;
+  try {
+    const result = await supabase.auth.exchangeCodeForSession(code);
+    authData = result.data as unknown as { session: { user: { id: string } } | null };
+    authError = result.error as unknown as { message?: string } | null;
+  } catch (error) {
+    if (isTransientNetworkError(error)) {
+      const res = NextResponse.redirect(new URL("/login?error=network_unstable", request.url));
+      return withCookies(cookieResponse, res);
+    }
+    const res = NextResponse.redirect(new URL("/login?error=oauth_failed", request.url));
+    return withCookies(cookieResponse, res);
+  }
 
   if (authError || !authData.session) {
-    const res = NextResponse.redirect(new URL("/login?error=oauth_failed", request.url));
+    const res = NextResponse.redirect(
+      new URL(isTransientNetworkError(authError) ? "/login?error=network_unstable" : "/login?error=oauth_failed", request.url),
+    );
     return withCookies(cookieResponse, res);
   }
 
@@ -67,7 +96,14 @@ export async function GET(request: NextRequest) {
   const role = profile?.role as string | undefined;
   const isAllowed = role === "admin" || role === "staff";
 
-  if (profileError || !isAllowed) {
+  if (profileError) {
+    const res = NextResponse.redirect(
+      new URL(isTransientNetworkError(profileError) ? "/login?error=network_unstable" : "/login?error=not_authorized", request.url),
+    );
+    return withCookies(cookieResponse, res);
+  }
+
+  if (!isAllowed) {
     const res = NextResponse.redirect(
       new URL("/login?error=not_authorized", request.url)
     );
