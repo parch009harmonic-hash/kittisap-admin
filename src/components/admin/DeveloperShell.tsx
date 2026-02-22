@@ -19,6 +19,7 @@ const NAV_ITEMS = [
   { href: "/admin/developer/github", key: "github" },
   { href: "/admin/developer/supabase", key: "supabase" },
   { href: "/admin/developer/vercel", key: "vercel" },
+  { href: "/admin/developer/vercel/observability", key: "observability" },
   { href: "/admin/settings", key: "settings" },
 ] as const;
 
@@ -36,6 +37,7 @@ export default function DeveloperShell({ children, locale }: DeveloperShellProps
     github: locale === "th" ? "GitHub" : "GitHub",
     supabase: locale === "th" ? "Supabase" : "Supabase",
     vercel: locale === "th" ? "Vercel" : "Vercel",
+    observability: locale === "th" ? "Observability" : "Observability",
     settings: locale === "th" ? "ตั้งค่าระบบ" : "System Settings",
     logout: locale === "th" ? "ออกจากระบบ" : "Logout",
     loggingOut: locale === "th" ? "กำลังออก..." : "Logging out...",
@@ -54,8 +56,8 @@ export default function DeveloperShell({ children, locale }: DeveloperShellProps
   }
 
   return (
-    <div className="admin-ui min-h-screen bg-[radial-gradient(circle_at_16%_10%,#0e7490_0,#0f172a_36%,#020617_76%,#000_100%)] text-slate-100">
-      <div className="mx-auto grid min-h-screen max-w-[1600px] grid-cols-1 lg:grid-cols-[300px_1fr]">
+    <div className="admin-ui h-[100dvh] overflow-hidden bg-[radial-gradient(circle_at_16%_10%,#0e7490_0,#0f172a_36%,#020617_76%,#000_100%)] text-slate-100">
+      <div className="mx-auto grid h-full max-w-[1600px] grid-cols-1 lg:grid-cols-[300px_1fr]">
         <aside className="border-r border-slate-800/90 bg-slate-950/70 p-5 backdrop-blur-sm">
           <div className="rounded-2xl border border-cyan-500/30 bg-cyan-500/10 p-4">
             <p className="text-xs uppercase tracking-[0.22em] text-cyan-300">{text.subtitle}</p>
@@ -67,6 +69,8 @@ export default function DeveloperShell({ children, locale }: DeveloperShellProps
               const isActive =
                 item.key === "dashboard"
                   ? pathname === item.href
+                  : item.key === "vercel"
+                    ? pathname === item.href
                   : pathname === item.href || pathname.startsWith(`${item.href}/`);
               const label =
                 item.key === "dashboard"
@@ -81,6 +85,8 @@ export default function DeveloperShell({ children, locale }: DeveloperShellProps
                       ? text.supabase
                       : item.key === "vercel"
                         ? text.vercel
+                        : item.key === "observability"
+                          ? text.observability
                         : text.settings;
 
               return (
@@ -109,7 +115,7 @@ export default function DeveloperShell({ children, locale }: DeveloperShellProps
           </button>
         </aside>
 
-        <main className="p-4 sm:p-6 lg:p-8">{children}</main>
+        <main className="no-scrollbar overflow-y-auto p-4 sm:p-6 lg:p-8">{children}</main>
       </div>
     </div>
   );
