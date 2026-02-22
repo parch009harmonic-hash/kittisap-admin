@@ -52,8 +52,12 @@ export default async function AdminDeveloperVercelObservabilityPage() {
     inferProjectSlugFromUrl(process.env.VERCEL_PROJECT_PRODUCTION_URL),
     inferProjectSlugFromUrl(process.env.VERCEL_URL),
   );
-  const projectObservabilityUrl =
-    teamSlug && projectSlug ? `https://vercel.com/${teamSlug}/${projectSlug}/observability` : null;
+  const projectId = pickFirstNonEmpty(process.env.VERCEL_PROJECT_ID);
+  const projectObservabilityUrl = teamSlug && projectSlug
+    ? `https://vercel.com/${teamSlug}/${projectSlug}/observability`
+    : projectId
+      ? `https://vercel.com/dashboard/observability?projectId=${encodeURIComponent(projectId)}`
+      : null;
   const dashboardObservabilityUrl = "https://vercel.com/dashboard/observability";
 
   return (
