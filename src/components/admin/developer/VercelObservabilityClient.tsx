@@ -6,12 +6,16 @@ type VercelObservabilityClientProps = {
   locale: AdminLocale;
   projectObservabilityUrl: string | null;
   dashboardObservabilityUrl: string;
+  teamSlug: string | null;
+  projectSlug: string | null;
 };
 
 export default function VercelObservabilityClient({
   locale,
   projectObservabilityUrl,
   dashboardObservabilityUrl,
+  teamSlug,
+  projectSlug,
 }: VercelObservabilityClientProps) {
   const text =
     locale === "th"
@@ -23,6 +27,10 @@ export default function VercelObservabilityClient({
           noteReady: "พร้อมใช้งาน",
           noteMissing: "ยังไม่ได้ตั้งค่า VERCEL_TEAM_SLUG หรือ VERCEL_PROJECT_SLUG",
           hint: "ถ้ายังไม่ขึ้นลิงก์ระดับโปรเจกต์ ให้เพิ่ม env: VERCEL_TEAM_SLUG และ VERCEL_PROJECT_SLUG แล้ว redeploy",
+          detected: "ค่าที่ตรวจพบ",
+          team: "ทีม",
+          project: "โปรเจกต์",
+          missing: "ไม่พบ",
         }
       : {
           title: "Vercel Observability",
@@ -32,6 +40,10 @@ export default function VercelObservabilityClient({
           noteReady: "Ready",
           noteMissing: "Missing VERCEL_TEAM_SLUG or VERCEL_PROJECT_SLUG",
           hint: "Set VERCEL_TEAM_SLUG and VERCEL_PROJECT_SLUG, then redeploy to enable project link.",
+          detected: "Detected values",
+          team: "Team",
+          project: "Project",
+          missing: "missing",
         };
 
   return (
@@ -66,6 +78,9 @@ export default function VercelObservabilityClient({
       </div>
 
       <p className="mt-3 text-xs text-slate-300">{projectObservabilityUrl ? text.noteReady : text.hint}</p>
+      <p className="mt-2 text-xs text-slate-400">
+        {text.detected}: {text.team}={teamSlug ?? text.missing}, {text.project}={projectSlug ?? text.missing}
+      </p>
     </section>
   );
 }
