@@ -143,6 +143,12 @@ export default function UiAccessMonitorClient({ locale }: { locale: AdminLocale 
     }
   }
 
+  async function toggleRuleEnabled(rule: UiMaintenanceRule, enabled: boolean) {
+    const nextRule: UiMaintenanceRule = { ...rule, enabled };
+    updateRule(rule.path, { enabled });
+    await saveRule(nextRule);
+  }
+
   return (
     <section className="rounded-2xl border border-cyan-400/25 bg-slate-900/60 p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -206,14 +212,16 @@ export default function UiAccessMonitorClient({ locale }: { locale: AdminLocale 
                   <div className="flex flex-wrap gap-2">
                     <button
                       type="button"
-                      onClick={() => updateRule(rule.path, { enabled: true })}
+                      onClick={() => void toggleRuleEnabled(rule, true)}
+                      disabled={isSaving}
                       className="rounded-md border border-amber-500/60 bg-amber-500/20 px-2 py-1 text-xs font-semibold text-amber-100"
                     >
                       {t.closeNow}
                     </button>
                     <button
                       type="button"
-                      onClick={() => updateRule(rule.path, { enabled: false })}
+                      onClick={() => void toggleRuleEnabled(rule, false)}
+                      disabled={isSaving}
                       className="rounded-md border border-emerald-500/60 bg-emerald-500/20 px-2 py-1 text-xs font-semibold text-emerald-100"
                     >
                       {t.openNow}
