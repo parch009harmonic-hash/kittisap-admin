@@ -63,6 +63,38 @@ function guessPhone(user: User) {
     || asString(user.phone);
 }
 
+async function resolveBackofficeRole(
+  supabase: ReturnType<typeof createServerClient>,
+  userId: string,
+) {
+  const byId = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", userId)
+    .maybeSingle();
+
+  let role = String(byId.data?.role ?? "").trim().toLowerCase();
+  let error = byId.error;
+  const missingColumn = String(error?.message ?? "").toLowerCase().includes("column")
+    && String(error?.message ?? "").toLowerCase().includes("does not exist");
+
+  if ((!role && !error) || missingColumn) {
+    const byUserId = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (!byUserId.error && byUserId.data) {
+      role = String(byUserId.data.role ?? "").trim().toLowerCase();
+      error = null;
+    } else if (!error) {
+      error = byUserId.error;
+    }
+  }
+
+  return { role, error };
+}
+
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get("code");
   const intent = normalizeIntent(request.nextUrl.searchParams.get("intent"));
@@ -150,13 +182,7 @@ export async function GET(request: NextRequest) {
     return withCookies(cookieResponse, res);
   }
 
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  const role = String(profile?.role ?? "").trim().toLowerCase();
+  const { role, error: profileError } = await resolveBackofficeRole(supabase, user.id);
   const isAllowed = role === "admin" || role === "staff" || role === "developer";
 
   if (profileError || !isAllowed) {

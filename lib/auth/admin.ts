@@ -42,13 +42,34 @@ async function retryOnTransient<T>(task: () => Promise<T>, attempts = 3, delayMs
 
 async function resolveAdminRole(userId: string) {
   const supabase = await getSupabaseServerClient();
-  const { data: profile, error } = await retryOnTransient(async () => {
+  const byId = await retryOnTransient(async () => {
     return await supabase
       .from("profiles")
       .select("role")
       .eq("id", userId)
       .maybeSingle();
   });
+
+  let profile = byId.data;
+  let error = byId.error;
+  const isMissingColumnError = String(error?.message ?? "").toLowerCase().includes("column")
+    && String(error?.message ?? "").toLowerCase().includes("does not exist");
+
+  if ((!profile && !error) || isMissingColumnError) {
+    const byUserId = await retryOnTransient(async () => {
+      return await supabase
+        .from("profiles")
+        .select("role")
+        .eq("user_id", userId)
+        .maybeSingle();
+    });
+    if (!byUserId.error && byUserId.data) {
+      profile = byUserId.data;
+      error = null;
+    } else if (!error) {
+      error = byUserId.error;
+    }
+  }
 
   const role = profile?.role as string | undefined;
   const normalizedRole = (role ?? "").trim().toLowerCase();

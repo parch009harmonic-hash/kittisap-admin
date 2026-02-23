@@ -38,11 +38,29 @@ export async function getCustomerActor(): Promise<CustomerActor | null> {
   }
 
   const supabase = await getSupabaseServerClient();
-  const { data: profile, error } = await supabase
+  const byId = await supabase
     .from("profiles")
     .select("role")
     .eq("id", user.id)
     .maybeSingle();
+
+  let profile = byId.data;
+  let error = byId.error;
+  const missingColumn = String(error?.message ?? "").toLowerCase().includes("column")
+    && String(error?.message ?? "").toLowerCase().includes("does not exist");
+  if ((!profile && !error) || missingColumn) {
+    const byUserId = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (!byUserId.error && byUserId.data) {
+      profile = byUserId.data;
+      error = null;
+    } else if (!error) {
+      error = byUserId.error;
+    }
+  }
 
   if (error) {
     if (isTransientNetworkError(error)) {
