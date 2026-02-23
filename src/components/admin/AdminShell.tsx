@@ -143,6 +143,34 @@ export function AdminShell({
   }, []);
 
   useEffect(() => {
+    if (typeof document === "undefined") {
+      return;
+    }
+
+    const toolbarSelectors = [
+      '[data-vercel-toolbar]',
+      "#vercel-toolbar",
+      "vercel-live-feedback",
+      'iframe[src*="vercel.live"]',
+      'iframe[src*="vercel.com"][src*="toolbar"]',
+    ];
+    const selector = toolbarSelectors.join(",");
+
+    const removeToolbarNodes = () => {
+      document.querySelectorAll(selector).forEach((node) => node.remove());
+    };
+
+    removeToolbarNodes();
+
+    const observer = new MutationObserver(() => {
+      removeToolbarNodes();
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
     setIsRouteChanging(false);
     setPendingHref(null);
   }, [pathname]);
