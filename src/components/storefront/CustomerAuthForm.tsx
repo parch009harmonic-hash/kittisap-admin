@@ -35,6 +35,10 @@ function text(mode: Mode, locale: AppLocale) {
       emailPlaceholder: "you@example.com",
       passwordPlaceholder: "********",
       or: "OR",
+      emailNotConfirmed: isThai ? "อีเมลยังไม่ยืนยัน กรุณายืนยันอีเมลก่อนเข้าสู่ระบบ" : "Email not confirmed. Please confirm your email before signing in.",
+      resendConfirm: isThai ? "ส่งอีเมลยืนยันใหม่" : "Resend confirmation email",
+      resendConfirmSuccess: isThai ? "ส่งอีเมลยืนยันใหม่แล้ว กรุณาตรวจสอบกล่องจดหมาย" : "Confirmation email sent. Please check your inbox.",
+      resendConfirmNeedEmail: isThai ? "กรุณากรอกอีเมลก่อนส่งอีเมลยืนยัน" : "Please enter your email first.",
     };
   }
 
@@ -51,6 +55,10 @@ function text(mode: Mode, locale: AppLocale) {
     emailPlaceholder: "you@example.com",
     passwordPlaceholder: "********",
     or: "OR",
+    emailNotConfirmed: isThai ? "อีเมลยังไม่ยืนยัน กรุณายืนยันอีเมลก่อนเข้าสู่ระบบ" : "Email not confirmed. Please confirm your email before signing in.",
+    resendConfirm: isThai ? "ส่งอีเมลยืนยันใหม่" : "Resend confirmation email",
+    resendConfirmSuccess: isThai ? "ส่งอีเมลยืนยันใหม่แล้ว กรุณาตรวจสอบกล่องจดหมาย" : "Confirmation email sent. Please check your inbox.",
+    resendConfirmNeedEmail: isThai ? "กรุณากรอกอีเมลก่อนส่งอีเมลยืนยัน" : "Please enter your email first.",
   };
 }
 
@@ -86,8 +94,14 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resendingConfirm, setResendingConfirm] = useState(false);
+  const [pendingConfirmEmail, setPendingConfirmEmail] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+
+  function isEmailNotConfirmedError(input: string) {
+    return input.toLowerCase().includes("email not confirmed");
+  }
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -116,15 +130,22 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
     setLoading(true);
     setError(null);
     setMessage(null);
+    setPendingConfirmEmail(null);
 
     try {
       const supabase = getSupabaseBrowserClient();
 
       if (mode === "register") {
+        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+        if (!siteUrl) {
+          setError("Missing NEXT_PUBLIC_SITE_URL");
+          return;
+        }
         const { data, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
           options: {
+            emailRedirectTo: `${siteUrl}/auth/callback?intent=customer&locale=${locale}`,
             data: {
               full_name: fullName,
               phone,
@@ -139,12 +160,18 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
 
         if (!data.session) {
           setMessage("สมัครสำเร็จ กรุณาตรวจสอบอีเมลเพื่อยืนยันบัญชี แล้วกลับมาเข้าสู่ระบบ");
+          setPendingConfirmEmail(email.trim());
           return;
         }
       } else {
         const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
         if (signInError) {
-          setError(signInError.message);
+          if (isEmailNotConfirmedError(signInError.message)) {
+            setError(t.emailNotConfirmed);
+            setPendingConfirmEmail(email.trim());
+          } else {
+            setError(signInError.message);
+          }
           return;
         }
       }
@@ -157,6 +184,47 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
       setError(caught instanceof Error ? caught.message : "Authentication failed");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleResendConfirmation() {
+    const normalizedEmail = (pendingConfirmEmail ?? email).trim();
+    if (!normalizedEmail) {
+      setError(t.resendConfirmNeedEmail);
+      return;
+    }
+
+    setResendingConfirm(true);
+    setError(null);
+    setMessage(null);
+
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+      if (!siteUrl) {
+        setError("Missing NEXT_PUBLIC_SITE_URL");
+        return;
+      }
+
+      const { error: resendError } = await supabase.auth.resend({
+        type: "signup",
+        email: normalizedEmail,
+        options: {
+          emailRedirectTo: `${siteUrl}/auth/callback?intent=customer&locale=${locale}`,
+        },
+      });
+
+      if (resendError) {
+        setError(resendError.message);
+        return;
+      }
+
+      setMessage(t.resendConfirmSuccess);
+      setPendingConfirmEmail(normalizedEmail);
+    } catch {
+      setError("Unable to resend confirmation email");
+    } finally {
+      setResendingConfirm(false);
     }
   }
 
@@ -209,6 +277,16 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
         <p className="mt-2 text-sm text-amber-100/75">{t.subtitle}</p>
 
         {error ? <p className="mt-4 rounded-xl border border-rose-400/35 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">{error}</p> : null}
+        {pendingConfirmEmail ? (
+          <button
+            type="button"
+            onClick={handleResendConfirmation}
+            disabled={resendingConfirm}
+            className="mt-3 inline-flex w-full items-center justify-center rounded-xl border border-amber-400/50 bg-amber-500/10 px-3 py-2 text-sm font-semibold text-amber-200 transition hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {resendingConfirm ? "Sending..." : t.resendConfirm}
+          </button>
+        ) : null}
         {message ? <p className="mt-4 rounded-xl border border-emerald-400/35 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">{message}</p> : null}
 
         <form className="mt-5 space-y-3" onSubmit={handlePasswordAuth}>
