@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import { getUiMaintenanceLockedMessageDual, UI_MAINTENANCE_LOCKED } from "../api-error";
+
 type ProductImagesUploaderProps = {
   productId?: string;
   onUploaded: (images: Array<{ url: string }>) => Promise<void>;
@@ -83,8 +85,11 @@ export function ProductImagesUploader({ productId, onUploaded }: ProductImagesUp
           body: formData,
         });
 
-        const result = await response.json();
+        const result = (await response.json()) as { code?: string; error?: string; url?: string };
         if (!response.ok) {
+          if (result.code === UI_MAINTENANCE_LOCKED) {
+            throw new Error(result.error || getUiMaintenanceLockedMessageDual());
+          }
           throw new Error(result.error || "Upload failed");
         }
 

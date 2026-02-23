@@ -4,6 +4,7 @@ import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { AdminSettingField, AdminSettings, SessionPolicy, ThemePreset } from "../../../../lib/types/admin-settings";
+import { parseAdminApiError } from "../api-error";
 import { ConfirmModal } from "../ConfirmModal";
 import { Toast } from "../Toast";
 
@@ -412,9 +413,10 @@ export default function SettingsClient({
         }),
       });
 
-      const result = (await response.json()) as { error?: string; settings?: AdminSettings };
+      const result = (await response.json()) as { code?: string; error?: string; settings?: AdminSettings };
       if (!response.ok || !result.settings) {
-        throw new Error(result.error || saveFailedMessage);
+        const parsedError = parseAdminApiError(result, saveFailedMessage, locale);
+        throw new Error(parsedError.message);
       }
 
       setValues(result.settings);
@@ -1183,9 +1185,10 @@ function CreateUserSettingItem({
     setLoadingUsers(true);
     try {
       const response = await fetchWithTimeout("/api/admin/users", { method: "GET" }, 20000);
-      const result = (await response.json()) as { error?: string; users?: AdminUserRecord[] };
+      const result = (await response.json()) as { code?: string; error?: string; users?: AdminUserRecord[] };
       if (!response.ok || !result.users) {
-        throw new Error(result.error || refreshFailedText);
+        const parsedError = parseAdminApiError(result, refreshFailedText, locale);
+        throw new Error(parsedError.message);
       }
       setUsers(result.users);
     } catch (error) {
@@ -1249,9 +1252,10 @@ function CreateUserSettingItem({
         }),
       });
 
-      const result = (await response.json()) as { error?: string };
+      const result = (await response.json()) as { code?: string; error?: string };
       if (!response.ok) {
-        throw new Error(result.error || text.createUserFailed);
+        const parsedError = parseAdminApiError(result, text.createUserFailed, locale);
+        throw new Error(parsedError.message);
       }
 
       setDisplayName("");
@@ -1316,9 +1320,10 @@ function CreateUserSettingItem({
               : undefined,
         }),
       });
-      const result = (await response.json()) as { error?: string };
+      const result = (await response.json()) as { code?: string; error?: string };
       if (!response.ok) {
-        throw new Error(result.error || t.updateFailed);
+        const parsedError = parseAdminApiError(result, t.updateFailed, locale);
+        throw new Error(parsedError.message);
       }
       setEditingUser(null);
       await loadUsers();
@@ -1350,9 +1355,10 @@ function CreateUserSettingItem({
           developerPin: user.role === "developer" ? developerPinForDelete : undefined,
         }),
       });
-      const result = (await response.json()) as { error?: string };
+      const result = (await response.json()) as { code?: string; error?: string };
       if (!response.ok) {
-        throw new Error(result.error || t.deleteFailed);
+        const parsedError = parseAdminApiError(result, t.deleteFailed, locale);
+        throw new Error(parsedError.message);
       }
       setDeletingUserId(null);
       setDeletingUser(null);

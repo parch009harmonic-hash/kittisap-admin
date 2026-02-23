@@ -19,6 +19,13 @@ type Row = {
   updated_by: string | null;
 };
 
+type UiMaintenanceCache = {
+  expiresAt: number;
+  rules: UiMaintenanceRule[];
+};
+
+let rulesCache: UiMaintenanceCache | null = null;
+
 function toRoleList(value: string[] | null | undefined): UiRole[] {
   const normalized = (value ?? []).filter((item): item is UiRole => item === "admin" || item === "staff");
   return normalized.length > 0 ? normalized : ["admin", "staff"];
@@ -49,7 +56,23 @@ function isMissingTable(error: unknown) {
   return message.includes("ui_maintenance_rules") && (message.includes("does not exist") || message.includes("schema cache"));
 }
 
-export async function listUiMaintenanceRules() {
+function cacheTtlMs() {
+  const raw = Number.parseInt(process.env.ADMIN_UI_MAINTENANCE_CACHE_MS ?? "5000", 10);
+  if (!Number.isFinite(raw) || raw < 0) {
+    return 5000;
+  }
+  return raw;
+}
+
+function buildDefaultRules() {
+  return UI_MAINTENANCE_PATHS.map((path) => getDefaultUiMaintenanceRule(path));
+}
+
+function invalidateUiMaintenanceRulesCache() {
+  rulesCache = null;
+}
+
+async function fetchUiMaintenanceRulesFromDb() {
   const supabase = getSupabaseServiceRoleClient();
   const { data, error } = await supabase
     .from("ui_maintenance_rules")
@@ -58,7 +81,7 @@ export async function listUiMaintenanceRules() {
 
   if (error) {
     if (isMissingTable(error)) {
-      return UI_MAINTENANCE_PATHS.map((path) => getDefaultUiMaintenanceRule(path));
+      return buildDefaultRules();
     }
     throw new Error(error.message);
   }
@@ -69,6 +92,20 @@ export async function listUiMaintenanceRules() {
   }
 
   return UI_MAINTENANCE_PATHS.map((path) => byPath.get(path) ?? getDefaultUiMaintenanceRule(path));
+}
+
+export async function listUiMaintenanceRules() {
+  const now = Date.now();
+  if (rulesCache && rulesCache.expiresAt > now) {
+    return rulesCache.rules;
+  }
+
+  const rules = await fetchUiMaintenanceRulesFromDb();
+  rulesCache = {
+    rules,
+    expiresAt: now + cacheTtlMs(),
+  };
+  return rules;
 }
 
 export async function upsertUiMaintenanceRule(input: {
@@ -102,5 +139,6 @@ export async function upsertUiMaintenanceRule(input: {
     throw new Error(error.message);
   }
 
+  invalidateUiMaintenanceRulesCache();
   return fromRow(data as Row);
 }

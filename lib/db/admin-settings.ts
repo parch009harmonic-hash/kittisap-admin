@@ -2,7 +2,8 @@
 
 import { z } from "zod";
 
-import { requireAdmin, requireAdminApi } from "../auth/admin";
+import { getAdminActor, requireAdmin, requireAdminApi } from "../auth/admin";
+import { assertUiWriteAllowed } from "../maintenance/ui-maintenance-guard";
 import {
   AdminSettingField,
   AdminSettings,
@@ -262,7 +263,17 @@ function toUpdatePayload(field: AdminSettingField, value: unknown) {
   }
 }
 
-async function updateSettingForUser(userId: string, field: AdminSettingField, value: unknown) {
+async function updateSettingForUser(
+  userId: string,
+  field: AdminSettingField,
+  value: unknown,
+  actorRole: "admin" | "staff" | "developer",
+) {
+  await assertUiWriteAllowed({
+    path: "/admin/settings",
+    actorRole,
+  });
+
   const supabase = getSupabaseServiceRoleClient();
   const payload = {
     ...dbDefaults(userId),
@@ -323,12 +334,20 @@ export async function getAdminSettingsApi() {
 
 export async function updateAdminSetting(field: unknown, value: unknown) {
   const user = await requireAdmin();
+  const actor = await getAdminActor();
+  if (!actor) {
+    throw new Error("Unauthorized");
+  }
   const parsedField = SettingsFieldSchema.parse(field);
-  return updateSettingForUser(user.id, parsedField, value);
+  return updateSettingForUser(user.id, parsedField, value, actor.role);
 }
 
 export async function updateAdminSettingApi(field: unknown, value: unknown) {
   const user = await requireAdminApi();
+  const actor = await getAdminActor();
+  if (!actor) {
+    throw new Error("Unauthorized");
+  }
   const parsedField = SettingsFieldSchema.parse(field);
-  return updateSettingForUser(user.id, parsedField, value);
+  return updateSettingForUser(user.id, parsedField, value, actor.role);
 }

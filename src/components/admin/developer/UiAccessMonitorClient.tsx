@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { AdminLocale } from "../../../../lib/i18n/admin";
 import { UI_MAINTENANCE_PATHS, type UiMaintenanceRule, type UiPlatform, type UiRole } from "../../../../lib/maintenance/ui-maintenance";
+import { assertApiSuccess } from "../api-error";
 
 type SaveState = { path: string; loading: boolean; error: string | null };
 
@@ -84,14 +85,20 @@ export default function UiAccessMonitorClient({ locale }: { locale: AdminLocale 
     try {
       const response = await fetch("/api/admin/developer/ui-maintenance", { cache: "no-store" });
       const json = (await response.json()) as { ok: boolean; error?: string; rules?: UiMaintenanceRule[] };
-      if (!response.ok || !json.ok) throw new Error(json.error ?? "Failed to load rules");
+      assertApiSuccess({
+        response,
+        payload: json,
+        fallbackMessage: "Failed to load rules",
+        locale,
+        requireOkField: true,
+      });
       setRules(json.rules ?? []);
     } catch (fetchError) {
       setError(fetchError instanceof Error ? fetchError.message : "Unknown error");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [locale]);
 
   useEffect(() => {
     void loadRules();
@@ -116,7 +123,13 @@ export default function UiAccessMonitorClient({ locale }: { locale: AdminLocale 
         }),
       });
       const json = (await response.json()) as { ok: boolean; error?: string; rule?: UiMaintenanceRule };
-      if (!response.ok || !json.ok) throw new Error(json.error ?? "Failed to save rule");
+      assertApiSuccess({
+        response,
+        payload: json,
+        fallbackMessage: "Failed to save rule",
+        locale,
+        requireOkField: true,
+      });
       if (json.rule) {
         updateRule(rule.path, json.rule);
       }

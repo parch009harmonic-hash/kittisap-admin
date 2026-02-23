@@ -2,6 +2,8 @@
 
 import { ReactNode, useCallback, useEffect, useState } from "react";
 
+import { assertApiSuccess } from "../api-error";
+
 type HealthPart = {
   ok: boolean;
   latencyMs: number | null;
@@ -59,6 +61,7 @@ export default function DeveloperConsole() {
     try {
       const response = await fetch("/api/admin/developer/status", { cache: "no-store" });
       const json = (await response.json()) as DeveloperStatus;
+      assertApiSuccess({ response, payload: json, fallbackMessage: "Failed to load developer status." });
       setPayload(json);
     } finally {
       setLoading(false);

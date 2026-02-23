@@ -2,7 +2,8 @@
 
 import { ZodError, z } from "zod";
 
-import { requireAdmin } from "../auth/admin";
+import { getAdminActor, requireAdmin } from "../auth/admin";
+import { assertUiWriteAllowed } from "../maintenance/ui-maintenance-guard";
 import { getSupabaseServiceRoleClient } from "../supabase/service";
 import { Product, ProductImage, ProductStatus } from "../types/product";
 import { ImageInputSchema, ListProductsFilterSchema, ProductInputSchema } from "../validators/product";
@@ -122,6 +123,14 @@ async function adminReadClient() {
 
 async function adminWriteClient() {
   await requireAdmin();
+  const actor = await getAdminActor();
+  if (!actor) {
+    throw new Error("Unauthorized");
+  }
+  await assertUiWriteAllowed({
+    path: "/admin/products",
+    actorRole: actor.role,
+  });
   return getSupabaseServiceRoleClient();
 }
 

@@ -111,7 +111,7 @@ export function AdminShell({
   const [uiMaintenance, setUiMaintenance] = useState<{ blocked: boolean; message: string | null; loading: boolean }>({
     blocked: false,
     message: null,
-    loading: false,
+    loading: true,
   });
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     if (typeof window === "undefined") {
@@ -164,6 +164,9 @@ export function AdminShell({
           signal: controller.signal,
         });
         const json = (await response.json()) as { ok: boolean; blocked?: boolean; message?: string | null };
+        if (!response.ok || !json.ok) {
+          throw new Error("Failed to verify maintenance state");
+        }
         if (!mounted) return;
         setUiMaintenance({
           blocked: Boolean(json.blocked),
@@ -172,7 +175,14 @@ export function AdminShell({
         });
       } catch {
         if (!mounted) return;
-        setUiMaintenance({ blocked: false, message: null, loading: false });
+        setUiMaintenance({
+          blocked: true,
+          message:
+            locale === "th"
+              ? "ไม่สามารถตรวจสอบสถานะการเปิดใช้งานหน้านี้ได้ ระบบจึงปิดการใช้งานชั่วคราวเพื่อความปลอดภัย"
+              : "Unable to verify page status, so access is temporarily locked for safety.",
+          loading: false,
+        });
       }
     }
 
@@ -181,7 +191,7 @@ export function AdminShell({
       mounted = false;
       controller.abort();
     };
-  }, [actorRole, pathname]);
+  }, [actorRole, locale, pathname]);
 
   useEffect(() => {
     if (typeof document === "undefined") {
@@ -242,6 +252,11 @@ export function AdminShell({
   }
 
   function handleNavIntent(event: MouseEvent<HTMLAnchorElement>, href: string) {
+    if (uiMaintenance.blocked || uiMaintenance.loading) {
+      event.preventDefault();
+      return;
+    }
+
     if (
       event.defaultPrevented ||
       event.metaKey ||
@@ -468,6 +483,10 @@ export function AdminShell({
           </aside>
         </>
       ) : null}
+
+      {uiMaintenance.blocked || uiMaintenance.loading ? (
+        <UiMaintenanceLockScreen locale={locale} message={uiMaintenance.message} loading={uiMaintenance.loading} />
+      ) : null}
     </div>
   );
 }
@@ -538,6 +557,54 @@ function UiMaintenanceOverlay({ locale, message }: { locale: AdminLocale; messag
         </div>
       </div>
     </section>
+  );
+}
+
+function UiMaintenanceLockScreen({
+  locale,
+  message,
+  loading,
+}: {
+  locale: AdminLocale;
+  message: string | null;
+  loading: boolean;
+}) {
+  const title = loading
+    ? locale === "th"
+      ? "กำลังตรวจสอบสถานะระบบ"
+      : "Checking System Status"
+    : locale === "th"
+      ? "ระบบปิดปรับปรุงชั่วคราว"
+      : "System Temporarily Under Maintenance";
+  const description =
+    message ??
+    (locale === "th"
+      ? "ขณะนี้ปิดการใช้งานชั่วคราว กรุณาลองใหม่อีกครั้งภายหลัง"
+      : "Access is temporarily disabled. Please try again later.");
+
+  return (
+    <div className="fixed inset-0 z-[200] grid place-items-center bg-slate-950/80 p-4 backdrop-blur-sm">
+      <section className="w-full max-w-xl rounded-2xl border border-amber-400/45 bg-amber-500/10 p-6 text-amber-50 shadow-2xl">
+        <div className="flex items-start gap-3">
+          <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-amber-500/20">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              className="h-5 w-5 animate-spin"
+              aria-hidden
+            >
+              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+            </svg>
+          </span>
+          <div>
+            <h2 className="text-lg font-semibold">{title}</h2>
+            <p className="mt-1 text-sm">{description}</p>
+          </div>
+        </div>
+      </section>
+    </div>
   );
 }
 

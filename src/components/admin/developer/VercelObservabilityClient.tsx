@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { AdminLocale } from "../../../../lib/i18n/admin";
+import { assertApiSuccess } from "../api-error";
 
 type VercelObservabilityClientProps = {
   locale: AdminLocale;
@@ -142,9 +143,13 @@ export default function VercelObservabilityClient({
         signal,
       });
       const json = (await response.json()) as Partial<InsightsPayload>;
-      if (!response.ok || !json.ok) {
-        throw new Error(json.error ?? t.apiError);
-      }
+      assertApiSuccess({
+        response,
+        payload: json,
+        fallbackMessage: t.apiError,
+        locale,
+        requireOkField: true,
+      });
       const normalized = json as InsightsPayload;
       setPayload(normalized);
       setLastLoadedAt(normalized.checkedAt);
@@ -154,7 +159,7 @@ export default function VercelObservabilityClient({
     } finally {
       if (!signal?.aborted) setLoading(false);
     }
-  }, [t.apiError]);
+  }, [locale, t.apiError]);
 
   useEffect(() => {
     const controller = new AbortController();

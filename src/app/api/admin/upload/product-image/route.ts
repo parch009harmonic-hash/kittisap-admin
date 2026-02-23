@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { requireAdminApi } from "../../../../../../lib/auth/admin";
+import { getAdminActor, requireAdminApi } from "../../../../../../lib/auth/admin";
+import { assertUiWriteAllowed, isUiMaintenanceLockedError } from "../../../../../../lib/maintenance/ui-maintenance-guard";
 import { takeRateLimitToken } from "../../../../../../lib/security/rate-limit";
 import { getSupabaseServiceRoleClient } from "../../../../../../lib/supabase/service";
 
@@ -15,6 +16,16 @@ export const dynamic = "force-dynamic";
 export async function POST(request: NextRequest) {
   try {
     const user = await requireAdminApi();
+    const actor = await getAdminActor();
+    if (!actor) {
+      throw new Error("Unauthorized");
+    }
+    await assertUiWriteAllowed({
+      path: "/admin/products",
+      actorRole: actor.role,
+      userAgent: request.headers.get("user-agent"),
+    });
+
     const rate = takeRateLimitToken(`upload:${user.id}`, {
       limit: UPLOAD_LIMIT,
       windowMs: UPLOAD_WINDOW_MS,
@@ -85,6 +96,9 @@ export async function POST(request: NextRequest) {
       { headers: { "Cache-Control": "no-store, max-age=0" } }
     );
   } catch (error) {
+    if (isUiMaintenanceLockedError(error)) {
+      return NextResponse.json({ code: error.code, error: error.message }, { status: error.status });
+    }
     const message = error instanceof Error ? error.message : "Upload failed";
     if (message === "Unauthorized") {
       return NextResponse.json({ error: message }, { status: 401 });

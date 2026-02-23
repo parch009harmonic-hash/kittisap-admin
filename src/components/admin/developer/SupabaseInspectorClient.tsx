@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 
 import type { AdminLocale } from "../../../../lib/i18n/admin";
+import { assertApiSuccess } from "../api-error";
 
 type InspectorTab = "tables" | "data" | "stability" | "sql";
 
@@ -152,7 +153,13 @@ export default function SupabaseInspectorClient({ locale }: { locale: AdminLocal
     try {
       const response = await fetch("/api/admin/developer/supabase/inspector?action=tables", { cache: "no-store" });
       const json = (await response.json()) as { ok: boolean; error?: string; tables?: TableSummary[] };
-      if (!response.ok || !json.ok) throw new Error(json.error ?? "Failed to load tables");
+      assertApiSuccess({
+        response,
+        payload: json,
+        fallbackMessage: "Failed to load tables",
+        locale,
+        requireOkField: true,
+      });
       setTables(json.tables ?? []);
     } catch (fetchError) {
       setError(fetchError instanceof Error ? fetchError.message : "Unknown error");
@@ -172,7 +179,13 @@ export default function SupabaseInspectorClient({ locale }: { locale: AdminLocal
       });
       const response = await fetch(`/api/admin/developer/supabase/inspector?${params.toString()}`, { cache: "no-store" });
       const json = (await response.json()) as { ok: boolean; error?: string } & DataResult;
-      if (!response.ok || !json.ok) throw new Error(json.error ?? "Failed to load data");
+      assertApiSuccess({
+        response,
+        payload: json,
+        fallbackMessage: "Failed to load data",
+        locale,
+        requireOkField: true,
+      });
       setDataPage(json.page);
       setDataLimit(json.limit as (typeof PAGE_SIZES)[number]);
       setDataResult({
@@ -197,7 +210,13 @@ export default function SupabaseInspectorClient({ locale }: { locale: AdminLocal
     try {
       const response = await fetch("/api/admin/developer/supabase/inspector?action=stability&runs=8", { cache: "no-store" });
       const json = (await response.json()) as { ok: boolean; error?: string } & StabilityResult;
-      if (!response.ok || !json.ok) throw new Error(json.error ?? "Failed to run stability test");
+      assertApiSuccess({
+        response,
+        payload: json,
+        fallbackMessage: "Failed to run stability test",
+        locale,
+        requireOkField: true,
+      });
       setStability(json);
     } catch (fetchError) {
       setError(fetchError instanceof Error ? fetchError.message : "Unknown error");
@@ -212,7 +231,13 @@ export default function SupabaseInspectorClient({ locale }: { locale: AdminLocal
       const params = new URLSearchParams({ action: "sql", query: sqlQuery });
       const response = await fetch(`/api/admin/developer/supabase/inspector?${params.toString()}`, { cache: "no-store" });
       const json = (await response.json()) as { ok: boolean; error?: string } & SqlResult;
-      if (!response.ok || !json.ok) throw new Error(json.error ?? "Failed to run SQL");
+      assertApiSuccess({
+        response,
+        payload: json,
+        fallbackMessage: "Failed to run SQL",
+        locale,
+        requireOkField: true,
+      });
       setSqlResult({ table: json.table, mode: json.mode, latencyMs: json.latencyMs, returned: json.returned, rows: json.rows });
     } catch (fetchError) {
       setError(fetchError instanceof Error ? fetchError.message : "Unknown error");

@@ -23,7 +23,9 @@ export function normalizeUiPath(pathname: string): string | null {
   if (!pathname.startsWith("/admin")) {
     return null;
   }
-  const matched = UI_MAINTENANCE_PATHS.find((path) => pathname === path || pathname.startsWith(`${path}/`));
+  const matched = [...UI_MAINTENANCE_PATHS]
+    .sort((a, b) => b.length - a.length)
+    .find((path) => pathname === path || pathname.startsWith(`${path}/`));
   return matched ?? null;
 }
 

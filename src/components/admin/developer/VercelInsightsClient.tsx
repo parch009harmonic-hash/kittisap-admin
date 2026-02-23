@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { AdminLocale } from "../../../../lib/i18n/admin";
+import { assertApiSuccess } from "../api-error";
 
 type TabKey = "overview" | "usage" | "deployments" | "branches" | "projects" | "env" | "speed";
 
@@ -161,16 +162,20 @@ export default function VercelInsightsClient({ locale }: { locale: AdminLocale }
     try {
       const response = await fetch("/api/admin/developer/vercel/insights", { cache: "no-store" });
       const json = (await response.json()) as Payload;
-      if (!response.ok || !json.ok) {
-        throw new Error(json.error ?? "Failed to load Vercel insights");
-      }
+      assertApiSuccess({
+        response,
+        payload: json,
+        fallbackMessage: "Failed to load Vercel insights",
+        locale,
+        requireOkField: true,
+      });
       setPayload(json);
     } catch (fetchError) {
       setError(fetchError instanceof Error ? fetchError.message : "Unknown error");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [locale]);
 
   useEffect(() => {
     void load();

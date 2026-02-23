@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { AdminLocale } from "../../../../lib/i18n/admin";
+import { assertApiSuccess } from "../api-error";
 
 type TabKey = "overview" | "files" | "actions" | "output";
 
@@ -118,7 +119,13 @@ export default function GitHubOpsClient({ locale }: { locale: AdminLocale }) {
     try {
       const response = await fetch("/api/admin/developer/github", { cache: "no-store" });
       const json = (await response.json()) as ApiPayload;
-      if (!response.ok || !json.ok) throw new Error(json.error ?? "Scan failed");
+      assertApiSuccess({
+        response,
+        payload: json,
+        fallbackMessage: "Scan failed",
+        locale,
+        requireOkField: true,
+      });
       setSummary(json.summary ?? null);
       if (json.summary?.branch) {
         setBranchInput(json.summary.branch);
@@ -128,7 +135,7 @@ export default function GitHubOpsClient({ locale }: { locale: AdminLocale }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [locale]);
 
   async function callAction(action: "update" | "build" | "commit_push" | "sync_script" | "run_all_1234") {
     setLoading(true);
@@ -141,7 +148,13 @@ export default function GitHubOpsClient({ locale }: { locale: AdminLocale }) {
         body: JSON.stringify({ action, branch: branchInput, message: commitMessageInput }),
       });
       const json = (await response.json()) as ApiPayload;
-      if (!response.ok || !json.ok) throw new Error(json.error ?? `${action} failed`);
+      assertApiSuccess({
+        response,
+        payload: json,
+        fallbackMessage: `${action} failed`,
+        locale,
+        requireOkField: true,
+      });
       setSummary(json.summary ?? null);
       setOutput(json.result?.output ?? "");
       if (action === "update" || action === "commit_push" || action === "sync_script" || action === "run_all_1234") {

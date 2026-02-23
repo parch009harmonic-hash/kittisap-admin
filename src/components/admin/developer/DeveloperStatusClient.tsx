@@ -3,6 +3,7 @@
 import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 
 import type { AdminLocale } from "../../../../lib/i18n/admin";
+import { assertApiSuccess } from "../api-error";
 
 type HealthPart = {
   ok: boolean;
@@ -203,9 +204,7 @@ export default function DeveloperStatusClient({ mode, locale }: { mode: Mode; lo
     try {
       const response = await fetch("/api/admin/developer/status", { cache: "no-store" });
       const json = (await response.json()) as DeveloperStatus;
-      if (!response.ok) {
-        throw new Error(json.error ?? "Failed to load developer status.");
-      }
+      assertApiSuccess({ response, payload: json, fallbackMessage: "Failed to load developer status.", locale });
       setStatus(json);
       setHistory((prev) => {
         const nextPoint: LatencySnapshot = {
@@ -222,7 +221,7 @@ export default function DeveloperStatusClient({ mode, locale }: { mode: Mode; lo
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [locale]);
 
   useEffect(() => {
     void load();

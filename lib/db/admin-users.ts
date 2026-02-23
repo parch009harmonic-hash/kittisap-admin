@@ -3,7 +3,8 @@
 import { timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 
-import { requireAdminApi } from "../auth/admin";
+import { getAdminActor, requireAdminApi } from "../auth/admin";
+import { assertUiWriteAllowed } from "../maintenance/ui-maintenance-guard";
 import { getSupabaseServiceRoleClient } from "../supabase/service";
 
 export type AdminUserRecord = {
@@ -93,6 +94,11 @@ function profilesRoleConstraintHint() {
 
 async function assertAdminRole() {
   await requireAdminApi();
+  const actor = await getAdminActor();
+  if (!actor) {
+    throw new Error("Unauthorized");
+  }
+  return actor;
 }
 
 function getDeveloperPinSecret() {
@@ -123,7 +129,11 @@ function assertDeveloperPin(pin: string | undefined) {
 }
 
 export async function createAdminUser(input: unknown) {
-  await assertAdminRole();
+  const actor = await assertAdminRole();
+  await assertUiWriteAllowed({
+    path: "/admin/settings",
+    actorRole: actor.role,
+  });
   const parsed = CreateAdminUserSchema.parse(input);
   if (parsed.role === "developer") {
     assertDeveloperPin(parsed.developerPin);
@@ -422,7 +432,11 @@ export async function listAdminUsers(): Promise<AdminUserRecord[]> {
 }
 
 export async function updateAdminUser(input: unknown) {
-  await assertAdminRole();
+  const actor = await assertAdminRole();
+  await assertUiWriteAllowed({
+    path: "/admin/settings",
+    actorRole: actor.role,
+  });
   const parsed = UpdateAdminUserSchema.parse(input);
   const currentRole = await getProfileRole(parsed.userId);
   if (currentRole === "developer" || parsed.role === "developer") {
@@ -511,7 +525,11 @@ export async function updateAdminUser(input: unknown) {
 }
 
 export async function deleteAdminUser(input: unknown) {
-  await assertAdminRole();
+  const actor = await assertAdminRole();
+  await assertUiWriteAllowed({
+    path: "/admin/settings",
+    actorRole: actor.role,
+  });
   const parsed = DeleteAdminUserSchema.parse(input);
   const currentRole = await getProfileRole(parsed.userId);
   if (currentRole === "developer") {

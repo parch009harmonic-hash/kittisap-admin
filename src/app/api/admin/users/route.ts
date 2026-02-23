@@ -3,6 +3,7 @@ import { ZodError } from "zod";
 
 import { takeRateLimitToken } from "../../../../../lib/security/rate-limit";
 import { createAdminUser, deleteAdminUser, listAdminUsers, updateAdminUser } from "../../../../../lib/db/admin-users";
+import { isUiMaintenanceLockedError } from "../../../../../lib/maintenance/ui-maintenance-guard";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -85,6 +86,9 @@ export async function POST(request: NextRequest) {
       const message = error.issues.map((item) => item.message).join(", ");
       return NextResponse.json({ error: message }, { status: 400 });
     }
+    if (isUiMaintenanceLockedError(error)) {
+      return NextResponse.json({ code: error.code, error: error.message }, { status: error.status });
+    }
 
     const message = error instanceof Error ? error.message : "Failed to create user";
     return NextResponse.json({ error: message }, { status: mapStatus(message) });
@@ -106,6 +110,9 @@ export async function PATCH(request: NextRequest) {
       const message = error.issues.map((item) => item.message).join(", ");
       return NextResponse.json({ error: message }, { status: 400 });
     }
+    if (isUiMaintenanceLockedError(error)) {
+      return NextResponse.json({ code: error.code, error: error.message }, { status: error.status });
+    }
 
     const message = error instanceof Error ? error.message : "Failed to update user";
     return NextResponse.json({ error: message }, { status: mapStatus(message) });
@@ -126,6 +133,9 @@ export async function DELETE(request: NextRequest) {
     if (error instanceof ZodError) {
       const message = error.issues.map((item) => item.message).join(", ");
       return NextResponse.json({ error: message }, { status: 400 });
+    }
+    if (isUiMaintenanceLockedError(error)) {
+      return NextResponse.json({ code: error.code, error: error.message }, { status: error.status });
     }
 
     const message = error instanceof Error ? error.message : "Failed to delete user";

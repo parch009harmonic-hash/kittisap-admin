@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { ZodError } from "zod";
 
 import { getAdminSettingsApi, updateAdminSettingApi } from "../../../../../lib/db/admin-settings";
+import { isUiMaintenanceLockedError } from "../../../../../lib/maintenance/ui-maintenance-guard";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -41,6 +42,9 @@ export async function PUT(request: NextRequest) {
     if (error instanceof ZodError) {
       const message = error.issues.map((item) => item.message).join(", ");
       return NextResponse.json({ error: message }, { status: 400 });
+    }
+    if (isUiMaintenanceLockedError(error)) {
+      return NextResponse.json({ code: error.code, error: error.message }, { status: error.status });
     }
     const message = error instanceof Error ? error.message : "Failed to update settings";
     return NextResponse.json({ error: message }, { status: mapStatus(message) });

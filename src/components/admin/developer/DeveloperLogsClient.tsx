@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import { assertApiSuccess } from "../api-error";
+
 type LogEntry = {
   id: string;
   ts: string;
@@ -46,9 +48,7 @@ export default function DeveloperLogsClient() {
 
       const response = await fetch(`/api/admin/developer/logs?${params.toString()}`, { cache: "no-store" });
       const payload = (await response.json()) as LogsPayload;
-      if (!response.ok) {
-        throw new Error(payload.error ?? "Failed to load logs.");
-      }
+      assertApiSuccess({ response, payload, fallbackMessage: "Failed to load logs." });
       setLogs(payload.logs ?? []);
       setTotal(payload.total ?? payload.logs?.length ?? 0);
       setCheckedAt(payload.checkedAt ?? null);
@@ -73,9 +73,7 @@ export default function DeveloperLogsClient() {
         cache: "no-store",
       });
       const payload = (await response.json()) as { error?: string };
-      if (!response.ok) {
-        throw new Error(payload.error ?? "Failed to clear logs.");
-      }
+      assertApiSuccess({ response, payload, fallbackMessage: "Failed to clear logs." });
       await loadLogs();
     } catch (fetchError) {
       const message = fetchError instanceof Error ? fetchError.message : "Failed to clear logs.";
