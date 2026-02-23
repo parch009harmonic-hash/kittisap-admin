@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import type { AppLocale } from "../../../../../lib/i18n/locale";
@@ -28,7 +28,7 @@ export async function generateMetadata({ params }: LocalizedLoginPageProps): Pro
       }
     : {
         title: "เข้าสู่ระบบลูกค้า | Kittisap",
-        description: "เข้าสู่ระบบลูกค้าเพื่อสั่งซื้อและติดตามคำสั่งซื้อ",
+        description: "เข้าสู่ระบบลูกค้าเพื่อสั่งซื้อสินค้าและติดตามคำสั่งซื้อ",
         alternates: {
           canonical: "/auth/login",
           languages: { th: "/auth/login", en: "/en/auth/login" },

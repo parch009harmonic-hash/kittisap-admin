@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 
 import { getAppLocale } from "../../../../lib/i18n/locale";
 import { CustomerAuthForm } from "../../../components/storefront/CustomerAuthForm";
@@ -6,7 +6,7 @@ import { CustomerAuthForm } from "../../../components/storefront/CustomerAuthFor
 export async function generateMetadata(): Promise<Metadata> {
   return {
     title: "เข้าสู่ระบบลูกค้า | Kittisap",
-    description: "เข้าสู่ระบบลูกค้าเพื่อสั่งซื้อและติดตามคำสั่งซื้อ",
+    description: "เข้าสู่ระบบลูกค้าเพื่อสั่งซื้อสินค้าและติดตามคำสั่งซื้อ",
     alternates: {
       canonical: "/auth/login",
       languages: { th: "/auth/login", en: "/en/auth/login" },

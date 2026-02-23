@@ -35,10 +35,13 @@ const notoSansLao = Noto_Sans_Lao({
 });
 
 export const metadata: Metadata = {
-  title: "Kittisap Admin",
-  description: "Kittisap Admin Dashboard",
+  title: {
+    default: "Kittisap",
+    template: "%s | Kittisap",
+  },
+  description: "Kittisap customer website and commerce platform",
   manifest: "/manifest.webmanifest",
-  applicationName: "Kittisap Admin",
+  applicationName: "Kittisap",
   icons: {
     icon: "/icon.png",
     shortcut: "/icon.png",

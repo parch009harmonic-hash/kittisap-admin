@@ -3,9 +3,10 @@
 import { z } from "zod";
 
 import { requireCustomerApi } from "../auth/customer";
+import { getSupabaseServerClient } from "../supabase/server";
 import { validatePublicCoupon } from "./public-coupons";
-import { getPaymentSettings } from "./payment-settings";
-import { getSupabaseServiceRoleClient } from "../supabase/service";
+
+const DEFAULT_PROMPTPAY_BASE_URL = "https://promptpay.io";
 
 const PublicOrderCreateSchema = z.object({
   items: z
@@ -73,8 +74,9 @@ function formatPromptpayAmount(amount: number) {
   return fixed.replace(/0+$/, "").replace(/\.$/, "");
 }
 
-async function reserveStock(productId: string, qty: number) {
-  const supabase = getSupabaseServiceRoleClient();
+type DbClient = Awaited<ReturnType<typeof getSupabaseServerClient>>;
+
+async function reserveStock(supabase: DbClient, productId: string, qty: number) {
   const { data, error } = await supabase.rpc("reserve_product_stock", {
     p_product_id: productId,
     p_qty: qty,
@@ -89,16 +91,14 @@ async function reserveStock(productId: string, qty: number) {
   }
 }
 
-async function releaseStock(productId: string, qty: number) {
-  const supabase = getSupabaseServiceRoleClient();
+async function releaseStock(supabase: DbClient, productId: string, qty: number) {
   await supabase.rpc("release_product_stock", {
     p_product_id: productId,
     p_qty: qty,
   });
 }
 
-async function ensureCustomerProfile(customerId: string, fullName: string, phone: string) {
-  const supabase = getSupabaseServiceRoleClient();
+async function ensureCustomerProfile(supabase: DbClient, customerId: string, fullName: string, phone: string) {
   const { error } = await supabase
     .from("customer_profiles")
     .upsert({ id: customerId, full_name: fullName, phone }, { onConflict: "id" });
@@ -108,8 +108,7 @@ async function ensureCustomerProfile(customerId: string, fullName: string, phone
   }
 }
 
-async function generateUniqueOrderNo() {
-  const supabase = getSupabaseServiceRoleClient();
+async function generateUniqueOrderNo(supabase: DbClient) {
   for (let attempt = 0; attempt < 8; attempt += 1) {
     const no = buildOrderNo();
     const { data, error } = await supabase.from("orders").select("id").eq("order_no", no).maybeSingle();
@@ -120,15 +119,30 @@ async function generateUniqueOrderNo() {
   return `${buildOrderNo()}-${Math.floor(Math.random() * 99)}`;
 }
 
+async function getPromptpayPhone(supabase: DbClient) {
+  const { data, error } = await supabase
+    .from("payment_settings")
+    .select("promptpay_phone")
+    .eq("id", "default")
+    .maybeSingle();
+
+  if (error) {
+    throw new PublicOrderError(500, "PAYMENT_CONFIG_FAILED", error.message);
+  }
+
+  const phone = String(data?.promptpay_phone ?? "").trim();
+  return phone;
+}
+
 export async function createPublicOrder(input: unknown) {
   const actor = await requireCustomerApi();
   const payload = PublicOrderCreateSchema.parse(input);
   const customerId = actor.user.id;
+  const supabase = await getSupabaseServerClient();
 
-  await ensureCustomerProfile(customerId, payload.customer.full_name, payload.customer.phone);
+  await ensureCustomerProfile(supabase, customerId, payload.customer.full_name, payload.customer.phone);
 
   const productIds = uniq(payload.items.map((item) => item.product_id));
-  const supabase = getSupabaseServiceRoleClient();
 
   const { data: productRows, error: productsError } = await supabase
     .from("products")
@@ -189,24 +203,23 @@ export async function createPublicOrder(input: unknown) {
   const shippingFee = 0;
   const finalAmount = Number(Math.max(0, subTotal - discountTotal + shippingFee).toFixed(2));
 
-  const payment = await getPaymentSettings();
-  const promptpayPhone = payment.promptpayPhone.trim();
+  const promptpayPhone = await getPromptpayPhone(supabase);
   if (!promptpayPhone) {
     throw new PublicOrderError(500, "PAYMENT_CONFIG_MISSING", "PromptPay phone is not configured");
   }
 
-  const base = "https://promptpay.io/";
+  const base = `${DEFAULT_PROMPTPAY_BASE_URL}/`;
   const promptpayUrl = `${base}${encodeURIComponent(promptpayPhone)}/${encodeURIComponent(formatPromptpayAmount(finalAmount))}`;
 
   const reserved: Array<{ productId: string; qty: number }> = [];
 
   try {
     for (const line of lines) {
-      await reserveStock(line.productId, line.qty);
+      await reserveStock(supabase, line.productId, line.qty);
       reserved.push({ productId: line.productId, qty: line.qty });
     }
 
-    const orderNo = await generateUniqueOrderNo();
+    const orderNo = await generateUniqueOrderNo(supabase);
     const { data: orderRow, error: orderError } = await supabase
       .from("orders")
       .insert({
@@ -256,7 +269,7 @@ export async function createPublicOrder(input: unknown) {
     };
   } catch (error) {
     for (const line of reserved) {
-      await releaseStock(line.productId, line.qty);
+      await releaseStock(supabase, line.productId, line.qty);
     }
 
     if (error instanceof PublicOrderError) {
@@ -270,7 +283,7 @@ export async function createPublicOrder(input: unknown) {
 
 export async function uploadPublicOrderSlip(orderNo: string, file: File) {
   const actor = await requireCustomerApi();
-  const supabase = getSupabaseServiceRoleClient();
+  const supabase = await getSupabaseServerClient();
   const normalizedOrderNo = orderNo.trim();
 
   if (!normalizedOrderNo) {
@@ -301,14 +314,6 @@ export async function uploadPublicOrderSlip(orderNo: string, file: File) {
   }
 
   const bucket = "payment-slips";
-  const createBucket = await supabase.storage.createBucket(bucket, {
-    public: false,
-    fileSizeLimit: 10 * 1024 * 1024,
-    allowedMimeTypes: allowed,
-  });
-  if (createBucket.error && !createBucket.error.message.toLowerCase().includes("already exists")) {
-    throw new PublicOrderError(500, "SLIP_BUCKET_FAILED", createBucket.error.message);
-  }
 
   const ext = file.name.includes(".") ? file.name.split(".").pop() ?? "bin" : "bin";
   const safeExt = ext.toLowerCase().replace(/[^a-z0-9]/g, "") || "bin";

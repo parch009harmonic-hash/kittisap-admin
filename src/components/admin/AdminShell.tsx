@@ -188,6 +188,9 @@ export function AdminShell({
       activeController?.abort();
       const controller = new AbortController();
       activeController = controller;
+      if (mounted) {
+        setUiMaintenance((prev) => ({ ...prev, loading: true }));
+      }
 
       try {
         const params = new URLSearchParams({ path: pathname });
@@ -210,17 +213,13 @@ export function AdminShell({
         if (error instanceof DOMException && error.name === "AbortError") {
           return;
         }
-        // Keep last known lock state when the status check fails.
-        setUiMaintenance((prev) => ({
-          blocked: prev.blocked,
-          message: prev.blocked
-            ? prev.message ??
-              (locale === "th"
-                ? "หน้าระบบนี้อยู่ระหว่างปิดปรับปรุงชั่วคราว กรุณาลองใหม่ภายหลัง"
-                : "This page is temporarily unavailable for maintenance. Please try again later.")
-            : null,
+        // Fail-open for UI lock overlay to avoid sticky blocked screen on transient failures.
+        // API write guards still enforce maintenance lock server-side.
+        setUiMaintenance({
+          blocked: false,
+          message: null,
           loading: false,
-        }));
+        });
       }
     }
 
@@ -295,7 +294,7 @@ export function AdminShell({
   }
 
   function handleNavIntent(event: MouseEvent<HTMLAnchorElement>, href: string) {
-    if (uiMaintenance.blocked || uiMaintenance.loading) {
+    if (uiMaintenance.blocked) {
       event.preventDefault();
       return;
     }
@@ -527,7 +526,7 @@ export function AdminShell({
         </>
       ) : null}
 
-      {uiMaintenance.blocked || uiMaintenance.loading ? (
+      {uiMaintenance.blocked ? (
         <UiMaintenanceLockScreen locale={locale} message={uiMaintenance.message} loading={uiMaintenance.loading} />
       ) : null}
     </div>

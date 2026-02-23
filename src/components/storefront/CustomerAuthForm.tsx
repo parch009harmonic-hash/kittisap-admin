@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -92,9 +92,8 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const errorCode = params.get("error");
-    if (!errorCode) {
-      return;
-    }
+    if (!errorCode) return;
+
     if (errorCode === "network_unstable") {
       setError("เครือข่ายไปยัง Supabase ไม่เสถียร กรุณาลองใหม่");
       return;
@@ -104,7 +103,7 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
       return;
     }
     if (errorCode === "profile_upsert_failed") {
-      setError("เข้าสู่ระบบสำเร็จแต่บันทึกข้อมูลลูกค้าไม่สำเร็จ กรุณาลองใหม่");
+      setError("เข้าสู่ระบบสำเร็จ แต่บันทึกข้อมูลลูกค้าไม่สำเร็จ กรุณาลองใหม่");
       return;
     }
     if (errorCode === "oauth_code_missing") {

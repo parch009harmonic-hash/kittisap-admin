@@ -26,6 +26,10 @@ insert into public.payment_settings (id, promptpay_phone, promptpay_base_url, al
 values ('default', '0843374982', 'https://promptpay.io', true)
 on conflict (id) do nothing;
 
+insert into storage.buckets (id, name, public)
+values ('payment-slips', 'payment-slips', false)
+on conflict (id) do nothing;
+
 create table if not exists public.orders (
   id uuid primary key default gen_random_uuid(),
   order_no text not null unique,
@@ -183,6 +187,8 @@ end $$;
 create or replace function public.reserve_product_stock(p_product_id uuid, p_qty int)
 returns boolean
 language plpgsql
+security definer
+set search_path = public, pg_temp
 as $$
 declare
   affected int := 0;
@@ -205,6 +211,8 @@ $$;
 create or replace function public.release_product_stock(p_product_id uuid, p_qty int)
 returns boolean
 language plpgsql
+security definer
+set search_path = public, pg_temp
 as $$
 begin
   if p_qty <= 0 then
@@ -222,6 +230,7 @@ $$;
 alter table public.customer_profiles enable row level security;
 alter table public.orders enable row level security;
 alter table public.order_items enable row level security;
+alter table public.payment_settings enable row level security;
 
 do $$
 begin
@@ -256,6 +265,20 @@ do $$
 begin
   if not exists (
     select 1 from pg_policies
+    where schemaname='public' and tablename='payment_settings' and policyname='payment_settings_authenticated_select'
+  ) then
+    create policy payment_settings_authenticated_select
+      on public.payment_settings
+      for select
+      to authenticated
+      using (true);
+  end if;
+end $$;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies
     where schemaname='public' and tablename='orders' and policyname='orders_self_select'
   ) then
     create policy orders_self_select
@@ -263,6 +286,43 @@ begin
       for select
       to authenticated
       using (customer_id = auth.uid());
+  end if;
+end $$;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies
+    where schemaname='public' and tablename='orders' and policyname='orders_self_insert'
+  ) then
+    create policy orders_self_insert
+      on public.orders
+      for insert
+      to authenticated
+      with check (customer_id = auth.uid());
+  end if;
+end $$;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies
+    where schemaname='public' and tablename='orders' and policyname='orders_self_update_payment_submit'
+  ) then
+    create policy orders_self_update_payment_submit
+      on public.orders
+      for update
+      to authenticated
+      using (
+        customer_id = auth.uid()
+        and status = 'pending_payment'
+        and payment_status = 'unpaid'
+      )
+      with check (
+        customer_id = auth.uid()
+        and status in ('pending_payment', 'pending_review')
+        and payment_status in ('unpaid', 'pending_verify')
+      );
   end if;
 end $$;
 
@@ -283,6 +343,68 @@ begin
           where o.id = order_items.order_id
             and o.customer_id = auth.uid()
         )
+      );
+  end if;
+end $$;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies
+    where schemaname='public' and tablename='order_items' and policyname='order_items_self_insert'
+  ) then
+    create policy order_items_self_insert
+      on public.order_items
+      for insert
+      to authenticated
+      with check (
+        exists (
+          select 1
+          from public.orders o
+          where o.id = order_items.order_id
+            and o.customer_id = auth.uid()
+        )
+      );
+  end if;
+end $$;
+
+grant select, insert, update on public.orders to authenticated;
+grant select, insert on public.order_items to authenticated;
+grant select, insert on public.payment_slips to authenticated;
+grant select on public.payment_settings to authenticated;
+grant execute on function public.reserve_product_stock(uuid, int) to authenticated;
+grant execute on function public.release_product_stock(uuid, int) to authenticated;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies
+    where schemaname='storage' and tablename='objects' and policyname='payment_slips_object_insert_self'
+  ) then
+    create policy payment_slips_object_insert_self
+      on storage.objects
+      for insert
+      to authenticated
+      with check (
+        bucket_id = 'payment-slips'
+        and owner = auth.uid()
+      );
+  end if;
+end $$;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies
+    where schemaname='storage' and tablename='objects' and policyname='payment_slips_object_select_self'
+  ) then
+    create policy payment_slips_object_select_self
+      on storage.objects
+      for select
+      to authenticated
+      using (
+        bucket_id = 'payment-slips'
+        and owner = auth.uid()
       );
   end if;
 end $$;

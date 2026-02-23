@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 
-import { getSupabaseServiceRoleClient } from "../supabase/service";
+import { getSupabaseServerClient } from "../supabase/server";
 
 const ValidateCouponInputSchema = z.object({
   code: z.string().trim().min(1).max(64),
@@ -98,7 +98,7 @@ function computeDiscount(subtotal: number, type: "percent" | "fixed", value: num
 }
 
 async function findCouponByCode(code: string): Promise<Record<string, unknown> | null> {
-  const supabase = getSupabaseServiceRoleClient();
+  const supabase = await getSupabaseServerClient();
 
   const byCode = await supabase
     .from("coupons")
