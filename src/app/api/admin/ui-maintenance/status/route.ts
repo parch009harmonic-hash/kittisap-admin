@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ ok: true, blocked: false });
     }
     const platform = detectUiPlatformFromUserAgent(request.headers.get("user-agent") ?? "");
-    const rules = await listUiMaintenanceRules();
+    const rules = await listUiMaintenanceRules({ bypassCache: true });
     const rule = rules.find((item) => item.path === pathname);
 
     const blocked = Boolean(

@@ -111,7 +111,7 @@ export function AdminShell({
   const [uiMaintenance, setUiMaintenance] = useState<{ blocked: boolean; message: string | null; loading: boolean }>({
     blocked: false,
     message: null,
-    loading: true,
+    loading: false,
   });
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     if (typeof window === "undefined") {
@@ -177,14 +177,18 @@ export function AdminShell({
 
   useEffect(() => {
     if (actorRole !== "admin" && actorRole !== "staff") {
+      setUiMaintenance({ blocked: false, message: null, loading: false });
       return;
     }
 
     let mounted = true;
-    const controller = new AbortController();
+    let activeController: AbortController | null = null;
 
     async function checkUiMaintenance() {
-      setUiMaintenance((prev) => ({ ...prev, loading: true }));
+      activeController?.abort();
+      const controller = new AbortController();
+      activeController = controller;
+
       try {
         const params = new URLSearchParams({ path: pathname });
         const response = await fetch(`/api/admin/ui-maintenance/status?${params.toString()}`, {
@@ -201,23 +205,34 @@ export function AdminShell({
           message: json.message ?? null,
           loading: false,
         });
-      } catch {
+      } catch (error) {
         if (!mounted) return;
-        setUiMaintenance({
-          blocked: true,
-          message:
-            locale === "th"
-              ? "ไม่สามารถตรวจสอบสถานะการเปิดใช้งานหน้านี้ได้ ระบบจึงปิดการใช้งานชั่วคราวเพื่อความปลอดภัย"
-              : "Unable to verify page status, so access is temporarily locked for safety.",
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+        // Keep last known lock state when the status check fails.
+        setUiMaintenance((prev) => ({
+          blocked: prev.blocked,
+          message: prev.blocked
+            ? prev.message ??
+              (locale === "th"
+                ? "หน้าระบบนี้อยู่ระหว่างปิดปรับปรุงชั่วคราว กรุณาลองใหม่ภายหลัง"
+                : "This page is temporarily unavailable for maintenance. Please try again later.")
+            : null,
           loading: false,
-        });
+        }));
       }
     }
 
     void checkUiMaintenance();
+    const pollTimer = window.setInterval(() => {
+      void checkUiMaintenance();
+    }, 5000);
+
     return () => {
       mounted = false;
-      controller.abort();
+      activeController?.abort();
+      window.clearInterval(pollTimer);
     };
   }, [actorRole, locale, pathname]);
 

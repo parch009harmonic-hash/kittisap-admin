@@ -94,9 +94,10 @@ async function fetchUiMaintenanceRulesFromDb() {
   return UI_MAINTENANCE_PATHS.map((path) => byPath.get(path) ?? getDefaultUiMaintenanceRule(path));
 }
 
-export async function listUiMaintenanceRules() {
+export async function listUiMaintenanceRules(options?: { bypassCache?: boolean }) {
+  const bypassCache = options?.bypassCache === true;
   const now = Date.now();
-  if (rulesCache && rulesCache.expiresAt > now) {
+  if (!bypassCache && rulesCache && rulesCache.expiresAt > now) {
     return rulesCache.rules;
   }
 

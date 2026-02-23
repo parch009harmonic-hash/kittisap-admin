@@ -49,7 +49,7 @@ export async function assertUiWriteAllowed(input: {
 
   const userAgent = input.userAgent ?? (await getRequestUserAgent());
   const platform = detectUiPlatformFromUserAgent(userAgent);
-  const rules = await listUiMaintenanceRules();
+  const rules = await listUiMaintenanceRules({ bypassCache: true });
   const matchedRule = rules.find((item) => item.path === normalizedPath);
   const blocked = Boolean(
     matchedRule &&
