@@ -11,7 +11,7 @@ export type AdminUserRecord = {
   id: string;
   email: string;
   displayName: string;
-  role: "admin" | "staff" | "developer";
+  role: "admin" | "staff" | "developer" | "customer";
   createdAt: string | null;
 };
 
@@ -27,13 +27,13 @@ const CreateAdminUserSchema = z.object({
     .trim()
     .min(6, "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร / Password must be at least 6 characters")
     .max(128, "รหัสผ่านยาวเกินไป / Password is too long"),
-  role: z.enum(["admin", "staff", "developer"]),
+  role: z.enum(["admin", "staff", "developer", "customer"]),
   developerPin: z.string().trim().min(4).max(64).optional(),
 });
 
 const UpdateAdminUserSchema = z.object({
   userId: z.string().uuid(),
-  role: z.enum(["admin", "staff", "developer"]),
+  role: z.enum(["admin", "staff", "developer", "customer"]),
   displayName: z.string().trim().min(1).max(120).optional(),
   email: z.string().trim().email().optional(),
   password: z.string().trim().min(6).max(128).optional(),
@@ -85,10 +85,10 @@ function isProfilesRoleConstraintError(error: unknown) {
 
 function profilesRoleConstraintHint() {
   return [
-    "ฐานข้อมูลยังไม่อนุญาต role 'developer' ในตาราง profiles (profiles_role_check).",
+    "ฐานข้อมูลยังไม่อนุญาต role 'developer/customer' ในตาราง profiles (profiles_role_check).",
     "กรุณารัน SQL นี้ใน Supabase SQL Editor:",
     "alter table public.profiles drop constraint if exists profiles_role_check;",
-    "alter table public.profiles add constraint profiles_role_check check (role in ('admin','staff','developer'));",
+    "alter table public.profiles add constraint profiles_role_check check (role in ('admin','staff','developer','customer'));",
   ].join("\n");
 }
 
@@ -229,9 +229,9 @@ function toDisplayName(value: unknown, fallback: string) {
   return fallback;
 }
 
-function toRole(value: unknown): "admin" | "staff" | "developer" {
+function toRole(value: unknown): "admin" | "staff" | "developer" | "customer" {
   const normalized = typeof value === "string" ? value.trim().toLowerCase() : "";
-  if (normalized === "admin" || normalized === "developer") {
+  if (normalized === "admin" || normalized === "developer" || normalized === "customer") {
     return normalized;
   }
   return "staff";
@@ -315,7 +315,7 @@ export async function listAdminUsers(): Promise<AdminUserRecord[]> {
 
   const authUsers = listed.data.users ?? [];
   const ids = authUsers.map((item) => item.id);
-  const rolesByUserId = new Map<string, "admin" | "staff" | "developer">();
+  const rolesByUserId = new Map<string, "admin" | "staff" | "developer" | "customer">();
   const namesByUserId = new Map<string, string>();
   const emailsByUserId = new Map<string, string>();
   const createdAtByUserId = new Map<string, string | null>();

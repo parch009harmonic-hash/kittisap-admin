@@ -72,6 +72,7 @@ export default async function AdminSettingsPage() {
     createUserRoleAdmin: locale === "th" ? "แอดมิน" : "Admin",
     createUserRoleStaff: locale === "th" ? "พนักงาน" : "Staff",
     createUserRoleDeveloper: locale === "th" ? "นักพัฒนา" : "Developer",
+    createUserRoleCustomer: locale === "th" ? "ลูกค้า" : "Customer",
     developerPin: locale === "th" ? "รหัส PIN นักพัฒนา" : "Developer PIN",
     developerPinHint:
       locale === "th"

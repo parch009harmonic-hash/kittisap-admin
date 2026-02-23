@@ -55,6 +55,7 @@ type SettingsText = {
   createUserRoleAdmin: string;
   createUserRoleStaff: string;
   createUserRoleDeveloper: string;
+  createUserRoleCustomer: string;
   developerPin: string;
   developerPinHint: string;
   createUserSubmit: string;
@@ -85,7 +86,7 @@ type SettingsSection = {
 };
 
 type Option = { value: string; label: string };
-type UserRole = "admin" | "staff" | "developer";
+type UserRole = "admin" | "staff" | "developer" | "customer";
 type AdminUserRecord = {
   id: string;
   email: string;
@@ -1154,6 +1155,7 @@ function CreateUserSettingItem({
     roleAdmin: text.createUserRoleAdmin,
     roleStaff: text.createUserRoleStaff,
     roleDeveloper: text.createUserRoleDeveloper,
+    roleCustomer: text.createUserRoleCustomer,
     editTitle: locale === "th" ? "แก้ไขผู้ใช้" : "Edit User",
     newPassword: locale === "th" ? "รหัสผ่านใหม่" : "New Password",
     newPasswordHint:
@@ -1430,6 +1432,8 @@ function CreateUserSettingItem({
                           ? t.roleAdmin
                           : user.role === "developer"
                             ? t.roleDeveloper
+                            : user.role === "customer"
+                              ? t.roleCustomer
                             : t.roleStaff}
                       </span>
                       <span>{formatDate(user.createdAt)}</span>
@@ -1495,6 +1499,8 @@ function CreateUserSettingItem({
                             ? t.roleAdmin
                             : user.role === "developer"
                               ? t.roleDeveloper
+                              : user.role === "customer"
+                                ? t.roleCustomer
                               : t.roleStaff}
                         </td>
                         <td className="px-3 py-2 text-slate-600">{formatDate(user.createdAt)}</td>
@@ -1588,6 +1594,7 @@ function CreateUserSettingItem({
                   className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                 >
                   <option value="staff">{text.createUserRoleStaff}</option>
+                  <option value="customer">{text.createUserRoleCustomer}</option>
                   <option value="developer">{text.createUserRoleDeveloper}</option>
                   <option value="admin">{text.createUserRoleAdmin}</option>
                 </select>
@@ -1673,6 +1680,7 @@ function CreateUserSettingItem({
                   className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                 >
                   <option value="staff">{text.createUserRoleStaff}</option>
+                  <option value="customer">{text.createUserRoleCustomer}</option>
                   <option value="developer">{text.createUserRoleDeveloper}</option>
                   <option value="admin">{text.createUserRoleAdmin}</option>
                 </select>

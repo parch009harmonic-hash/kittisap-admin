@@ -127,6 +127,25 @@ export async function GET(request: NextRequest) {
       return withCookies(cookieResponse, res);
     }
 
+    // Keep customer role in profiles for backoffice visibility/permission mapping.
+    const rolePayloads: Array<Record<string, unknown>> = [
+      { id: user.id, role: "customer" },
+      { user_id: user.id, role: "customer" },
+    ];
+    for (const payload of rolePayloads) {
+      const onConflict = "id" in payload ? "id" : "user_id";
+      const roleUpsert = await supabase.from("profiles").upsert(payload, { onConflict });
+      if (!roleUpsert.error) {
+        break;
+      }
+      const roleError = String(roleUpsert.error.message ?? "").toLowerCase();
+      if (roleError.includes("column") && (roleError.includes("does not exist") || roleError.includes("schema cache"))) {
+        continue;
+      }
+      // Non-fatal: customer auth should still work even if role shadow write fails.
+      break;
+    }
+
     const res = NextResponse.redirect(new URL(customerPath(locale, "/account"), request.url));
     return withCookies(cookieResponse, res);
   }

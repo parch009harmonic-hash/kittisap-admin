@@ -10,6 +10,30 @@ export type CustomerProfilePayload = {
   phone: string;
 };
 
+function isMissingProfileColumnError(error: unknown) {
+  const message = error instanceof Error ? error.message.toLowerCase() : String(error ?? "").toLowerCase();
+  return message.includes("column") && (message.includes("does not exist") || message.includes("schema cache"));
+}
+
+async function upsertCustomerRoleProfile(userId: string) {
+  const supabase = await getSupabaseServerClient();
+  const payloads: Array<Record<string, unknown>> = [
+    { id: userId, role: "customer" },
+    { user_id: userId, role: "customer" },
+  ];
+
+  for (const payload of payloads) {
+    const onConflict = "id" in payload ? "id" : "user_id";
+    const attempt = await supabase.from("profiles").upsert(payload, { onConflict });
+    if (!attempt.error) {
+      return;
+    }
+    if (isMissingProfileColumnError(attempt.error)) {
+      continue;
+    }
+  }
+}
+
 function asString(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
@@ -65,5 +89,11 @@ export async function upsertCustomerProfileForSessionUser(input?: { fullName?: s
     throw new Error(upsertError.message);
   }
 
+  await upsertCustomerRoleProfile(data.user.id);
+
   return payload;
+}
+
+export async function upsertCustomerProfileAndRoleForSessionUser(input?: { fullName?: string; phone?: string }) {
+  return upsertCustomerProfileForSessionUser(input);
 }

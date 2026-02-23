@@ -88,6 +88,7 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
 
   const accountPath = withLocale(locale, "/account", useLocalePrefix);
   const switchPath = withLocale(locale, mode === "register" ? "/auth/login" : "/auth/register", useLocalePrefix);
+  const verifyEmailPath = withLocale(locale, "/auth/verify-email", useLocalePrefix);
 
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
@@ -105,6 +106,11 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    const emailFromQuery = params.get("email");
+    if (emailFromQuery && !email) {
+      setEmail(emailFromQuery);
+      setPendingConfirmEmail(emailFromQuery);
+    }
     const errorCode = params.get("error");
     if (!errorCode) return;
 
@@ -123,7 +129,7 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
     if (errorCode === "oauth_code_missing") {
       setError("ไม่พบ OAuth code ใน callback");
     }
-  }, []);
+  }, [email]);
 
   async function handlePasswordAuth(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -160,7 +166,9 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
 
         if (!data.session) {
           setMessage("สมัครสำเร็จ กรุณาตรวจสอบอีเมลเพื่อยืนยันบัญชี แล้วกลับมาเข้าสู่ระบบ");
-          setPendingConfirmEmail(email.trim());
+          const normalizedEmail = email.trim();
+          setPendingConfirmEmail(normalizedEmail);
+          router.replace(`${verifyEmailPath}?email=${encodeURIComponent(normalizedEmail)}`);
           return;
         }
       } else {
