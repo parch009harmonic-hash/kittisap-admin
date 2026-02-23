@@ -1,4 +1,6 @@
-﻿import { getAdminActor } from "../../../lib/auth/admin";
+﻿import { redirect } from "next/navigation";
+
+import { getBackofficeActor } from "../../../lib/auth/admin";
 import { getAdminLocale } from "../../../lib/i18n/admin";
 
 const KPI_CARDS = [
@@ -54,7 +56,10 @@ function statusText(status: OrderStatus, locale: "th" | "en") {
 }
 
 export default async function AdminDashboardPage() {
-  await getAdminActor();
+  const actor = await getBackofficeActor();
+  if (actor?.role === "developer") {
+    redirect("/admin/developer");
+  }
   const locale = await getAdminLocale();
   const text = {
     title: locale === "th" ? "แดชบอร์ด" : "Dashboard",
@@ -176,6 +181,9 @@ function KpiIcon({ label }: { label: string }) {
     </svg>
   );
 }
+
+
+
 
 
 

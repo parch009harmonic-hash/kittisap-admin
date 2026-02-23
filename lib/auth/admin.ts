@@ -51,10 +51,13 @@ async function resolveAdminRole(userId: string) {
   });
 
   const role = profile?.role as string | undefined;
-  const normalizedRole = (role ?? "") as AdminRole;
-  const isAllowed = !error && (normalizedRole === "admin" || normalizedRole === "staff");
+  const normalizedRole = (role ?? "").trim().toLowerCase();
+  const resolvedRole: AdminRole | null =
+    normalizedRole === "admin" || normalizedRole === "staff" || normalizedRole === "developer"
+      ? (normalizedRole as AdminRole)
+      : null;
 
-  return { isAllowed, role: isAllowed ? (normalizedRole as "admin" | "staff") : null, error };
+  return { role: resolvedRole, error };
 }
 
 export type AdminActor = {
@@ -65,6 +68,11 @@ export type AdminActor = {
 type DeveloperActor = {
   user: User;
   role: "admin" | "developer";
+};
+
+export type BackofficeActor = {
+  user: User;
+  role: AdminRole;
 };
 
 export async function getAdminSession() {
@@ -95,7 +103,24 @@ export async function getAdminActor(): Promise<AdminActor | null> {
   }
 
   const roleResult = await resolveAdminRole(user.id);
-  if (!roleResult.isAllowed || !roleResult.role) {
+  if (!roleResult.role || (roleResult.role !== "admin" && roleResult.role !== "staff")) {
+    return null;
+  }
+
+  return {
+    user,
+    role: roleResult.role,
+  };
+}
+
+export async function getBackofficeActor(): Promise<BackofficeActor | null> {
+  const user = await getAdminSession();
+  if (!user) {
+    return null;
+  }
+
+  const roleResult = await resolveAdminRole(user.id);
+  if (!roleResult.role) {
     return null;
   }
 
@@ -120,6 +145,24 @@ export async function requireAdmin() {
   }
 
   return actor.user;
+}
+
+export async function requireBackoffice() {
+  let actor: BackofficeActor | null = null;
+  try {
+    actor = await getBackofficeActor();
+  } catch (error) {
+    if (isSupabaseNetworkUnstable(error) || (error instanceof Error && error.message === "Network unstable")) {
+      redirect("/login?error=network_unstable");
+    }
+    throw error;
+  }
+
+  if (!actor) {
+    redirect("/login?error=not_authorized");
+  }
+
+  return actor;
 }
 
 export async function requireAdminApi() {
@@ -148,14 +191,8 @@ export async function requireDeveloper(options?: { allowAdmin?: boolean }) {
       const roleResult = await resolveAdminRole(user.id);
       if (roleResult.role === "admin") {
         actor = { user, role: "admin" };
-      } else {
-        const supabase = await getSupabaseServerClient();
-        const { data: profile } = await retryOnTransient(async () => {
-          return await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle();
-        });
-        if ((profile?.role as string | undefined) === "developer") {
-          actor = { user, role: "developer" };
-        }
+      } else if (roleResult.role === "developer") {
+        actor = { user, role: "developer" };
       }
     }
   } catch (error) {
@@ -185,14 +222,8 @@ export async function requireDeveloperApi(options?: { allowAdmin?: boolean }) {
       const roleResult = await resolveAdminRole(user.id);
       if (roleResult.role === "admin") {
         actor = { user, role: "admin" };
-      } else {
-        const supabase = await getSupabaseServerClient();
-        const { data: profile } = await retryOnTransient(async () => {
-          return await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle();
-        });
-        if ((profile?.role as string | undefined) === "developer") {
-          actor = { user, role: "developer" };
-        }
+      } else if (roleResult.role === "developer") {
+        actor = { user, role: "developer" };
       }
     }
   } catch (error) {

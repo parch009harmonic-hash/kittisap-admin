@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import type { Metadata } from "next";
 
-import { getAdminActor, requireAdmin } from "../../../lib/auth/admin";
+import { requireBackoffice } from "../../../lib/auth/admin";
 import { getAdminSettings } from "../../../lib/db/admin-settings";
 import { getAdminLocale } from "../../../lib/i18n/admin";
 import { ThemePreset, UiMode } from "../../../lib/types/admin-settings";
@@ -20,8 +20,7 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminLayout({ children }: AdminLayoutProps) {
-  await requireAdmin();
-  const actor = await getAdminActor();
+  const actor = await requireBackoffice();
   const locale = await getAdminLocale();
 
   let initialUiMode: UiMode = "auto";
@@ -41,8 +40,8 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
       initialLocale={locale}
       initialUiMode={initialUiMode}
       initialThemePreset={initialThemePreset}
-      actorRole={actor?.role ?? "staff"}
-      showDeveloperMenu={actor?.role === "admin"}
+      actorRole={actor.role}
+      showDeveloperMenu={actor.role === "admin" || actor.role === "developer"}
     >
       {children}
     </AdminShell>

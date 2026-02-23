@@ -138,7 +138,7 @@ export async function GET(request: NextRequest) {
     .maybeSingle();
 
   const role = String(profile?.role ?? "").trim().toLowerCase();
-  const isAllowed = role === "admin" || role === "staff";
+  const isAllowed = role === "admin" || role === "staff" || role === "developer";
 
   if (profileError || !isAllowed) {
     const isNetwork = isTransientNetworkError(profileError);
@@ -146,6 +146,7 @@ export async function GET(request: NextRequest) {
     return withCookies(cookieResponse, res);
   }
 
-  const res = NextResponse.redirect(new URL("/admin", request.url));
+  const target = role === "developer" ? "/admin/developer" : "/admin";
+  const res = NextResponse.redirect(new URL(target, request.url));
   return withCookies(cookieResponse, res);
 }
