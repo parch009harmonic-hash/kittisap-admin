@@ -1,25 +1,36 @@
 ﻿import Link from "next/link";
 
+import { listAdminOrders } from "../../../../lib/db/admin-orders";
 import { getAdminLocale } from "../../../../lib/i18n/admin";
+import { AdminOrderReviewActions } from "../../../components/admin/orders/AdminOrderReviewActions";
 
-type UiOrder = {
-  id: string;
-  customer: string;
-  total: string;
-  status: "paid" | "pending" | "processing";
-  createdAt: string;
-};
-
-const MOCK_ORDERS: UiOrder[] = [];
-
-function statusClass(status: UiOrder["status"]) {
+function statusClass(status: string) {
   if (status === "paid") return "bg-emerald-100 text-emerald-700";
-  if (status === "pending") return "bg-amber-100 text-amber-700";
-  return "bg-sky-100 text-sky-700";
+  if (status === "pending_review") return "bg-sky-100 text-sky-700";
+  if (status === "pending_payment") return "bg-amber-100 text-amber-700";
+  if (status === "processing") return "bg-indigo-100 text-indigo-700";
+  if (status === "cancelled") return "bg-rose-100 text-rose-700";
+  return "bg-zinc-100 text-zinc-700";
 }
 
-export default async function AdminOrdersPage() {
+type AdminOrdersPageProps = {
+  searchParams: Promise<{ q?: string; status?: string }>;
+};
+
+export default async function AdminOrdersPage({ searchParams }: AdminOrdersPageProps) {
   const locale = await getAdminLocale();
+  const params = await searchParams;
+  const q = typeof params.q === "string" ? params.q : "";
+  const status = typeof params.status === "string" ? params.status : "";
+
+  let orders = [] as Awaited<ReturnType<typeof listAdminOrders>>;
+  let loadError: string | null = null;
+
+  try {
+    orders = await listAdminOrders({ q, status, limit: 200 });
+  } catch (error) {
+    loadError = error instanceof Error ? error.message : "Failed to load orders";
+  }
 
   const text = {
     section: locale === "th" ? "คำสั่งซื้อ" : "Orders",
@@ -32,8 +43,9 @@ export default async function AdminOrdersPage() {
     searchPlaceholder:
       locale === "th" ? "ค้นหาเลขที่คำสั่งซื้อ หรือลูกค้า..." : "Search order id or customer...",
     allStatus: locale === "th" ? "ทุกสถานะ" : "All status",
+    pendingPayment: locale === "th" ? "รอชำระเงิน" : "Pending Payment",
+    pendingReview: locale === "th" ? "รอตรวจสอบสลิป" : "Pending Review",
     paid: locale === "th" ? "ชำระแล้ว" : "Paid",
-    pending: locale === "th" ? "รอดำเนินการ" : "Pending",
     processing: locale === "th" ? "กำลังจัดเตรียม" : "Processing",
     filter: locale === "th" ? "กรอง" : "Filter",
     orderId: locale === "th" ? "เลขที่คำสั่งซื้อ" : "Order ID",
@@ -41,6 +53,7 @@ export default async function AdminOrdersPage() {
     createdAt: locale === "th" ? "วันที่สั่งซื้อ" : "Created At",
     total: locale === "th" ? "ยอดรวม" : "Total",
     status: locale === "th" ? "สถานะ" : "Status",
+    paymentStatus: locale === "th" ? "ชำระเงิน" : "Payment",
     actions: locale === "th" ? "จัดการ" : "Actions",
     view: locale === "th" ? "ดู" : "View",
     noOrdersTitle: locale === "th" ? "ยังไม่มีคำสั่งซื้อ" : "No orders yet",
@@ -68,11 +81,12 @@ export default async function AdminOrdersPage() {
       </header>
 
       <form className="sst-card-soft grid grid-cols-1 gap-3 rounded-2xl p-4 md:grid-cols-[1fr_220px_auto]">
-        <input type="search" placeholder={text.searchPlaceholder} className="input-base" />
-        <select className="input-base" defaultValue="">
+        <input name="q" defaultValue={q} type="search" placeholder={text.searchPlaceholder} className="input-base" />
+        <select name="status" className="input-base" defaultValue={status}>
           <option value="">{text.allStatus}</option>
+          <option value="pending_payment">{text.pendingPayment}</option>
+          <option value="pending_review">{text.pendingReview}</option>
           <option value="paid">{text.paid}</option>
-          <option value="pending">{text.pending}</option>
           <option value="processing">{text.processing}</option>
         </select>
         <button
@@ -83,7 +97,9 @@ export default async function AdminOrdersPage() {
         </button>
       </form>
 
-      {MOCK_ORDERS.length === 0 ? (
+      {loadError ? <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{loadError}</p> : null}
+
+      {orders.length === 0 ? (
         <div className="sst-card-soft rounded-2xl border border-dashed border-slate-200 px-6 py-12 text-center">
           <p className="text-lg font-semibold text-slate-900">{text.noOrdersTitle}</p>
           <p className="mt-1 text-sm text-slate-600">{text.noOrdersText}</p>
@@ -103,28 +119,36 @@ export default async function AdminOrdersPage() {
                 <th className="px-5 py-3 font-medium">{text.createdAt}</th>
                 <th className="px-5 py-3 font-medium">{text.total}</th>
                 <th className="px-5 py-3 font-medium">{text.status}</th>
+                <th className="px-5 py-3 font-medium">{text.paymentStatus}</th>
                 <th className="px-5 py-3 font-medium">{text.actions}</th>
               </tr>
             </thead>
             <tbody>
-              {MOCK_ORDERS.map((order) => (
+              {orders.map((order) => (
                 <tr key={order.id} className="border-t border-slate-200 text-slate-600 hover:bg-slate-50/70">
-                  <td className="px-5 py-3 font-semibold text-slate-900">{order.id}</td>
-                  <td className="px-5 py-3">{order.customer}</td>
-                  <td className="px-5 py-3">{order.createdAt}</td>
-                  <td className="px-5 py-3">{order.total}</td>
+                  <td className="px-5 py-3 font-semibold text-slate-900">{order.order_no}</td>
+                  <td className="px-5 py-3">
+                    <p className="font-medium text-slate-900">{order.customer_name}</p>
+                    <p className="text-xs text-slate-500">{order.customer_phone}</p>
+                  </td>
+                  <td className="px-5 py-3">{new Date(order.created_at).toLocaleString()}</td>
+                  <td className="px-5 py-3">THB {order.grand_total.toLocaleString()}</td>
                   <td className="px-5 py-3">
                     <span className={`rounded-md px-2.5 py-1 text-xs font-semibold ${statusClass(order.status)}`}>
                       {order.status}
                     </span>
                   </td>
+                  <td className="px-5 py-3">{order.payment_status}</td>
                   <td className="px-5 py-3">
-                    <button
-                      type="button"
-                      className="rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-900 hover:bg-slate-50"
-                    >
-                      {text.view}
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <Link
+                        href={`/admin/orders/${encodeURIComponent(order.order_no)}`}
+                        className="rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-900 hover:bg-slate-50"
+                      >
+                        {text.view}
+                      </Link>
+                      <AdminOrderReviewActions orderNo={order.order_no} slipId={order.latest_pending_slip_id} locale={locale} />
+                    </div>
                   </td>
                 </tr>
               ))}

@@ -5,7 +5,6 @@ import { getAdminSettings } from "../../../lib/db/admin-settings";
 import { getAdminLocale } from "../../../lib/i18n/admin";
 import { ThemePreset, UiMode } from "../../../lib/types/admin-settings";
 import { AdminShell } from "../../components/admin/AdminShell";
-import DeveloperShell from "../../components/admin/DeveloperShell";
 
 type AdminLayoutProps = {
   children: ReactNode;
@@ -15,10 +14,6 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
   await requireAdmin();
   const actor = await getAdminActor();
   const locale = await getAdminLocale();
-
-  if (actor?.role === "developer") {
-    return <DeveloperShell locale={locale}>{children}</DeveloperShell>;
-  }
 
   let initialUiMode: UiMode = "auto";
   let initialThemePreset: ThemePreset = "default";

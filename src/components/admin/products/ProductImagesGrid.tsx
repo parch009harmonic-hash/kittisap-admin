@@ -1,5 +1,6 @@
 ﻿"use client";
 
+import Image from "next/image";
 import { DragEvent } from "react";
 
 type ProductImagesGridProps = {
@@ -66,8 +67,9 @@ export function ProductImagesGrid({
           onDrop={(event) => onDrop(event, image.id)}
           className="glass-card rounded-2xl p-2.5"
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={image.url} alt="Product image" className="h-28 w-full rounded-xl object-cover" />
+          <div className="relative h-28 w-full overflow-hidden rounded-xl">
+            <Image src={image.url} alt="Product image" fill sizes="(max-width: 768px) 50vw, 240px" className="object-cover" loading="lazy" />
+          </div>
           <div className="mt-2 space-y-1.5">
             <button
               type="button"

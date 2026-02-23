@@ -4,7 +4,6 @@ import { redirect } from "next/navigation";
 import { getSupabaseServerClient } from "../supabase/server";
 
 export type AdminRole = "admin" | "staff" | "developer";
-const allowedRoles: AdminRole[] = ["admin", "staff", "developer"];
 
 function isTransientNetworkError(error: unknown) {
   const message = error instanceof Error ? error.message.toLowerCase() : String(error ?? "").toLowerCase();
@@ -53,14 +52,19 @@ async function resolveAdminRole(userId: string) {
 
   const role = profile?.role as string | undefined;
   const normalizedRole = (role ?? "") as AdminRole;
-  const isAllowed = !error && Boolean(role) && allowedRoles.includes(normalizedRole);
+  const isAllowed = !error && (normalizedRole === "admin" || normalizedRole === "staff");
 
-  return { isAllowed, role: isAllowed ? normalizedRole : null, error };
+  return { isAllowed, role: isAllowed ? (normalizedRole as "admin" | "staff") : null, error };
 }
 
 export type AdminActor = {
   user: User;
-  role: AdminRole;
+  role: "admin" | "staff";
+};
+
+type DeveloperActor = {
+  user: User;
+  role: "admin" | "developer";
 };
 
 export async function getAdminSession() {
@@ -137,9 +141,23 @@ export async function requireAdminApi() {
 
 export async function requireDeveloper(options?: { allowAdmin?: boolean }) {
   const allowAdmin = options?.allowAdmin ?? false;
-  let actor: AdminActor | null = null;
+  let actor: DeveloperActor | null = null;
   try {
-    actor = await getAdminActor();
+    const user = await getAdminSession();
+    if (user) {
+      const roleResult = await resolveAdminRole(user.id);
+      if (roleResult.role === "admin") {
+        actor = { user, role: "admin" };
+      } else {
+        const supabase = await getSupabaseServerClient();
+        const { data: profile } = await retryOnTransient(async () => {
+          return await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle();
+        });
+        if ((profile?.role as string | undefined) === "developer") {
+          actor = { user, role: "developer" };
+        }
+      }
+    }
   } catch (error) {
     if (isSupabaseNetworkUnstable(error) || (error instanceof Error && error.message === "Network unstable")) {
       redirect("/login?error=network_unstable");
@@ -160,9 +178,23 @@ export async function requireDeveloper(options?: { allowAdmin?: boolean }) {
 
 export async function requireDeveloperApi(options?: { allowAdmin?: boolean }) {
   const allowAdmin = options?.allowAdmin ?? false;
-  let actor: AdminActor | null = null;
+  let actor: DeveloperActor | null = null;
   try {
-    actor = await getAdminActor();
+    const user = await getAdminSession();
+    if (user) {
+      const roleResult = await resolveAdminRole(user.id);
+      if (roleResult.role === "admin") {
+        actor = { user, role: "admin" };
+      } else {
+        const supabase = await getSupabaseServerClient();
+        const { data: profile } = await retryOnTransient(async () => {
+          return await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle();
+        });
+        if ((profile?.role as string | undefined) === "developer") {
+          actor = { user, role: "developer" };
+        }
+      }
+    }
   } catch (error) {
     if (isSupabaseNetworkUnstable(error) || (error instanceof Error && error.message === "Network unstable")) {
       throw new Error("Network unstable");

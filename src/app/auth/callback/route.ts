@@ -1,4 +1,5 @@
 import { createServerClient } from "@supabase/auth-helpers-nextjs";
+import type { User } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 
 function getSupabaseEnv() {
@@ -6,9 +7,7 @@ function getSupabaseEnv() {
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error(
-      "Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY"
-    );
+    throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY");
   }
 
   return { supabaseUrl, supabaseAnonKey };
@@ -25,10 +24,7 @@ function isTransientNetworkError(error: unknown) {
   );
 }
 
-function withCookies(
-  source: NextResponse,
-  destination: NextResponse
-): NextResponse {
+function withCookies(source: NextResponse, destination: NextResponse): NextResponse {
   for (const cookie of source.cookies.getAll()) {
     destination.cookies.set(cookie);
   }
@@ -36,13 +32,47 @@ function withCookies(
   return destination;
 }
 
+function asString(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function normalizeIntent(raw: string | null): "admin" | "customer" {
+  return raw?.toLowerCase() === "customer" ? "customer" : "admin";
+}
+
+function normalizeLocale(raw: string | null): "th" | "en" {
+  return raw?.toLowerCase() === "en" ? "en" : "th";
+}
+
+function customerPath(locale: "th" | "en", path: string) {
+  if (locale === "th") return path;
+  return `/${locale}${path}`;
+}
+
+function guessFullName(user: User) {
+  return asString(user.user_metadata?.full_name)
+    || asString(user.user_metadata?.name)
+    || asString(user.user_metadata?.display_name)
+    || asString(user.email).split("@")[0]
+    || "";
+}
+
+function guessPhone(user: User) {
+  return asString(user.user_metadata?.phone)
+    || asString(user.user_metadata?.phone_number)
+    || asString(user.phone);
+}
+
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get("code");
+  const intent = normalizeIntent(request.nextUrl.searchParams.get("intent"));
+  const locale = normalizeLocale(request.nextUrl.searchParams.get("locale"));
 
   if (!code) {
-    return NextResponse.redirect(
-      new URL("/login?error=oauth_code_missing", request.url)
-    );
+    const target = intent === "customer"
+      ? `${customerPath(locale, "/auth/login")}?error=oauth_code_missing`
+      : "/login?error=oauth_code_missing";
+    return NextResponse.redirect(new URL(target, request.url));
   }
 
   const { supabaseUrl, supabaseAnonKey } = getSupabaseEnv();
@@ -61,52 +91,58 @@ export async function GET(request: NextRequest) {
     },
   });
 
-  let authData:
-    | {
-        session: { user: { id: string } } | null;
-      }
-    | null = null;
-  let authError: { message?: string } | null = null;
-  try {
-    const result = await supabase.auth.exchangeCodeForSession(code);
-    authData = result.data as unknown as { session: { user: { id: string } } | null };
-    authError = result.error as unknown as { message?: string } | null;
-  } catch (error) {
+  const exchanged = await supabase.auth.exchangeCodeForSession(code).catch((error) => {
     if (isTransientNetworkError(error)) {
-      const res = NextResponse.redirect(new URL("/login?error=network_unstable", request.url));
-      return withCookies(cookieResponse, res);
+      return { data: null, error: new Error("network_unstable") };
     }
-    const res = NextResponse.redirect(new URL("/login?error=oauth_failed", request.url));
+    return { data: null, error: new Error("oauth_failed") };
+  });
+
+  if (exchanged.error || !exchanged.data?.session) {
+    const isNetwork = exchanged.error?.message === "network_unstable";
+    const targetBase = intent === "customer" ? customerPath(locale, "/auth/login") : "/login";
+    const res = NextResponse.redirect(new URL(`${targetBase}?error=${isNetwork ? "network_unstable" : "oauth_failed"}`, request.url));
     return withCookies(cookieResponse, res);
   }
 
-  if (authError || !authData.session) {
-    const res = NextResponse.redirect(
-      new URL(isTransientNetworkError(authError) ? "/login?error=network_unstable" : "/login?error=oauth_failed", request.url),
-    );
+  const user = exchanged.data.session.user;
+
+  if (intent === "customer") {
+    const { error: profileUpsertError } = await supabase
+      .from("customer_profiles")
+      .upsert(
+        {
+          id: user.id,
+          full_name: guessFullName(user),
+          phone: guessPhone(user),
+        },
+        { onConflict: "id" },
+      );
+
+    if (profileUpsertError) {
+      const isNetwork = isTransientNetworkError(profileUpsertError);
+      const res = NextResponse.redirect(
+        new URL(`${customerPath(locale, "/auth/login")}?error=${isNetwork ? "network_unstable" : "profile_upsert_failed"}`, request.url),
+      );
+      return withCookies(cookieResponse, res);
+    }
+
+    const res = NextResponse.redirect(new URL(customerPath(locale, "/account"), request.url));
     return withCookies(cookieResponse, res);
   }
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("role")
-    .eq("id", authData.session.user.id)
+    .eq("id", user.id)
     .maybeSingle();
 
-  const role = profile?.role as string | undefined;
+  const role = String(profile?.role ?? "").trim().toLowerCase();
   const isAllowed = role === "admin" || role === "staff";
 
-  if (profileError) {
-    const res = NextResponse.redirect(
-      new URL(isTransientNetworkError(profileError) ? "/login?error=network_unstable" : "/login?error=not_authorized", request.url),
-    );
-    return withCookies(cookieResponse, res);
-  }
-
-  if (!isAllowed) {
-    const res = NextResponse.redirect(
-      new URL("/login?error=not_authorized", request.url)
-    );
+  if (profileError || !isAllowed) {
+    const isNetwork = isTransientNetworkError(profileError);
+    const res = NextResponse.redirect(new URL(`/login?error=${isNetwork ? "network_unstable" : "not_authorized"}`, request.url));
     return withCookies(cookieResponse, res);
   }
 

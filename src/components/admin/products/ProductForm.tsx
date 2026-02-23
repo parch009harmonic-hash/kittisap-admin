@@ -1,5 +1,6 @@
 ﻿"use client";
 
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { FormEvent, ReactNode, useEffect, useMemo, useRef, useState, useTransition } from "react";
 
@@ -782,12 +783,16 @@ export function ProductForm({
                 Cover Preview
               </p>
               {previewCover ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={previewCover}
-                  alt="Cover preview"
-                  className="h-44 w-full rounded-xl object-cover shadow-sm"
-                />
+                <div className="relative h-44 w-full overflow-hidden rounded-xl shadow-sm">
+                  <Image
+                    src={previewCover}
+                    alt="Cover preview"
+                    fill
+                    sizes="(max-width: 768px) 100vw, 260px"
+                    className="object-cover"
+                    loading="lazy"
+                  />
+                </div>
               ) : (
                 <div className="flex h-44 items-center justify-center rounded-xl border border-dashed border-slate-300 text-xs text-slate-500">
                   No image selected

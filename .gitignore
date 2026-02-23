@@ -44,3 +44,5 @@ next-env.d.ts
 .vercel
 .env*.local
 .npm-temp/
+dev-run.log
+start-run.log

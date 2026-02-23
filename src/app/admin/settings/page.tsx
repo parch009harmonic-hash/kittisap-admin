@@ -7,7 +7,7 @@ import SettingsClient from "../../../components/admin/settings/SettingsClient";
 export default async function AdminSettingsPage() {
   const locale = await getAdminLocale();
   const actor = await getAdminActor();
-  const isDeveloperMode = actor?.role === "developer";
+  const isDeveloperMode = actor?.role === "admin";
   let initialSettings = getDefaultAdminSettings();
   let bootstrapError: string | null = null;
 
@@ -107,6 +107,7 @@ export default async function AdminSettingsPage() {
     />
   );
 }
+
 
 
 

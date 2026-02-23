@@ -1,5 +1,6 @@
-"use client";
+﻿"use client";
 
+import Image from "next/image";
 import { useMemo, useState } from "react";
 
 import { ProductImage } from "../../../../lib/types/product";
@@ -50,12 +51,9 @@ export function ProductImageGallery({ title, heroImage, images }: ProductImageGa
 
   return (
     <>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={activeImage.url}
-        alt={title}
-        className="product-detail-main-image h-72 w-full rounded-2xl border border-slate-200 object-cover md:h-[390px]"
-      />
+      <div className="product-detail-main-image relative h-72 w-full overflow-hidden rounded-2xl border border-slate-200 md:h-[390px]">
+        <Image src={activeImage.url} alt={title} fill sizes="(max-width: 768px) 100vw, 720px" className="object-cover" priority />
+      </div>
 
       {galleryImages.length > 1 ? (
         <div className="product-detail-thumbs mt-3 grid grid-cols-3 gap-2">
@@ -71,8 +69,9 @@ export function ProductImageGallery({ title, heroImage, images }: ProductImageGa
                 }`}
                 aria-label={`View image ${image.key}`}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={image.url} alt={title} className="h-20 w-full object-cover" />
+                <div className="relative h-20 w-full overflow-hidden">
+                  <Image src={image.url} alt={title} fill sizes="160px" className="object-cover" loading="lazy" />
+                </div>
               </button>
             );
           })}
