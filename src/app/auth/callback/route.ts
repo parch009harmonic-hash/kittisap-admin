@@ -77,15 +77,18 @@ async function resolveBackofficeRole(
   let error = byId.error;
   const missingColumn = String(error?.message ?? "").toLowerCase().includes("column")
     && String(error?.message ?? "").toLowerCase().includes("does not exist");
+  const roleByIdBackoffice = role === "admin" || role === "staff" || role === "developer";
 
-  if ((!role && !error) || missingColumn) {
+  if ((!role && !error) || missingColumn || !roleByIdBackoffice) {
     const byUserId = await supabase
       .from("profiles")
       .select("role")
       .eq("user_id", userId)
       .maybeSingle();
-    if (!byUserId.error && byUserId.data) {
-      role = String(byUserId.data.role ?? "").trim().toLowerCase();
+    const roleByUserId = String(byUserId.data?.role ?? "").trim().toLowerCase();
+    const roleByUserIdBackoffice = roleByUserId === "admin" || roleByUserId === "staff" || roleByUserId === "developer";
+    if (!byUserId.error && byUserId.data && roleByUserIdBackoffice) {
+      role = roleByUserId;
       error = null;
     } else if (!error) {
       error = byUserId.error;

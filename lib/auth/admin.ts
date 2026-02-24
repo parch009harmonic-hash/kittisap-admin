@@ -54,8 +54,10 @@ async function resolveAdminRole(userId: string) {
   let error = byId.error;
   const isMissingColumnError = String(error?.message ?? "").toLowerCase().includes("column")
     && String(error?.message ?? "").toLowerCase().includes("does not exist");
+  const roleById = String(profile?.role ?? "").trim().toLowerCase();
+  const roleByIdBackoffice = roleById === "admin" || roleById === "staff" || roleById === "developer";
 
-  if ((!profile && !error) || isMissingColumnError) {
+  if ((!profile && !error) || isMissingColumnError || !roleByIdBackoffice) {
     const byUserId = await retryOnTransient(async () => {
       return await supabase
         .from("profiles")
@@ -63,7 +65,11 @@ async function resolveAdminRole(userId: string) {
         .eq("user_id", userId)
         .maybeSingle();
     });
-    if (!byUserId.error && byUserId.data) {
+    const roleByUserId = String(byUserId.data?.role ?? "").trim().toLowerCase();
+    const roleByUserIdBackoffice =
+      roleByUserId === "admin" || roleByUserId === "staff" || roleByUserId === "developer";
+
+    if (!byUserId.error && byUserId.data && roleByUserIdBackoffice) {
       profile = byUserId.data;
       error = null;
     } else if (!error) {
