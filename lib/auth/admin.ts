@@ -6,6 +6,12 @@ import { getSupabaseServiceRoleClient } from "../supabase/service";
 
 export type AdminRole = "admin" | "staff" | "developer";
 
+type ProfilesRoleLookup = {
+  role: AdminRole | null;
+  error: unknown;
+  missingColumn: boolean;
+};
+
 function isTransientNetworkError(error: unknown) {
   const message = error instanceof Error ? error.message.toLowerCase() : String(error ?? "").toLowerCase();
   return (
@@ -19,6 +25,19 @@ function isTransientNetworkError(error: unknown) {
 
 function isSupabaseNetworkUnstable(error: unknown) {
   return isTransientNetworkError(error);
+}
+
+function isMissingProfileColumnError(error: unknown) {
+  const message = error instanceof Error ? error.message.toLowerCase() : String(error ?? "").toLowerCase();
+  return message.includes("column") && message.includes("does not exist");
+}
+
+function normalizeAdminRole(value: unknown): AdminRole | null {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (normalized === "admin" || normalized === "staff" || normalized === "developer") {
+    return normalized as AdminRole;
+  }
+  return null;
 }
 
 function sleep(ms: number) {
@@ -41,51 +60,55 @@ async function retryOnTransient<T>(task: () => Promise<T>, attempts = 3, delayMs
   throw lastError;
 }
 
-async function resolveAdminRole(userId: string) {
+async function fetchProfilesRole(
+  userId: string,
+  column: "id" | "user_id",
+): Promise<ProfilesRoleLookup> {
   const supabase = getSupabaseServiceRoleClient();
-  const byId = await retryOnTransient(async () => {
+  const result = await retryOnTransient(async () => {
     return await supabase
       .from("profiles")
-      .select("role")
-      .eq("id", userId)
-      .maybeSingle();
+      .select("role,updated_at,created_at")
+      .eq(column, userId)
+      .order("updated_at", { ascending: false, nullsFirst: false })
+      .order("created_at", { ascending: false, nullsFirst: false })
+      .limit(20);
   });
 
-  let profile = byId.data;
+  if (result.error) {
+    return {
+      role: null,
+      error: result.error,
+      missingColumn: isMissingProfileColumnError(result.error),
+    };
+  }
+
+  for (const row of (result.data ?? []) as Array<Record<string, unknown>>) {
+    const role = normalizeAdminRole(row.role);
+    if (role) {
+      return { role, error: null, missingColumn: false };
+    }
+  }
+
+  return { role: null, error: null, missingColumn: false };
+}
+
+async function resolveAdminRole(userId: string) {
+  const byId = await fetchProfilesRole(userId, "id");
+  let role = byId.role;
   let error = byId.error;
-  const isMissingColumnError = String(error?.message ?? "").toLowerCase().includes("column")
-    && String(error?.message ?? "").toLowerCase().includes("does not exist");
-  const roleById = String(profile?.role ?? "").trim().toLowerCase();
-  const roleByIdBackoffice = roleById === "admin" || roleById === "staff" || roleById === "developer";
 
-  if ((!profile && !error) || isMissingColumnError || !roleByIdBackoffice) {
-    const byUserId = await retryOnTransient(async () => {
-      return await supabase
-        .from("profiles")
-        .select("role")
-        .eq("user_id", userId)
-        .maybeSingle();
-    });
-    const roleByUserId = String(byUserId.data?.role ?? "").trim().toLowerCase();
-    const roleByUserIdBackoffice =
-      roleByUserId === "admin" || roleByUserId === "staff" || roleByUserId === "developer";
-
-    if (!byUserId.error && byUserId.data && roleByUserIdBackoffice) {
-      profile = byUserId.data;
+  if (!role || byId.missingColumn) {
+    const byUserId = await fetchProfilesRole(userId, "user_id");
+    if (byUserId.role) {
+      role = byUserId.role;
       error = null;
     } else if (!error) {
       error = byUserId.error;
     }
   }
 
-  const role = profile?.role as string | undefined;
-  const normalizedRole = (role ?? "").trim().toLowerCase();
-  const resolvedRole: AdminRole | null =
-    normalizedRole === "admin" || normalizedRole === "staff" || normalizedRole === "developer"
-      ? (normalizedRole as AdminRole)
-      : null;
-
-  return { role: resolvedRole, error };
+  return { role, error };
 }
 
 export type AdminActor = {

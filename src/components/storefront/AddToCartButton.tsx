@@ -69,7 +69,7 @@ export function AddToCartButton({
         type="button"
         onClick={() => void handleAddToCart()}
         disabled={disabled || busy}
-        className={`w-full rounded-xl px-4 py-2.5 text-sm font-semibold transition ${className} ${
+        className={`app-press w-full rounded-xl px-4 py-2.5 text-sm font-semibold transition ${className} ${
           disabled
             ? "cursor-not-allowed bg-zinc-700 text-zinc-300"
             : "bg-amber-400/25 text-amber-100 hover:bg-amber-300/35"

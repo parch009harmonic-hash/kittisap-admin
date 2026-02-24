@@ -241,25 +241,41 @@ async function getProfileRole(userId: string) {
   const supabase = getSupabaseServiceRoleClient();
   const byId = await supabase
     .from("profiles")
-    .select("role")
+    .select("role,updated_at,created_at")
     .eq("id", userId)
-    .maybeSingle();
+    .order("updated_at", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false, nullsFirst: false })
+    .limit(20);
 
   if (!byId.error && byId.data) {
-    return toRole((byId.data as Record<string, unknown>).role);
+    for (const row of byId.data as Array<Record<string, unknown>>) {
+      const normalized = String(row.role ?? "").trim().toLowerCase();
+      if (normalized === "admin" || normalized === "staff" || normalized === "developer" || normalized === "customer") {
+        return normalized as "admin" | "staff" | "developer" | "customer";
+      }
+    }
   }
 
   const byUserId = await supabase
     .from("profiles")
-    .select("role")
+    .select("role,updated_at,created_at")
     .eq("user_id", userId)
-    .maybeSingle();
+    .order("updated_at", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false, nullsFirst: false })
+    .limit(20);
 
   if (byUserId.error) {
     throw new Error(`Failed to verify profile role: ${errorText(byUserId.error, "Unknown error")}`);
   }
 
-  return toRole((byUserId.data as Record<string, unknown> | null)?.role);
+  for (const row of (byUserId.data ?? []) as Array<Record<string, unknown>>) {
+    const normalized = String(row.role ?? "").trim().toLowerCase();
+    if (normalized === "admin" || normalized === "staff" || normalized === "developer" || normalized === "customer") {
+      return normalized as "admin" | "staff" | "developer" | "customer";
+    }
+  }
+
+  return "staff";
 }
 
 async function upsertProfileCompat(

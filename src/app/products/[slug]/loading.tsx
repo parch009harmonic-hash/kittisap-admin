@@ -1,14 +1,15 @@
 export default function ProductDetailLoading() {
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,_#5c3f00_0%,_#1a1200_30%,_#090909_68%)] text-amber-50">
-      <section className="mx-auto w-full max-w-7xl px-4 py-8 md:px-6 md:py-12">
-        <div className="mt-4 grid gap-5 rounded-3xl border border-amber-500/30 bg-black/55 p-4 md:grid-cols-[1.1fr_1fr] md:p-6">
-          <div className="h-[300px] animate-pulse rounded-2xl bg-zinc-800 md:h-[430px]" />
+    <main className="min-h-screen bg-[#f4f6fb] text-slate-900">
+      <section className="mx-auto w-full max-w-7xl px-3 py-4 md:px-4 md:py-8">
+        <div className="mt-3 grid gap-4 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm md:mt-4 md:grid-cols-[1.05fr_1fr] md:gap-6 md:p-5">
+          <div className="aspect-square rounded-2xl bg-slate-100 shimmer-skeleton" />
           <div className="space-y-3">
-            <div className="h-9 w-3/4 animate-pulse rounded bg-zinc-800" />
-            <div className="h-28 animate-pulse rounded-2xl bg-zinc-800" />
-            <div className="h-28 animate-pulse rounded-2xl bg-zinc-800" />
-            <div className="h-10 animate-pulse rounded-xl bg-zinc-800" />
+            <div className="h-8 w-3/4 rounded bg-slate-100 shimmer-skeleton" />
+            <div className="h-28 rounded-2xl bg-amber-100 shimmer-skeleton" />
+            <div className="h-24 rounded-2xl bg-slate-100 shimmer-skeleton" />
+            <div className="h-20 rounded-2xl bg-slate-100 shimmer-skeleton" />
+            <div className="h-11 rounded-xl bg-amber-100 shimmer-skeleton" />
           </div>
         </div>
       </section>

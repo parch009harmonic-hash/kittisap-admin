@@ -20,5 +20,6 @@ export default async function LocalizedHomePage({ params }: LocalizedHomeProps) 
     notFound();
   }
 
-  return <MarketingLandingPage locale={locale} useLocalePrefix showOuterFrame={false} />;
+  return <MarketingLandingPage locale={locale} useLocalePrefix showOuterFrame={false} showTopNav={false} />;
 }
+

@@ -70,28 +70,42 @@ async function resolveBackofficeRole(
   const adminSupabase = getSupabaseServiceRoleClient();
   const byId = await adminSupabase
     .from("profiles")
-    .select("role")
+    .select("role,updated_at,created_at")
     .eq("id", userId)
-    .maybeSingle();
+    .order("updated_at", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false, nullsFirst: false })
+    .limit(20);
 
-  let role = String(byId.data?.role ?? "").trim().toLowerCase();
+  let role = "";
+  for (const row of (byId.data ?? []) as Array<Record<string, unknown>>) {
+    const normalized = String(row.role ?? "").trim().toLowerCase();
+    if (normalized === "admin" || normalized === "staff" || normalized === "developer") {
+      role = normalized;
+      break;
+    }
+  }
+
   let error = byId.error;
   const missingColumn = String(error?.message ?? "").toLowerCase().includes("column")
     && String(error?.message ?? "").toLowerCase().includes("does not exist");
-  const roleByIdBackoffice = role === "admin" || role === "staff" || role === "developer";
 
-  if ((!role && !error) || missingColumn || !roleByIdBackoffice) {
+  if (!role || missingColumn) {
     const byUserId = await adminSupabase
       .from("profiles")
-      .select("role")
+      .select("role,updated_at,created_at")
       .eq("user_id", userId)
-      .maybeSingle();
-    const roleByUserId = String(byUserId.data?.role ?? "").trim().toLowerCase();
-    const roleByUserIdBackoffice = roleByUserId === "admin" || roleByUserId === "staff" || roleByUserId === "developer";
-    if (!byUserId.error && byUserId.data && roleByUserIdBackoffice) {
-      role = roleByUserId;
-      error = null;
-    } else if (!error) {
+      .order("updated_at", { ascending: false, nullsFirst: false })
+      .order("created_at", { ascending: false, nullsFirst: false })
+      .limit(20);
+    for (const row of (byUserId.data ?? []) as Array<Record<string, unknown>>) {
+      const normalized = String(row.role ?? "").trim().toLowerCase();
+      if (normalized === "admin" || normalized === "staff" || normalized === "developer") {
+        role = normalized;
+        error = null;
+        break;
+      }
+    }
+    if (!role && !error) {
       error = byUserId.error;
     }
   }

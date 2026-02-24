@@ -57,7 +57,7 @@ export function ProductGallerySlider({ title, images, fallbackUrl }: ProductGall
 
   if (slides.length === 0) {
     return (
-      <div className="grid aspect-square place-items-center rounded-2xl border border-amber-500/25 bg-zinc-900 text-sm text-amber-100/55">
+      <div className="grid aspect-square place-items-center rounded-2xl border border-slate-200 bg-slate-100 text-sm text-slate-500">
         No Image
       </div>
     );
@@ -68,11 +68,11 @@ export function ProductGallerySlider({ title, images, fallbackUrl }: ProductGall
       <div
         ref={trackRef}
         onScroll={onScroll}
-        className="flex snap-x snap-mandatory overflow-x-auto rounded-2xl border border-amber-500/25 bg-zinc-900 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+        className="flex snap-x snap-mandatory overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
       >
         {slides.map((slide) => (
           <div key={slide.key} className="relative aspect-square min-w-full snap-start">
-            <Image src={slide.url} alt={title} fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover" priority={index === 0} />
+            <Image src={slide.url} alt={title} fill sizes="(max-width: 768px) 100vw, 42vw" className="object-cover" priority={index === 0} />
           </div>
         ))}
       </div>
@@ -84,7 +84,7 @@ export function ProductGallerySlider({ title, images, fallbackUrl }: ProductGall
               key={slide.key}
               type="button"
               onClick={() => scrollTo(dotIndex)}
-              className={`h-2 rounded-full transition-all ${dotIndex === index ? "w-6 bg-amber-300" : "w-2 bg-amber-300/40"}`}
+              className={`h-2 rounded-full transition-all ${dotIndex === index ? "w-6 bg-amber-500" : "w-2 bg-slate-300"}`}
               aria-label={`Go to slide ${dotIndex + 1}`}
             />
           ))}

@@ -1,7 +1,10 @@
-﻿import Link from "next/link";
+﻿import Image from "next/image";
+import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { listPublicProducts } from "../../../lib/db/publicProducts";
 import type { AppLocale } from "../../../lib/i18n/locale";
+import { MarketingTopNav } from "./MarketingTopNav";
 
 type MarketingLandingPageProps = {
   locale: AppLocale;
@@ -17,62 +20,49 @@ function withLocale(locale: AppLocale, path: string, useLocalePrefix: boolean) {
   return `/${locale}${path}`;
 }
 
-function text(locale: AppLocale) {
+function copy(locale: AppLocale) {
   if (locale === "th") {
     return {
+      brand: "Kittisap",
       nav: {
-        about: "เกี่ยวกับเรา",
-        services: "บริการ",
-        why: "ทำไมต้องเรา",
-        faq: "คำถามที่พบบ่อย",
-        contact: "ติดต่อ",
-        quote: "ขอใบเสนอราคา",
+        home: "หน้าแรก",
+        products: "สินค้าของเรา",
+        pricing: "ตารางราคา",
+        promotions: "กิจกรรม + ส่วนลด/คูปอง",
+        contact: "ติดต่อเรา",
+        auth: "สมัครสมาชิก/ล็อกอินลูกค้า",
+      },
+      cta: {
+        auth: "เข้าสู่ระบบลูกค้า",
+        products: "ดูสินค้า",
       },
       hero: {
-        title: "บริการดูแลรถและบริการเสริมแบบพรีเมียมถึงที่",
-        desc: "เข้าชมเว็บได้โดยไม่ต้องล็อกอิน และล็อกอินเฉพาะตอนสั่งซื้อสินค้า/บริการเท่านั้น",
-        primary: "ดูสินค้า",
-        secondary: "อ่านบริการ",
+        eyebrow: "KITTISAP CUSTOMER SITE",
+        title: "แพลตฟอร์มลูกค้า เชื่อมสินค้าและคำสั่งซื้อชุดเดียวกับระบบแอดมิน",
+        desc: "ลูกค้าดูสินค้า ตารางราคา โปรโมชัน สั่งซื้อ และชำระเงินผ่าน PromptPay ได้ครบในระบบเดียว",
       },
-      about: {
-        title: "เกี่ยวกับเรา",
-        lead: "ไม่ต้องขับรถออกไป เพราะบริการคุณภาพมาหาคุณแทน",
-        desc: "เราใช้มาตรฐานงานระดับมืออาชีพ และระบบตรวจสอบงานทุกขั้นตอน เพื่อให้มั่นใจในความสะอาด ความปลอดภัย และความโปร่งใส",
+      sections: {
+        updates: "สินค้าแนะนำ",
+        updatesSub: "รายการสินค้าจริงจากฐานข้อมูลเดียวกับ /admin/products",
+        news: "กิจกรรมและข่าวสาร",
+        newsSub: "อัปเดตโปรโมชันและคูปองล่าสุด",
       },
-      services: {
-        title: "บริการของเรา",
-        cards: ["ดูแลรถยนต์", "ทำความสะอาดภายใน", "ดูแลแอร์และระบบ"],
+      tags: {
+        latest: "Live Products",
+        updates: "Promotions",
       },
-      why: {
-        title: "ทำไมต้องเลือกเรา",
-        items: [
-          "บริการถึงบ้าน นัดง่าย",
-          "มาตรฐานพรีเมียม",
-          "ทีมงานมีประสบการณ์",
-          "ตรวจสอบงานได้โปร่งใส",
-          "รองรับหลายช่องทางติดต่อ",
-          "พัฒนาบริการต่อเนื่อง",
-        ],
-      },
-      reviews: {
-        title: "เสียงจากลูกค้า",
-      },
-      news: {
-        title: "บทความและข่าวสาร",
-      },
-      faq: {
-        title: "คำถามที่พบบ่อย",
-      },
-      booking: {
-        title: "จองคิวบริการ",
-        name: "ชื่อ",
-        phone: "เบอร์โทร",
-        email: "อีเมล",
-        service: "บริการที่ต้องการ",
-        details: "รายละเอียด",
-        submit: "ส่งข้อมูล",
+      card: {
+        model: "สินค้า",
+        meta: "ราคา • สต็อก",
+        article: "หัวข้อข่าว / กิจกรรม",
+        articleMeta: "วันที่ • หมวดหมู่",
       },
       footer: {
+        title: "Kittisap",
+        desc1: "เว็บไซต์ลูกค้าเชื่อมข้อมูลร่วมกับระบบแอดมินและ Supabase",
+        desc2: "รองรับการสั่งซื้อ ชำระเงิน และตรวจสอบคำสั่งซื้ออย่างครบวงจร",
+        quick: "Quick Links",
+        contact: "Contact",
         admin: "เข้าสู่ระบบแอดมิน",
         dev: "Developer Console",
       },
@@ -80,59 +70,46 @@ function text(locale: AppLocale) {
   }
 
   return {
+    brand: "Kittisap",
     nav: {
-      about: "About",
-      services: "Services",
-      why: "Why Us",
-      faq: "FAQ",
+      home: "Home",
+      products: "Products",
+      pricing: "Pricing",
+      promotions: "Promotions + Coupons",
       contact: "Contact",
-      quote: "Get Quote",
+      auth: "Register/Login",
+    },
+    cta: {
+      auth: "Customer Login",
+      products: "Browse Products",
     },
     hero: {
-      title: "Premium vehicle care and home services at your doorstep",
-      desc: "Public visitors can browse without login. Login is required only when placing order.",
-      primary: "Browse products",
-      secondary: "Our services",
+      eyebrow: "KITTISAP CUSTOMER SITE",
+      title: "Customer platform connected to the same catalog and orders as admin",
+      desc: "Customers can browse products, pricing, promotions, and complete PromptPay checkout in one flow.",
     },
-    about: {
-      title: "About Us",
-      lead: "No need to drive to service center. Quality care comes to you.",
-      desc: "We operate with professional standards and transparent workflow to ensure safety and trusted quality.",
+    sections: {
+      updates: "Featured Products",
+      updatesSub: "Live products from the same dataset as /admin/products",
+      news: "Activities and Updates",
+      newsSub: "Latest promotions and coupon updates",
     },
-    services: {
-      title: "Our Services",
-      cards: ["Car Maintenance", "Cleaning Services", "Air Cleaning Service"],
+    tags: {
+      latest: "Live Products",
+      updates: "Promotions",
     },
-    why: {
-      title: "Why Choose Us",
-      items: [
-        "Doorstep service, easy booking",
-        "Premium standard",
-        "Experienced team",
-        "Auditable transparency",
-        "Multi-channel convenience",
-        "Continuous improvement",
-      ],
-    },
-    reviews: {
-      title: "Customer Reviews",
-    },
-    news: {
-      title: "Articles & News",
-    },
-    faq: {
-      title: "Frequently Asked Questions",
-    },
-    booking: {
-      title: "Book a Service Queue",
-      name: "Name",
-      phone: "Phone",
-      email: "Email",
-      service: "Requested Service",
-      details: "Details",
-      submit: "Send Message",
+    card: {
+      model: "Product",
+      meta: "Price • Stock",
+      article: "News / Activity Headline",
+      articleMeta: "Date • Category",
     },
     footer: {
+      title: "Kittisap",
+      desc1: "Customer site connected with admin and Supabase.",
+      desc2: "Unified flow for browsing, ordering, payment and order tracking.",
+      quick: "Quick Links",
+      contact: "Contact",
       admin: "Admin Login",
       dev: "Developer Console",
     },
@@ -140,178 +117,211 @@ function text(locale: AppLocale) {
 }
 
 function Frame({ children, showOuterFrame }: { children: ReactNode; showOuterFrame: boolean }) {
-  if (!showOuterFrame) return <>{children}</>;
-  return <main className="min-h-screen bg-[var(--bg)] text-[var(--fg)]">{children}</main>;
+  if (!showOuterFrame) {
+    return <>{children}</>;
+  }
+
+  return (
+    <main className="min-h-screen bg-[radial-gradient(1200px_600px_at_20%_-10%,rgba(245,158,11,0.12),transparent_60%),radial-gradient(900px_500px_at_100%_10%,rgba(59,130,246,0.10),transparent_60%),#0b0f16] text-slate-200">
+      {children}
+    </main>
+  );
 }
 
-export function MarketingLandingPage({
+function PlaceholderCard({ title, meta }: { title: string; meta: string }) {
+  return (
+    <a href="#" className="tap-ripple app-press overflow-hidden rounded-2xl border border-slate-400/20 bg-gradient-to-b from-slate-900/90 to-slate-950/80 shadow-[0_14px_50px_rgba(0,0,0,0.28)] transition hover:-translate-y-0.5 hover:border-amber-400/40">
+      <div className="aspect-[16/10] bg-[linear-gradient(135deg,rgba(245,158,11,0.22),rgba(59,130,246,0.12)),radial-gradient(800px_300px_at_20%_20%,rgba(255,255,255,0.08),transparent_45%)]" />
+      <div className="p-4">
+        <p className="text-sm font-extrabold tracking-tight text-slate-100">{title}</p>
+        <p className="mt-1 text-xs text-slate-300/70">{meta}</p>
+      </div>
+    </a>
+  );
+}
+
+type ShowroomItem = {
+  id: string;
+  slug: string;
+  title: string;
+  price: number;
+  stock: number;
+  coverUrl: string | null;
+};
+
+async function loadShowroomItems(locale: AppLocale): Promise<ShowroomItem[]> {
+  try {
+    const source = await listPublicProducts({ page: 1, pageSize: 4 });
+    return source.items.map((item) => ({
+      id: item.id,
+      slug: item.slug,
+      title: locale === "en" ? item.title_en || item.title_th : item.title_th,
+      price: item.price,
+      stock: item.stock,
+      coverUrl: item.cover_url,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+function ProductCard({
+  locale,
+  useLocalePrefix,
+  item,
+}: {
+  locale: AppLocale;
+  useLocalePrefix: boolean;
+  item: ShowroomItem;
+}) {
+  const detailPath = withLocale(locale, `/products/${item.slug}`, useLocalePrefix);
+
+  return (
+    <Link href={detailPath} className="tap-ripple app-press overflow-hidden rounded-2xl border border-slate-400/20 bg-gradient-to-b from-slate-900/90 to-slate-950/80 shadow-[0_14px_50px_rgba(0,0,0,0.28)] transition hover:-translate-y-0.5 hover:border-amber-400/40">
+      {item.coverUrl ? (
+        <div className="relative aspect-[16/10] w-full overflow-hidden">
+          <Image src={item.coverUrl} alt={item.title} fill sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 25vw" className="object-cover" loading="lazy" />
+        </div>
+      ) : (
+        <div className="aspect-[16/10] bg-[linear-gradient(135deg,rgba(245,158,11,0.22),rgba(59,130,246,0.12)),radial-gradient(800px_300px_at_20%_20%,rgba(255,255,255,0.08),transparent_45%)]" />
+      )}
+      <div className="p-4">
+        <p className="text-sm font-extrabold tracking-tight text-slate-100">{item.title}</p>
+        <p className="mt-1 text-xs text-slate-300/70">THB {item.price.toLocaleString()} • Stock {item.stock}</p>
+      </div>
+    </Link>
+  );
+}
+
+export async function MarketingLandingPage({
   locale,
   useLocalePrefix = false,
   showOuterFrame = true,
   showTopNav = true,
 }: MarketingLandingPageProps) {
-  const t = text(locale);
+  const t = copy(locale);
+  const showroomItems = await loadShowroomItems(locale);
+  const homePath = withLocale(locale, "/", useLocalePrefix);
+  const productsPath = withLocale(locale, "/products", useLocalePrefix);
+  const pricingPath = withLocale(locale, "/pricing", useLocalePrefix);
+  const promotionsPath = withLocale(locale, "/promotions", useLocalePrefix);
+  const contactPath = withLocale(locale, "/contact", useLocalePrefix);
 
   return (
     <Frame showOuterFrame={showOuterFrame}>
       {showTopNav ? (
-        <header className="sticky top-0 z-30 border-b border-slate-200 bg-[var(--bg)]/90 backdrop-blur">
-          <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-3">
-            <Link href={withLocale(locale, "/", useLocalePrefix)} className="flex items-center gap-2 font-semibold">
-              <span className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-700 to-blue-900" />
-              <span>Clean Kittisap</span>
-            </Link>
-            <nav className="hidden items-center gap-2 text-sm font-semibold text-slate-700 md:flex">
-              <a href="#about" className="rounded-lg px-3 py-2 hover:bg-slate-100">{t.nav.about}</a>
-              <a href="#services" className="rounded-lg px-3 py-2 hover:bg-slate-100">{t.nav.services}</a>
-              <a href="#why" className="rounded-lg px-3 py-2 hover:bg-slate-100">{t.nav.why}</a>
-              <a href="#faq" className="rounded-lg px-3 py-2 hover:bg-slate-100">{t.nav.faq}</a>
-              <a href="#contact" className="rounded-lg px-3 py-2 hover:bg-slate-100">{t.nav.contact}</a>
-            </nav>
-            <a href="#contact" className="rounded-full border border-slate-300 bg-white px-4 py-2 text-xs font-semibold shadow-sm">
-              {t.nav.quote}
-            </a>
-          </div>
-        </header>
+        <MarketingTopNav locale={locale} useLocalePrefix={useLocalePrefix} brand={t.brand} nav={t.nav} cta={t.cta} />
       ) : null}
 
-      <section className="mx-auto w-full max-w-7xl px-4 py-8 md:py-12">
-        <article className="overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-900 to-slate-700 text-white shadow-[0_20px_45px_-30px_rgba(15,23,42,0.45)]">
-          <div className="grid gap-6 p-6 md:grid-cols-[1.1fr_0.9fr] md:p-8">
+      <section id="showroom" className="mx-auto w-full max-w-7xl px-4 py-7">
+        <article className="relative overflow-hidden rounded-[28px] border border-slate-400/20 bg-gradient-to-br from-slate-900/95 to-slate-950/90 shadow-[0_18px_60px_rgba(0,0,0,0.45)]">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(closest-side,rgba(245,158,11,0.26),transparent_55%),radial-gradient(closest-side,rgba(59,130,246,0.16),transparent_62%),linear-gradient(120deg,transparent_35%,rgba(255,255,255,0.08)_45%,transparent_55%)] opacity-70" />
+
+          <div className="relative grid gap-5 p-6 md:grid-cols-[1.15fr_0.85fr] md:p-8">
             <div>
-              <div className="flex flex-wrap gap-2">
-                <span className="rounded-full border border-white/30 bg-white/10 px-4 py-2 text-xs font-semibold">On-site Service</span>
-                <span className="rounded-full border border-blue-200/40 bg-blue-500/20 px-4 py-2 text-xs font-semibold">Web + App + Admin</span>
-              </div>
-              <h1 className="mt-4 font-heading text-3xl font-semibold leading-tight md:text-5xl">{t.hero.title}</h1>
-              <p className="mt-3 max-w-2xl text-sm text-white/85 md:text-base">{t.hero.desc}</p>
+              <p className="inline-flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.2em] text-amber-200">{t.hero.eyebrow}</p>
+              <h1 className="mt-2 text-3xl font-black leading-tight tracking-tight text-slate-50 md:text-5xl">{t.hero.title}</h1>
+              <p className="mt-3 max-w-3xl text-sm text-slate-200/80 md:text-base">{t.hero.desc}</p>
               <div className="mt-5 flex flex-wrap gap-2">
-                <Link href={withLocale(locale, "/products", useLocalePrefix)} className="rounded-full bg-white px-5 py-2.5 text-xs font-extrabold uppercase tracking-[0.16em] text-slate-900">
-                  {t.hero.primary}
-                </Link>
-                <a href="#services" className="rounded-full border border-white/40 px-5 py-2.5 text-xs font-extrabold uppercase tracking-[0.16em] text-white">
-                  {t.hero.secondary}
-                </a>
+                <Link href={productsPath} className="inline-flex rounded-full border border-amber-400/40 bg-amber-500/15 px-4 py-2 text-xs font-extrabold text-amber-200">{t.nav.products}</Link>
+                <Link href={promotionsPath} className="inline-flex rounded-full border border-slate-400/30 bg-white/5 px-4 py-2 text-xs font-extrabold text-slate-100">{t.nav.promotions}</Link>
               </div>
             </div>
 
-            <aside className="rounded-2xl border border-white/20 bg-white/10 p-4">
-              <div className="space-y-3 text-sm">
-                <div className="border-b border-white/20 pb-3">
-                  <p className="font-semibold">Auditable Security</p>
-                  <p className="text-white/80">Trackable process for each operation.</p>
-                </div>
-                <div className="border-b border-white/20 pb-3">
-                  <p className="font-semibold">Experienced Team</p>
-                  <p className="text-white/80">Professional standard and service discipline.</p>
-                </div>
-                <div>
-                  <p className="font-semibold">One-stop Service</p>
-                  <p className="text-white/80">Car care, cleaning, and related services in one place.</p>
-                </div>
+            <aside className="rounded-2xl border border-white/15 bg-white/5 p-3">
+              <div className="relative aspect-[16/10] overflow-hidden rounded-2xl border border-white/15 bg-[linear-gradient(135deg,rgba(245,158,11,0.22),rgba(59,130,246,0.12)),repeating-linear-gradient(135deg,rgba(255,255,255,0.06)_0_10px,transparent_10px_20px)]">
+                {showroomItems[0]?.coverUrl ? (
+                  <Image
+                    src={showroomItems[0].coverUrl}
+                    alt={showroomItems[0].title}
+                    fill
+                    sizes="(max-width: 768px) 100vw, 40vw"
+                    priority
+                    fetchPriority="high"
+                    className="object-cover"
+                  />
+                ) : null}
               </div>
+              <p className="mt-2 text-xs text-slate-200/70">Slider image placeholder</p>
             </aside>
           </div>
         </article>
       </section>
 
-      <section id="about" className="mx-auto w-full max-w-7xl px-4 py-10">
-        <h2 className="font-heading text-2xl font-semibold md:text-3xl">{t.about.title}</h2>
-        <p className="mt-3 text-lg font-medium text-slate-800">{t.about.lead}</p>
-        <p className="mt-2 max-w-4xl text-sm text-slate-600 md:text-base">{t.about.desc}</p>
-      </section>
-
-      <section id="services" className="mx-auto w-full max-w-7xl px-4 py-10">
-        <h2 className="font-heading text-2xl font-semibold md:text-3xl">{t.services.title}</h2>
-        <div className="mt-6 grid gap-4 md:grid-cols-3">
-          {t.services.cards.map((item) => (
-            <article key={item} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.45)]">
-              <div className="h-40 rounded-xl border border-slate-200 bg-slate-100" />
-              <h3 className="mt-4 text-lg font-semibold">{item}</h3>
-              <p className="mt-1 text-sm text-slate-600">Premium quality service with convenient scheduling.</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section id="why" className="mx-auto w-full max-w-7xl px-4 py-10">
-        <h2 className="font-heading text-2xl font-semibold md:text-3xl">{t.why.title}</h2>
-        <div className="mt-6 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-          {t.why.items.map((item) => (
-            <article key={item} className="rounded-xl border border-slate-200 bg-white p-4 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.45)]">
-              <p className="text-sm font-semibold text-slate-800">{item}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="mx-auto w-full max-w-7xl px-4 py-10">
-        <h2 className="font-heading text-2xl font-semibold md:text-3xl">{t.reviews.title}</h2>
-        <div className="mt-6 grid gap-4 md:grid-cols-3">
-          {[1, 2, 3].map((item) => (
-            <article key={item} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.45)]">
-              <p className="text-sm text-slate-700">บริการตรงเวลา งานละเอียด ใช้งานสะดวกมาก</p>
-              <p className="mt-3 text-xs font-semibold text-slate-500">Customer #{item}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="mx-auto w-full max-w-7xl px-4 py-10">
-        <h2 className="font-heading text-2xl font-semibold md:text-3xl">{t.news.title}</h2>
-        <div className="mt-6 grid gap-4 md:grid-cols-3">
-          {["5 เคล็ดลับดูแลรถ", "ทำไมต้องล้างแอร์", "เทคโนโลยีตรวจสอบงาน"].map((item) => (
-            <article key={item} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.45)]">
-              <h3 className="text-base font-semibold text-slate-900">{item}</h3>
-              <a href="#" className="mt-3 inline-block text-sm font-semibold text-blue-700">Read More</a>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section id="faq" className="mx-auto w-full max-w-7xl px-4 py-10">
-        <h2 className="font-heading text-2xl font-semibold md:text-3xl">{t.faq.title}</h2>
-        <div className="mt-6 space-y-3">
-          {[
-            locale === "th" ? "ให้บริการพื้นที่ไหนบ้าง?" : "Which service areas are available?",
-            locale === "th" ? "มีค่าเดินทางเพิ่มไหม?" : "Is there an extra travel fee?",
-            locale === "th" ? "เปิดให้บริการช่วงเวลาใด?" : "What are your opening hours?",
-          ].map((item) => (
-            <details key={item} className="rounded-xl border border-slate-200 bg-white p-4 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.45)]">
-              <summary className="cursor-pointer font-semibold">{item}</summary>
-              <p className="mt-2 text-sm text-slate-600">{locale === "th" ? "สามารถติดต่อทีมเพื่อยืนยันข้อมูลล่าสุดได้ทันที" : "Please contact our team for the latest confirmation."}</p>
-            </details>
-          ))}
-        </div>
-      </section>
-
-      <section id="contact" className="mx-auto w-full max-w-7xl px-4 py-10">
-        <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.45)] md:p-6">
-          <h2 className="font-heading text-2xl font-semibold md:text-3xl">{t.booking.title}</h2>
-          <form className="mt-5 grid gap-3 md:grid-cols-2" action="#">
-            <input className="rounded-xl border border-slate-300 px-4 py-3" placeholder={t.booking.name} required />
-            <input className="rounded-xl border border-slate-300 px-4 py-3" placeholder={t.booking.phone} required />
-            <input className="rounded-xl border border-slate-300 px-4 py-3" placeholder={t.booking.email} type="email" required />
-            <input className="rounded-xl border border-slate-300 px-4 py-3" placeholder={t.booking.service} required />
-            <textarea className="min-h-28 rounded-xl border border-slate-300 px-4 py-3 md:col-span-2" placeholder={t.booking.details} required />
-            <div className="md:col-span-2 md:text-right">
-              <button type="submit" className="rounded-full bg-slate-900 px-6 py-3 text-xs font-extrabold uppercase tracking-[0.16em] text-white">
-                {t.booking.submit}
-              </button>
-            </div>
-          </form>
-        </article>
-      </section>
-
-      <footer className="mx-auto w-full max-w-7xl px-4 py-10 text-sm text-slate-600">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-6">
-          <div>© {new Date().getFullYear()} Clean Kittisap. All rights reserved.</div>
-          <div className="flex items-center gap-4">
-            <Link href="/login" className="hover:text-slate-900">{t.footer.admin}</Link>
-            <Link href="/admin/developer" className="hover:text-slate-900">{t.footer.dev}</Link>
+      <section id="updates" className="mx-auto w-full max-w-7xl px-4 py-12">
+        <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="text-2xl font-black tracking-tight text-slate-100 md:text-3xl">{t.sections.updates}</h2>
+            <p className="mt-1 text-sm text-slate-300/70">{t.sections.updatesSub}</p>
           </div>
+          <span className="rounded-full border border-slate-400/20 bg-white/5 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-200/85">{t.tags.latest}</span>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {showroomItems.length > 0
+            ? showroomItems.map((item) => (
+              <ProductCard key={item.id} locale={locale} useLocalePrefix={useLocalePrefix} item={item} />
+            ))
+            : [1, 2, 3, 4].map((item) => (
+              <PlaceholderCard key={item} title={t.card.model} meta={t.card.meta} />
+            ))}
+        </div>
+      </section>
+
+      <section id="news" className="mx-auto w-full max-w-7xl px-4 py-12">
+        <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="text-2xl font-black tracking-tight text-slate-100 md:text-3xl">{t.sections.news}</h2>
+            <p className="mt-1 text-sm text-slate-300/70">{t.sections.newsSub}</p>
+          </div>
+          <span className="rounded-full border border-slate-400/20 bg-white/5 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-200/85">{t.tags.updates}</span>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {[1, 2, 3].map((item) => (
+            <PlaceholderCard key={item} title={t.card.article} meta={t.card.articleMeta} />
+          ))}
+        </div>
+      </section>
+
+      <footer id="contact" className="border-t border-slate-400/20 py-10 text-slate-300/85">
+        <div className="mx-auto grid w-full max-w-7xl gap-4 px-4 md:grid-cols-[1.2fr_1fr_1fr]">
+          <div>
+            <p className="text-base font-black text-slate-100">{t.footer.title}</p>
+            <p className="mt-2 text-sm text-slate-300/75">{t.footer.desc1}</p>
+            <p className="text-sm text-slate-300/75">{t.footer.desc2}</p>
+          </div>
+
+          <div>
+            <p className="text-base font-black text-slate-100">{t.footer.quick}</p>
+            <div className="mt-2 space-y-1 text-sm">
+              <Link href={homePath} className="block hover:text-amber-200">{t.nav.home}</Link>
+              <Link href={productsPath} className="block hover:text-amber-200">{t.nav.products}</Link>
+              <Link href={pricingPath} className="block hover:text-amber-200">{t.nav.pricing}</Link>
+              <Link href={promotionsPath} className="block hover:text-amber-200">{t.nav.promotions}</Link>
+              <Link href={contactPath} className="block hover:text-amber-200">{t.nav.contact}</Link>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-base font-black text-slate-100">{t.footer.contact}</p>
+            <div className="mt-2 space-y-1 text-sm">
+              <a href="tel:+66843374982" className="block hover:text-amber-200">Call</a>
+              <a href="https://line.me" className="block hover:text-amber-200">LINE</a>
+              <a href="https://facebook.com" className="block hover:text-amber-200">Facebook</a>
+            </div>
+          </div>
+        </div>
+
+        <div className="mx-auto mt-5 w-full max-w-7xl border-t border-slate-400/20 px-4 pt-4 text-xs text-slate-400">
+          © {new Date().getFullYear()} {t.footer.title}
+          <span className="mx-2">|</span>
+          <Link href="/login" className="hover:text-amber-200">{t.footer.admin}</Link>
+          <span className="mx-2">|</span>
+          <Link href="/admin/developer" className="hover:text-amber-200">{t.footer.dev}</Link>
         </div>
       </footer>
     </Frame>
   );
 }
+
