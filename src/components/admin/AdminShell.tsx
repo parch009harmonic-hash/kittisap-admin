@@ -83,6 +83,10 @@ const BRAND_LOGO_URL =
 const TEXT = {
   appSubtitle: { th: "\u0e23\u0e30\u0e1a\u0e1a\u0e1c\u0e39\u0e49\u0e14\u0e39\u0e41\u0e25", en: "Admin system" },
   menu: { th: "\u0e40\u0e21\u0e19\u0e39", en: "Menu" },
+  currentRole: { th: "\u0e2a\u0e34\u0e17\u0e18\u0e34\u0e4c\u0e1b\u0e31\u0e08\u0e08\u0e38\u0e1a\u0e31\u0e19", en: "Current Role" },
+  roleAdmin: { th: "\u0e41\u0e2d\u0e14\u0e21\u0e34\u0e19", en: "Admin" },
+  roleStaff: { th: "\u0e1e\u0e19\u0e31\u0e01\u0e07\u0e32\u0e19", en: "Staff" },
+  roleDeveloper: { th: "\u0e19\u0e31\u0e01\u0e1e\u0e31\u0e12\u0e19\u0e32", en: "Developer" },
   logout: { th: "\u0e2d\u0e2d\u0e01\u0e08\u0e32\u0e01\u0e23\u0e30\u0e1a\u0e1a", en: "Logout" },
   loggingOut: { th: "\u0e01\u0e33\u0e25\u0e31\u0e07\u0e2d\u0e2d\u0e01\u0e08\u0e32\u0e01\u0e23\u0e30\u0e1a\u0e1a...", en: "Logging out..." },
   collapse: { th: "\u0e22\u0e48\u0e2d\u0e40\u0e21\u0e19\u0e39", en: "Collapse" },
@@ -437,6 +441,9 @@ export function AdminShell({
                 : "px-3 py-4 sm:px-4 sm:py-5 md:px-6 md:py-6"
             }`}
           >
+            <div className="sticky top-2 z-20 mb-2 flex justify-end">
+              <RoleBadge locale={locale} role={actorRole} />
+            </div>
             {isRouteChanging ? (
               <div className="sticky top-0 z-30 mb-2 h-1 overflow-hidden rounded-full bg-slate-200/80">
                 <div className="h-full w-1/3 animate-pulse rounded-full bg-blue-500" />
@@ -621,6 +628,18 @@ function UiMaintenanceOverlay({ locale, message }: { locale: AdminLocale; messag
         </div>
       </div>
     </section>
+  );
+}
+
+function RoleBadge({ locale, role }: { locale: AdminLocale; role: "admin" | "staff" | "developer" }) {
+  const roleText =
+    role === "admin" ? TEXT.roleAdmin[locale] : role === "developer" ? TEXT.roleDeveloper[locale] : TEXT.roleStaff[locale];
+
+  return (
+    <div className="inline-flex items-center gap-2 rounded-full border border-blue-200/70 bg-white/90 px-3 py-1.5 text-xs shadow-sm backdrop-blur">
+      <span className="font-semibold text-slate-500">{TEXT.currentRole[locale]}:</span>
+      <span className="font-bold text-blue-700">{roleText}</span>
+    </div>
   );
 }
 
