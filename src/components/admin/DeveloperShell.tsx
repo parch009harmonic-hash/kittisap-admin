@@ -18,6 +18,7 @@ const NAV_ITEMS = [
   { href: "/admin/developer/logs", key: "logs" },
   { href: "/admin/developer/github", key: "github" },
   { href: "/admin/developer/supabase", key: "supabase" },
+  { href: "/admin/developer/auth-role", key: "authRole" },
   { href: "/admin/developer/vercel", key: "vercel" },
   { href: "/admin/developer/vercel/observability", key: "observability" },
   { href: "/admin/settings", key: "settings" },
@@ -36,6 +37,7 @@ export default function DeveloperShell({ children, locale }: DeveloperShellProps
     logs: locale === "th" ? "บันทึกระบบ" : "System Logs",
     github: locale === "th" ? "GitHub" : "GitHub",
     supabase: locale === "th" ? "Supabase" : "Supabase",
+    authRole: locale === "th" ? "ตรวจสิทธิ์ผู้ใช้" : "Auth Role Debug",
     vercel: locale === "th" ? "Vercel" : "Vercel",
     observability: locale === "th" ? "Observability" : "Observability",
     settings: locale === "th" ? "ตั้งค่าระบบ" : "System Settings",
@@ -83,6 +85,8 @@ export default function DeveloperShell({ children, locale }: DeveloperShellProps
                       ? text.github
                     : item.key === "supabase"
                       ? text.supabase
+                      : item.key === "authRole"
+                        ? text.authRole
                       : item.key === "vercel"
                         ? text.vercel
                         : item.key === "observability"
