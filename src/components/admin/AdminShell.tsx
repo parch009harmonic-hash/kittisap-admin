@@ -8,6 +8,7 @@ import { MouseEvent, ReactNode, useEffect, useState } from "react";
 import { AdminLocale } from "../../../lib/i18n/admin";
 import { ThemePreset, UiMode } from "../../../lib/types/admin-settings";
 import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
+import DeveloperShell from "./DeveloperShell";
 
 type AdminShellProps = {
   children: ReactNode;
@@ -127,6 +128,8 @@ export function AdminShell({
   const mobileThemeClass =
     isMobileTheme && mobilePlatform === "ios" ? "os-mobile-ios" : isMobileTheme ? "os-mobile-android" : "";
   const navLinks = showDeveloperMenu ? [...NAV_LINKS, DEVELOPER_NAV_LINK] : NAV_LINKS;
+  const isDeveloperConsoleRoute =
+    pathname === "/admin/developer" || pathname.startsWith("/admin/developer/");
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -316,6 +319,10 @@ export function AdminShell({
 
     setPendingHref(href);
     setIsRouteChanging(true);
+  }
+
+  if (isDeveloperConsoleRoute) {
+    return <DeveloperShell locale={locale}>{children}</DeveloperShell>;
   }
 
   return (
