@@ -520,7 +520,6 @@ export default function SettingsClient({
 
   return (
     <div className="space-y-5">
-      <ApiHealthCard text={text} locale={locale} />
       <section className="space-y-4">
         <aside className="settings-quicknav sst-card-soft rounded-2xl p-4 sm:p-5">
           <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">{text.quickMenu}</p>
