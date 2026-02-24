@@ -97,9 +97,7 @@ export function middleware(request: NextRequest) {
 
   response.headers.set("x-request-id", requestId);
   const verboseLogEnabled = process.env.ADMIN_VERBOSE_REQUEST_LOG === "1";
-  const shouldLog =
-    request.method !== "GET" || pathname.startsWith("/api/") || verboseLogEnabled;
-  if (shouldLog) {
+  if (verboseLogEnabled) {
     writeAccessLog(request, requestId, "allow");
   }
 
