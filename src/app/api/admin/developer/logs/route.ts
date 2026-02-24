@@ -29,7 +29,7 @@ function toSource(value: string | null) {
 
 export async function GET(request: NextRequest) {
   try {
-    await requireDeveloperApi({ allowAdmin: true });
+    await requireDeveloperApi();
     const limit = toPositiveInt(request.nextUrl.searchParams.get("limit"), 120);
     const level = toLevel(request.nextUrl.searchParams.get("level"));
     const source = toSource(request.nextUrl.searchParams.get("source"));
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
 
 export async function DELETE() {
   try {
-    await requireDeveloperApi({ allowAdmin: true });
+    await requireDeveloperApi();
     clearDeveloperLogs();
     return NextResponse.json(
       { ok: true, clearedAt: new Date().toISOString() },
@@ -74,3 +74,4 @@ export async function DELETE() {
     return NextResponse.json({ error: message }, { status, headers: { "Cache-Control": "no-store, max-age=0" } });
   }
 }
+

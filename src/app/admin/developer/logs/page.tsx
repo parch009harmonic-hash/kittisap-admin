@@ -2,7 +2,7 @@ import { requireDeveloper } from "../../../../../lib/auth/admin";
 import DeveloperLogsClient from "../../../../components/admin/developer/DeveloperLogsClient";
 
 export default async function AdminDeveloperLogsPage() {
-  await requireDeveloper({ allowAdmin: true });
+  await requireDeveloper();
 
   return (
     <div className="space-y-4">
@@ -10,4 +10,5 @@ export default async function AdminDeveloperLogsPage() {
     </div>
   );
 }
+
 

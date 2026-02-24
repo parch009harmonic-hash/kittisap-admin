@@ -173,7 +173,7 @@ async function scanCodebase() {
 
 export async function GET() {
   try {
-    await requireDeveloperApi({ allowAdmin: true });
+    await requireDeveloperApi();
     const retryConfig = getRetryConfig();
 
     const supabase = getSupabaseServiceRoleClient();
@@ -275,3 +275,4 @@ export async function GET() {
     );
   }
 }
+

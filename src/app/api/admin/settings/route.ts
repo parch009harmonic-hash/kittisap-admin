@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ZodError } from "zod";
 
+import { getAdminActor } from "../../../../../lib/auth/admin";
 import { getAdminSettingsApi, updateAdminSettingApi } from "../../../../../lib/db/admin-settings";
 import { isUiMaintenanceLockedError } from "../../../../../lib/maintenance/ui-maintenance-guard";
 
@@ -17,8 +18,16 @@ function mapStatus(message: string) {
   return 500;
 }
 
+async function assertAdminOnly() {
+  const actor = await getAdminActor();
+  if (!actor || actor.role !== "admin") {
+    throw new Error("Not authorized to manage users");
+  }
+}
+
 export async function GET() {
   try {
+    await assertAdminOnly();
     const settings = await getAdminSettingsApi();
     return NextResponse.json(
       { settings },
@@ -32,6 +41,7 @@ export async function GET() {
 
 export async function PUT(request: NextRequest) {
   try {
+    await assertAdminOnly();
     const body = (await request.json()) as { field?: unknown; value?: unknown };
     const settings = await updateAdminSettingApi(body.field, body.value);
     return NextResponse.json(

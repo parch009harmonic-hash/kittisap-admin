@@ -16,7 +16,7 @@ function normalizeRole(value: unknown) {
 
 export async function GET() {
   try {
-    const actor = await requireDeveloperApi({ allowAdmin: true });
+    const actor = await requireDeveloperApi();
     const supabase = getSupabaseServiceRoleClient();
 
     const byId = await supabase
@@ -93,3 +93,4 @@ export async function GET() {
     );
   }
 }
+

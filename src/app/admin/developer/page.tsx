@@ -5,7 +5,7 @@ import { getAdminLocale } from "../../../../lib/i18n/admin";
 import DeveloperStatusClient from "../../../components/admin/developer/DeveloperStatusClient";
 
 export default async function AdminDeveloperPage() {
-  await requireDeveloper({ allowAdmin: true });
+  await requireDeveloper();
   const locale = await getAdminLocale();
 
   return (
@@ -34,3 +34,4 @@ export default async function AdminDeveloperPage() {
     </div>
   );
 }
+

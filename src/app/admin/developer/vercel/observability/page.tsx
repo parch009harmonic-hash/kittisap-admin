@@ -34,7 +34,7 @@ function inferProjectSlugFromUrl(urlOrHost?: string | null) {
 }
 
 export default async function AdminDeveloperVercelObservabilityPage() {
-  await requireDeveloper({ allowAdmin: true });
+  await requireDeveloper();
   const locale = await getAdminLocale();
 
   const oidcPayload = process.env.VERCEL_OIDC_TOKEN
@@ -73,3 +73,4 @@ export default async function AdminDeveloperVercelObservabilityPage() {
     </div>
   );
 }
+

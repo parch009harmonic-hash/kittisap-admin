@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ZodError } from "zod";
 
+import { getAdminActor } from "../../../../../../lib/auth/admin";
 import { getPaymentSettingsApi, updatePaymentSettingsApi } from "../../../../../../lib/db/payment-settings";
 
 export const runtime = "nodejs";
@@ -10,14 +11,25 @@ function mapStatus(message: string) {
   if (message === "Unauthorized") {
     return 401;
   }
+  if (message === "Not authorized to manage users") {
+    return 403;
+  }
   if (message === "Network unstable") {
     return 503;
   }
   return 500;
 }
 
+async function assertAdminOnly() {
+  const actor = await getAdminActor();
+  if (!actor || actor.role !== "admin") {
+    throw new Error("Not authorized to manage users");
+  }
+}
+
 export async function GET() {
   try {
+    await assertAdminOnly();
     const settings = await getPaymentSettingsApi();
     return NextResponse.json({ ok: true, data: settings }, { headers: { "Cache-Control": "no-store, max-age=0" } });
   } catch (error) {
@@ -28,6 +40,7 @@ export async function GET() {
 
 export async function PUT(request: NextRequest) {
   try {
+    await assertAdminOnly();
     const payload = await request.json();
     const settings = await updatePaymentSettingsApi(payload);
     return NextResponse.json({ ok: true, data: settings }, { headers: { "Cache-Control": "no-store, max-age=0" } });

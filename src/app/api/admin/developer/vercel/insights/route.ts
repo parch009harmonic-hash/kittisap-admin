@@ -43,7 +43,7 @@ async function fetchVercelJson<T>(path: string, token: string) {
 
 export async function GET() {
   try {
-    await requireDeveloperApi({ allowAdmin: true });
+    await requireDeveloperApi();
 
     const projectId = process.env.VERCEL_PROJECT_ID ?? "";
     const teamId = process.env.VERCEL_ORG_ID ?? process.env.VERCEL_TEAM_ID ?? "";
@@ -180,3 +180,4 @@ export async function GET() {
     return NextResponse.json({ ok: false, error: message }, { status });
   }
 }
+

@@ -127,7 +127,8 @@ export function AdminShell({
   const themeClass = `admin-theme-${themePreset}`;
   const mobileThemeClass =
     isMobileTheme && mobilePlatform === "ios" ? "os-mobile-ios" : isMobileTheme ? "os-mobile-android" : "";
-  const navLinks = showDeveloperMenu ? [...NAV_LINKS, DEVELOPER_NAV_LINK] : NAV_LINKS;
+  const baseLinks = actorRole === "staff" ? NAV_LINKS.filter((item) => item.href !== "/admin/settings") : NAV_LINKS;
+  const navLinks = showDeveloperMenu ? [...baseLinks, DEVELOPER_NAV_LINK] : baseLinks;
   const isDeveloperConsoleRoute =
     pathname === "/admin/developer" || pathname.startsWith("/admin/developer/");
 
@@ -177,6 +178,20 @@ export function AdminShell({
     setIsRouteChanging(false);
     setPendingHref(null);
   }, [pathname]);
+
+  useEffect(() => {
+    if (!pathname) {
+      return;
+    }
+    if (actorRole !== "developer") {
+      return;
+    }
+    if (pathname === "/admin/developer" || pathname.startsWith("/admin/developer/")) {
+      return;
+    }
+    router.replace("/admin/developer");
+    router.refresh();
+  }, [actorRole, pathname, router]);
 
   useEffect(() => {
     if (actorRole !== "admin" && actorRole !== "staff") {

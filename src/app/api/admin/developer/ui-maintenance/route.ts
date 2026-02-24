@@ -19,7 +19,7 @@ function safeError(error: unknown) {
 
 export async function GET() {
   try {
-    await requireDeveloperApi({ allowAdmin: true });
+    await requireDeveloperApi();
     const rules = await listUiMaintenanceRules();
     return NextResponse.json({ ok: true, rules }, { headers: { "Cache-Control": "no-store, max-age=0" } });
   } catch (error) {
@@ -31,7 +31,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const actor = await requireDeveloperApi({ allowAdmin: true });
+    const actor = await requireDeveloperApi();
     const payload = payloadSchema.parse(await request.json());
     if (!UI_MAINTENANCE_PATHS.includes(payload.path as (typeof UI_MAINTENANCE_PATHS)[number])) {
       return NextResponse.json({ ok: false, error: "Invalid path" }, { status: 400 });
@@ -54,3 +54,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, error: message }, { status });
   }
 }
+

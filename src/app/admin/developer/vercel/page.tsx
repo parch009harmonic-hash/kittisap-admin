@@ -4,7 +4,7 @@ import DeveloperStatusClient from "../../../../components/admin/developer/Develo
 import VercelInsightsClient from "../../../../components/admin/developer/VercelInsightsClient";
 
 export default async function AdminDeveloperVercelPage() {
-  await requireDeveloper({ allowAdmin: true });
+  await requireDeveloper();
   const locale = await getAdminLocale();
 
   return (
@@ -14,3 +14,4 @@ export default async function AdminDeveloperVercelPage() {
     </div>
   );
 }
+

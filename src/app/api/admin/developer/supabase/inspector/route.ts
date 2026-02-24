@@ -210,7 +210,7 @@ async function runReadOnlySql(rawQuery: string) {
 
 export async function GET(request: NextRequest) {
   try {
-    await requireDeveloperApi({ allowAdmin: true });
+    await requireDeveloperApi();
 
     const action = request.nextUrl.searchParams.get("action") ?? "tables";
 
@@ -250,3 +250,4 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ok: false, error: message }, { status });
   }
 }
+

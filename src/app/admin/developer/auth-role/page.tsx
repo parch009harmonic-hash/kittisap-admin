@@ -3,7 +3,7 @@ import { getAdminLocale } from "../../../../../lib/i18n/admin";
 import DeveloperRoleDebugClient from "../../../../components/admin/developer/DeveloperRoleDebugClient";
 
 export default async function AdminDeveloperAuthRolePage() {
-  await requireDeveloper({ allowAdmin: true });
+  await requireDeveloper();
   const locale = await getAdminLocale();
 
   return (
@@ -12,3 +12,4 @@ export default async function AdminDeveloperAuthRolePage() {
     </div>
   );
 }
+

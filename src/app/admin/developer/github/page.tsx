@@ -3,7 +3,7 @@ import { getAdminLocale } from "../../../../../lib/i18n/admin";
 import GitHubOpsClient from "../../../../components/admin/developer/GitHubOpsClient";
 
 export default async function AdminDeveloperGitHubPage() {
-  await requireDeveloper({ allowAdmin: true });
+  await requireDeveloper();
   const locale = await getAdminLocale();
 
   return (
@@ -12,3 +12,4 @@ export default async function AdminDeveloperGitHubPage() {
     </div>
   );
 }
+

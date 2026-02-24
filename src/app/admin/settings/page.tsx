@@ -3,10 +3,14 @@ import { getAdminSettings } from "../../../../lib/db/admin-settings";
 import { getAdminLocale } from "../../../../lib/i18n/admin";
 import { getDefaultAdminSettings } from "../../../../lib/types/admin-settings";
 import SettingsClient from "../../../components/admin/settings/SettingsClient";
+import { redirect } from "next/navigation";
 
 export default async function AdminSettingsPage() {
   const locale = await getAdminLocale();
   const actor = await getAdminActor();
+  if (!actor || actor.role !== "admin") {
+    redirect("/admin?error=admin_only");
+  }
   const isDeveloperMode = actor?.role === "admin";
   let initialSettings = getDefaultAdminSettings();
   let bootstrapError: string | null = null;
@@ -108,6 +112,9 @@ export default async function AdminSettingsPage() {
     />
   );
 }
+
+
+
 
 
 

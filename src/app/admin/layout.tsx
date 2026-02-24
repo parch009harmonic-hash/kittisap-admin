@@ -41,7 +41,7 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
       initialUiMode={initialUiMode}
       initialThemePreset={initialThemePreset}
       actorRole={actor.role}
-      showDeveloperMenu={actor.role === "admin" || actor.role === "developer"}
+      showDeveloperMenu={false}
     >
       {children}
     </AdminShell>

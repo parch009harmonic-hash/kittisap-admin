@@ -192,7 +192,7 @@ async function runAllOneToFourAction(message: string | undefined, branchFromBody
 
 export async function GET() {
   try {
-    await requireDeveloperApi({ allowAdmin: true });
+    await requireDeveloperApi();
     const summary = await getGitSummary();
     return NextResponse.json({ ok: true, summary }, { headers: { "Cache-Control": "no-store, max-age=0" } });
   } catch (error) {
@@ -204,7 +204,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    await requireDeveloperApi({ allowAdmin: true });
+    await requireDeveloperApi();
     const body = (await request.json()) as { action?: string; message?: string; branch?: string };
     const action = body.action ?? "scan";
 
@@ -251,3 +251,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, error: message }, { status });
   }
 }
+

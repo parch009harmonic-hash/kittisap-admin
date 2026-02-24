@@ -4,7 +4,7 @@ import DeveloperStatusClient from "../../../../components/admin/developer/Develo
 import SupabaseInspectorClient from "../../../../components/admin/developer/SupabaseInspectorClient";
 
 export default async function AdminDeveloperSupabasePage() {
-  await requireDeveloper({ allowAdmin: true });
+  await requireDeveloper();
   const locale = await getAdminLocale();
 
   return (
@@ -14,3 +14,4 @@ export default async function AdminDeveloperSupabasePage() {
     </div>
   );
 }
+

@@ -3,7 +3,7 @@ import { getAdminLocale } from "../../../../../lib/i18n/admin";
 import UiAccessMonitorClient from "../../../../components/admin/developer/UiAccessMonitorClient";
 
 export default async function AdminDeveloperUiCheckPage() {
-  await requireDeveloper({ allowAdmin: true });
+  await requireDeveloper();
   const locale = await getAdminLocale();
 
   return (
@@ -12,3 +12,4 @@ export default async function AdminDeveloperUiCheckPage() {
     </div>
   );
 }
+
