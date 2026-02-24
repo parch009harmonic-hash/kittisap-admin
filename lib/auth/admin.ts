@@ -2,6 +2,7 @@ import { User } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
 
 import { getSupabaseServerClient } from "../supabase/server";
+import { getSupabaseServiceRoleClient } from "../supabase/service";
 
 export type AdminRole = "admin" | "staff" | "developer";
 
@@ -41,7 +42,7 @@ async function retryOnTransient<T>(task: () => Promise<T>, attempts = 3, delayMs
 }
 
 async function resolveAdminRole(userId: string) {
-  const supabase = await getSupabaseServerClient();
+  const supabase = getSupabaseServiceRoleClient();
   const byId = await retryOnTransient(async () => {
     return await supabase
       .from("profiles")

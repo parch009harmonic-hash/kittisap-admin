@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/auth-helpers-nextjs";
 import type { User } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
+import { getSupabaseServiceRoleClient } from "../../../../lib/supabase/service";
 
 function getSupabaseEnv() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -64,10 +65,10 @@ function guessPhone(user: User) {
 }
 
 async function resolveBackofficeRole(
-  supabase: ReturnType<typeof createServerClient>,
   userId: string,
 ) {
-  const byId = await supabase
+  const adminSupabase = getSupabaseServiceRoleClient();
+  const byId = await adminSupabase
     .from("profiles")
     .select("role")
     .eq("id", userId)
@@ -80,7 +81,7 @@ async function resolveBackofficeRole(
   const roleByIdBackoffice = role === "admin" || role === "staff" || role === "developer";
 
   if ((!role && !error) || missingColumn || !roleByIdBackoffice) {
-    const byUserId = await supabase
+    const byUserId = await adminSupabase
       .from("profiles")
       .select("role")
       .eq("user_id", userId)
@@ -185,7 +186,7 @@ export async function GET(request: NextRequest) {
     return withCookies(cookieResponse, res);
   }
 
-  const { role, error: profileError } = await resolveBackofficeRole(supabase, user.id);
+  const { role, error: profileError } = await resolveBackofficeRole(user.id);
   const isAllowed = role === "admin" || role === "staff" || role === "developer";
 
   if (profileError || !isAllowed) {
