@@ -87,6 +87,7 @@ const TEXT = {
   roleAdmin: { th: "\u0e41\u0e2d\u0e14\u0e21\u0e34\u0e19", en: "Admin" },
   roleStaff: { th: "\u0e1e\u0e19\u0e31\u0e01\u0e07\u0e32\u0e19", en: "Staff" },
   roleDeveloper: { th: "\u0e19\u0e31\u0e01\u0e1e\u0e31\u0e12\u0e19\u0e32", en: "Developer" },
+  openDeveloper: { th: "\u0e40\u0e1b\u0e34\u0e14\u0e2b\u0e19\u0e49\u0e32\u0e19\u0e31\u0e01\u0e1e\u0e31\u0e12\u0e19\u0e32", en: "Open Developer" },
   logout: { th: "\u0e2d\u0e2d\u0e01\u0e08\u0e32\u0e01\u0e23\u0e30\u0e1a\u0e1a", en: "Logout" },
   loggingOut: { th: "\u0e01\u0e33\u0e25\u0e31\u0e07\u0e2d\u0e2d\u0e01\u0e08\u0e32\u0e01\u0e23\u0e30\u0e1a\u0e1a...", en: "Logging out..." },
   collapse: { th: "\u0e22\u0e48\u0e2d\u0e40\u0e21\u0e19\u0e39", en: "Collapse" },
@@ -639,6 +640,14 @@ function RoleBadge({ locale, role }: { locale: AdminLocale; role: "admin" | "sta
     <div className="inline-flex items-center gap-2 rounded-full border border-blue-200/70 bg-white/90 px-3 py-1.5 text-xs shadow-sm backdrop-blur">
       <span className="font-semibold text-slate-500">{TEXT.currentRole[locale]}:</span>
       <span className="font-bold text-blue-700">{roleText}</span>
+      {role === "developer" ? (
+        <Link
+          href="/admin/developer"
+          className="ml-1 rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 font-semibold text-blue-700 transition hover:border-blue-300 hover:bg-blue-100"
+        >
+          {TEXT.openDeveloper[locale]}
+        </Link>
+      ) : null}
     </div>
   );
 }
