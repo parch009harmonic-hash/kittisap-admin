@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { getPublicCart } from "../../../lib/storefront/cart";
 
-type AppLocale = "th" | "en";
+type AppLocale = "th" | "en" | "lo";
 
 type MobileBottomNavProps = {
   locale: AppLocale;

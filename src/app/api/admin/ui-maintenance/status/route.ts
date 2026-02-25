@@ -46,6 +46,9 @@ export async function GET(request: NextRequest) {
       { headers: { "Cache-Control": "no-store, max-age=0" } },
     );
   } catch (error) {
-    return NextResponse.json({ ok: false, error: safeError(error) }, { status: 500 });
+    return NextResponse.json(
+      { ok: true, blocked: false, degraded: true, error: safeError(error) },
+      { headers: { "Cache-Control": "no-store, max-age=0" } },
+    );
   }
 }

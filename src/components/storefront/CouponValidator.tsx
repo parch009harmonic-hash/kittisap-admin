@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { FormEvent, useMemo, useState } from "react";
+import type { AppLocale } from "../../../lib/i18n/locale";
 
 type CouponValidationData = {
   valid: boolean;
@@ -14,10 +15,10 @@ type CouponValidationData = {
 };
 
 type CouponValidatorProps = {
-  locale: "th" | "en";
+  locale: AppLocale;
 };
 
-function text(locale: "th" | "en") {
+function text(locale: AppLocale) {
   if (locale === "th") {
     return {
       title: "ตรวจสอบคูปอง",
@@ -59,7 +60,7 @@ function text(locale: "th" | "en") {
   };
 }
 
-function formatDiscount(locale: "th" | "en", item: CouponValidationData) {
+function formatDiscount(locale: AppLocale, item: CouponValidationData) {
   if (item.discountType === "percent") {
     return locale === "th" ? `${item.discountValue}%` : `${item.discountValue}%`;
   }

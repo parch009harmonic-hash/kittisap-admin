@@ -2,9 +2,11 @@
 
 import { listPublicPricingProducts, type PublicPricingProduct } from "../../../lib/db/publicProducts";
 import type { AppLocale } from "../../../lib/i18n/locale";
+import { StorefrontTopMenu } from "./StorefrontTopMenu";
 
 type PricingTablePageProps = {
   locale: AppLocale;
+  useLocalePrefix?: boolean;
 };
 
 type PriceGroup = {
@@ -129,14 +131,16 @@ function groupProducts(locale: AppLocale, items: PublicPricingProduct[]): { mode
   return { mode: "price", groups };
 }
 
-export async function PricingTablePage({ locale }: PricingTablePageProps) {
+export async function PricingTablePage({ locale, useLocalePrefix = false }: PricingTablePageProps) {
   const t = text(locale);
   const items = await listPublicPricingProducts();
   const grouped = groupProducts(locale, items);
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,_#5c3f00_0%,_#1a1200_30%,_#090909_68%)] text-amber-50">
-      <section className="mx-auto w-full max-w-7xl px-4 py-8 md:px-6 md:py-12">
+    <>
+      <StorefrontTopMenu locale={locale} useLocalePrefix={useLocalePrefix} />
+      <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,_#5c3f00_0%,_#1a1200_30%,_#090909_68%)] text-amber-50">
+        <section className="mx-auto w-full max-w-7xl px-4 py-8 md:px-6 md:py-12">
         <header className="rounded-3xl border border-amber-500/35 bg-black/55 p-6 shadow-[0_20px_80px_rgba(0,0,0,0.45)] backdrop-blur">
           <h1 className="font-heading text-3xl font-semibold text-amber-300 md:text-4xl">{t.title}</h1>
           <p className="mt-2 text-sm text-amber-100/80 md:text-base">{t.subtitle}</p>
@@ -202,7 +206,8 @@ export async function PricingTablePage({ locale }: PricingTablePageProps) {
             ))}
           </div>
         )}
-      </section>
-    </main>
+        </section>
+      </main>
+    </>
   );
 }

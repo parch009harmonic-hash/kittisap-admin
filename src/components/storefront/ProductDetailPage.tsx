@@ -49,15 +49,17 @@ function text(locale: AppLocale) {
 
 export function ProductDetailPage({ locale, product }: ProductDetailPageProps) {
   const t = text(locale);
-  const title = locale === "en" ? product.title_en || product.title_th : product.title_th;
+  const isEnglishLike = locale === "en" || locale === "lo";
+  const title = isEnglishLike ? product.title_en || product.title_th : product.title_th;
   const description =
-    locale === "en"
+    isEnglishLike
       ? product.description_en || product.description_th || t.noDesc
       : product.description_th || product.description_en || t.noDesc;
   const isOutOfStock = product.stock <= 0;
   const basePath = locale === "th" ? "/products" : `/${locale}/products`;
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-  const productUrl = new URL(locale === "en" ? `/en/products/${product.slug}` : `/products/${product.slug}`, siteUrl).toString();
+  const productPath = locale === "th" ? `/products/${product.slug}` : `/${locale}/products/${product.slug}`;
+  const productUrl = new URL(productPath, siteUrl).toString();
   const productJsonLd = {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -185,15 +187,17 @@ export function buildProductMetadata(input: {
 }): Metadata {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
   const { locale, slug, product } = input;
-  const title = locale === "en" ? product.title_en || product.title_th : product.title_th;
+  const isEnglishLike = locale === "en" || locale === "lo";
+  const title = isEnglishLike ? product.title_en || product.title_th : product.title_th;
   const description =
-    locale === "en"
+    isEnglishLike
       ? product.description_en || product.description_th || title
       : product.description_th || product.description_en || title;
 
   const thPath = `/products/${slug}`;
   const enPath = `/en/products/${slug}`;
-  const canonicalPath = locale === "en" ? enPath : thPath;
+  const loPath = `/lo/products/${slug}`;
+  const canonicalPath = locale === "th" ? thPath : locale === "lo" ? loPath : enPath;
   const canonical = new URL(canonicalPath, siteUrl).toString();
 
   return {
@@ -204,6 +208,7 @@ export function buildProductMetadata(input: {
       languages: {
         th: new URL(thPath, siteUrl).toString(),
         en: new URL(enPath, siteUrl).toString(),
+        lo: new URL(loPath, siteUrl).toString(),
       },
     },
     openGraph: {
@@ -212,7 +217,7 @@ export function buildProductMetadata(input: {
       url: canonical,
       images: product.cover_url ? [{ url: product.cover_url }] : undefined,
       type: "website",
-      locale: locale === "en" ? "en_US" : "th_TH",
+      locale: locale === "th" ? "th_TH" : locale === "lo" ? "lo_LA" : "en_US",
     },
   };
 }

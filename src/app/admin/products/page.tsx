@@ -1,13 +1,13 @@
 ﻿import Link from "next/link";
 import { revalidatePath } from "next/cache";
 
-import { deleteProduct, listProducts } from "../../../../lib/db/products";
+import { deleteProduct, listProducts, setProductFeatured } from "../../../../lib/db/products";
 import { getAdminLocale } from "../../../../lib/i18n/admin";
 import { ProductStatus } from "../../../../lib/types/product";
 import { ProductsTableClient } from "../../../components/admin/products/ProductsTableClient";
 
 type ProductsPageProps = {
-  searchParams: Promise<{ q?: string; status?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; status?: string; featured?: string; page?: string }>;
 };
 
 export default async function AdminProductsPage({ searchParams }: ProductsPageProps) {
@@ -18,9 +18,10 @@ export default async function AdminProductsPage({ searchParams }: ProductsPagePr
     params.status === "active" || params.status === "inactive"
       ? (params.status as ProductStatus)
       : undefined;
+  const featuredOnly = params.featured === "1";
   const page = Math.max(1, Number(params.page ?? "1") || 1);
 
-  const result = await listProducts({ q, status, page, pageSize: 12 });
+  const result = await listProducts({ q, status, featuredOnly, page, pageSize: 12 });
   const products = result.items;
 
   async function deleteAction(formData: FormData) {
@@ -31,6 +32,19 @@ export default async function AdminProductsPage({ searchParams }: ProductsPagePr
     }
     await deleteProduct(id);
     revalidatePath("/admin/products");
+  }
+
+  async function toggleFeaturedAction(formData: FormData) {
+    "use server";
+    const id = String(formData.get("id") ?? "");
+    const isFeatured = String(formData.get("is_featured") ?? "") === "1";
+    if (!id) {
+      throw new Error("Missing product id");
+    }
+    await setProductFeatured(id, isFeatured);
+    revalidatePath("/admin/products");
+    revalidatePath("/");
+    revalidatePath("/en");
   }
 
   return (
@@ -71,6 +85,10 @@ export default async function AdminProductsPage({ searchParams }: ProductsPagePr
           <option value="active">{locale === "th" ? "\u0e43\u0e0a\u0e49\u0e07\u0e32\u0e19" : "active"}</option>
           <option value="inactive">{locale === "th" ? "\u0e1b\u0e34\u0e14\u0e43\u0e0a\u0e49\u0e07\u0e32\u0e19" : "inactive"}</option>
         </select>
+        <label className="md:col-span-2 inline-flex items-center gap-2 text-sm font-medium text-slate-700">
+          <input type="checkbox" name="featured" value="1" defaultChecked={featuredOnly} className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+          <span>{locale === "th" ? "ดูเฉพาะสินค้าแนะนำ" : "Show featured products only"}</span>
+        </label>
         <button
           type="submit"
           className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-900 transition hover:bg-slate-50"
@@ -81,7 +99,7 @@ export default async function AdminProductsPage({ searchParams }: ProductsPagePr
 
       <nav className="flex items-center gap-2 overflow-x-auto pb-1 md:hidden">
         <Link
-          href={`/admin/products?q=${encodeURIComponent(q ?? "")}&status=&page=1`}
+          href={`/admin/products?q=${encodeURIComponent(q ?? "")}&status=&featured=${featuredOnly ? "1" : ""}&page=1`}
           className={`shrink-0 rounded-full border px-4 py-2 text-sm font-semibold ${
             !status
               ? "border-blue-200 bg-blue-50 text-blue-700"
@@ -91,7 +109,7 @@ export default async function AdminProductsPage({ searchParams }: ProductsPagePr
           {locale === "th" ? "ทั้งหมด" : "All"}
         </Link>
         <Link
-          href={`/admin/products?q=${encodeURIComponent(q ?? "")}&status=active&page=1`}
+          href={`/admin/products?q=${encodeURIComponent(q ?? "")}&status=active&featured=${featuredOnly ? "1" : ""}&page=1`}
           className={`shrink-0 rounded-full border px-4 py-2 text-sm font-semibold ${
             status === "active"
               ? "border-emerald-200 bg-emerald-50 text-emerald-700"
@@ -101,7 +119,7 @@ export default async function AdminProductsPage({ searchParams }: ProductsPagePr
           {locale === "th" ? "ใช้งาน" : "Active"}
         </Link>
         <Link
-          href={`/admin/products?q=${encodeURIComponent(q ?? "")}&status=inactive&page=1`}
+          href={`/admin/products?q=${encodeURIComponent(q ?? "")}&status=inactive&featured=${featuredOnly ? "1" : ""}&page=1`}
           className={`shrink-0 rounded-full border px-4 py-2 text-sm font-semibold ${
             status === "inactive"
               ? "border-slate-300 bg-slate-100 text-slate-700"
@@ -110,9 +128,17 @@ export default async function AdminProductsPage({ searchParams }: ProductsPagePr
         >
           {locale === "th" ? "ปิดใช้งาน" : "Inactive"}
         </Link>
+        <Link
+          href={`/admin/products?q=${encodeURIComponent(q ?? "")}&status=${status ?? ""}&featured=1&page=1`}
+          className={`shrink-0 rounded-full border px-4 py-2 text-sm font-semibold ${
+            featuredOnly ? "border-amber-200 bg-amber-50 text-amber-700" : "border-slate-200 bg-white text-slate-700"
+          }`}
+        >
+          {locale === "th" ? "แนะนำเท่านั้น" : "Featured Only"}
+        </Link>
       </nav>
 
-      <ProductsTableClient products={products} onDelete={deleteAction} locale={locale} />
+      <ProductsTableClient products={products} onDelete={deleteAction} onToggleFeatured={toggleFeaturedAction} locale={locale} />
 
       <div className="product-page-pagination sst-card-soft flex flex-col gap-3 rounded-2xl p-3 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between sm:p-0 sm:shadow-none sm:border-0">
         <p>
@@ -122,7 +148,7 @@ export default async function AdminProductsPage({ searchParams }: ProductsPagePr
         <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-2 self-end w-full sm:w-auto">
           {result.page > 1 ? (
             <Link
-              href={`/admin/products?q=${encodeURIComponent(q ?? "")}&status=${status ?? ""}&page=${result.page - 1}`}
+              href={`/admin/products?q=${encodeURIComponent(q ?? "")}&status=${status ?? ""}&featured=${featuredOnly ? "1" : ""}&page=${result.page - 1}`}
               className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-center text-slate-900 hover:bg-slate-50"
             >
               {locale === "th" ? "\u0e01\u0e48\u0e2d\u0e19\u0e2b\u0e19\u0e49\u0e32" : "Prev"}
@@ -134,7 +160,7 @@ export default async function AdminProductsPage({ searchParams }: ProductsPagePr
           )}
           {result.page < result.totalPages ? (
             <Link
-              href={`/admin/products?q=${encodeURIComponent(q ?? "")}&status=${status ?? ""}&page=${result.page + 1}`}
+              href={`/admin/products?q=${encodeURIComponent(q ?? "")}&status=${status ?? ""}&featured=${featuredOnly ? "1" : ""}&page=${result.page + 1}`}
               className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-center text-slate-900 hover:bg-slate-50"
             >
               {locale === "th" ? "\u0e16\u0e31\u0e14\u0e44\u0e1b" : "Next"}

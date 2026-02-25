@@ -16,7 +16,7 @@ type LocalizedCheckoutPageProps = {
 
 export default async function LocalizedCheckoutPage({ params, searchParams }: LocalizedCheckoutPageProps) {
   const locale = (await params).locale.toLowerCase();
-  if (locale !== "th" && locale !== "en") {
+  if (locale !== "th" && locale !== "en" && locale !== "lo") {
     notFound();
   }
 
@@ -37,3 +37,4 @@ export default async function LocalizedCheckoutPage({ params, searchParams }: Lo
     />
   );
 }
+

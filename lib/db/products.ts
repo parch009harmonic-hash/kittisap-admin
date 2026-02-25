@@ -18,10 +18,11 @@ const ProductRowSchema = ProductInputSchema.extend({
   id: z.string().uuid(),
   created_at: z.string().nullable().optional(),
   updated_at: z.string().nullable().optional(),
+  is_featured: z.boolean().optional(),
 });
 
 const PRODUCT_SELECT_COLUMNS =
-  "id,sku,slug,title_th,title_en,title_lo,description_th,description_en,description_lo,price,compare_at_price,stock,status,created_at";
+  "id,sku,slug,title_th,title_en,title_lo,description_th,description_en,description_lo,price,compare_at_price,stock,status,is_featured,created_at";
 
 function buildSku() {
   const now = new Date();
@@ -62,6 +63,11 @@ function errorText(error: unknown, fallback: string) {
 function isMissingColumnError(error: unknown) {
   const message = errorText(error, "").toLowerCase();
   return message.includes("does not exist") && message.includes("column");
+}
+
+function isMissingFeaturedColumnError(error: unknown) {
+  const message = errorText(error, "").toLowerCase();
+  return message.includes("is_featured") && message.includes("column");
 }
 
 function mapImage(row: Record<string, unknown>): ProductImage {
@@ -110,6 +116,7 @@ function mapProduct(row: Record<string, unknown>, images: ProductImage[] = []): 
     status: parsed.status as ProductStatus,
     created_at: parsed.created_at ?? null,
     updated_at: parsed.updated_at ?? null,
+    is_featured: parsed.is_featured ?? false,
     primary_image: primary,
     cover_url: primary?.url ?? null,
     images: sorted,
@@ -137,6 +144,7 @@ async function adminWriteClient() {
 export async function listProducts(input: {
   q?: string;
   status?: ProductStatus;
+  featuredOnly?: boolean;
   page?: number;
   pageSize?: number;
 } = {}) {
@@ -161,8 +169,12 @@ export async function listProducts(input: {
   if (filters.status) {
     query = query.eq("status", filters.status);
   }
+  if (filters.featuredOnly) {
+    query = query.eq("is_featured", true);
+  }
 
   let { data, error, count } = await query;
+  const missingFeaturedColumn = Boolean(error && isMissingFeaturedColumnError(error));
   if (error && isMissingColumnError(error)) {
     let fallbackQuery = supabase
       .from("products")
@@ -189,6 +201,9 @@ export async function listProducts(input: {
   }
 
   const rows = (data ?? []) as Array<Record<string, unknown>>;
+  if (filters.featuredOnly && missingFeaturedColumn) {
+    return { items: [], total: 0, page, pageSize, totalPages: 1 };
+  }
   const ids = rows.map((row) => String(row.id));
 
   let primaryByProduct = new Map<string, ProductImage>();
@@ -306,6 +321,19 @@ export async function deleteProduct(id: string) {
   if (error) {
     throw new Error(`Failed to delete product: ${errorText(error, "Unknown error")}`);
   }
+}
+
+export async function setProductFeatured(id: string, isFeatured: boolean) {
+  const supabase = await adminWriteClient();
+  const { error } = await supabase.from("products").update({ is_featured: isFeatured }).eq("id", id);
+  if (error) {
+    const message = errorText(error, "Unknown error");
+    if (isMissingFeaturedColumnError(error)) {
+      return { applied: false as const, reason: "missing_is_featured_column" as const };
+    }
+    throw new Error(`Failed to update featured product: ${message}`);
+  }
+  return { applied: true as const };
 }
 
 export async function addProductImages(productId: string, urls: string[]) {

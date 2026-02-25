@@ -11,7 +11,7 @@ type LocalizedPromotionsPageProps = {
 };
 
 function normalizeLocale(input: string): AppLocale | null {
-  if (input === "th" || input === "en") {
+  if (input === "th" || input === "en" || input === "lo") {
     return input;
   }
   return null;
@@ -32,6 +32,22 @@ export async function generateMetadata({ params }: LocalizedPromotionsPageProps)
         languages: {
           th: "/promotions",
           en: "/en/promotions",
+          lo: "/lo/promotions",
+        },
+      },
+    };
+  }
+
+  if (locale === "lo") {
+    return {
+      title: "ກິດຈະກໍາ ແລະໂປຣໂມຊັນ | Kittisap",
+      description: "ອັບເດດກິດຈະກໍາ, ຂ່າວສານ ແລະກວດສອບຄູປອງສ່ວນຫຼຸດຢ່າງປອດໄພ",
+      alternates: {
+        canonical: "/lo/promotions",
+        languages: {
+          th: "/promotions",
+          en: "/en/promotions",
+          lo: "/lo/promotions",
         },
       },
     };
@@ -45,6 +61,7 @@ export async function generateMetadata({ params }: LocalizedPromotionsPageProps)
       languages: {
         th: "/promotions",
         en: "/en/promotions",
+        lo: "/lo/promotions",
       },
     },
   };
@@ -56,5 +73,6 @@ export default async function LocalizedPromotionsPage({ params }: LocalizedPromo
     notFound();
   }
 
-  return <PromotionsPage locale={locale} />;
+  return <PromotionsPage locale={locale} useLocalePrefix />;
 }
+

@@ -3,7 +3,18 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { listPublicProducts } from "../../../lib/db/publicProducts";
+import {
+  getWebBannerSettings,
+  getWebHomepageAppearanceSettings,
+  getWebHomepageImageStripSettings,
+} from "../../../lib/db/web-settings";
 import type { AppLocale } from "../../../lib/i18n/locale";
+import {
+  getDefaultWebBannerSettings,
+  getDefaultWebHomepageAppearanceSettings,
+  getDefaultWebHomepageImageStripSettings,
+} from "../../../lib/types/web-settings";
+import { FeaturedProductsShowcase } from "./FeaturedProductsShowcase";
 import { MarketingTopNav } from "./MarketingTopNav";
 
 type MarketingLandingPageProps = {
@@ -30,10 +41,8 @@ function copy(locale: AppLocale) {
         pricing: "ตารางราคา",
         promotions: "กิจกรรม + ส่วนลด/คูปอง",
         contact: "ติดต่อเรา",
-        auth: "สมัครสมาชิก/ล็อกอินลูกค้า",
       },
       cta: {
-        auth: "เข้าสู่ระบบลูกค้า",
         products: "ดูสินค้า",
       },
       hero: {
@@ -43,7 +52,7 @@ function copy(locale: AppLocale) {
       },
       sections: {
         updates: "สินค้าแนะนำ",
-        updatesSub: "รายการสินค้าจริงจากฐานข้อมูลเดียวกับ /admin/products",
+        updatesSub: "",
         news: "กิจกรรมและข่าวสาร",
         newsSub: "อัปเดตโปรโมชันและคูปองล่าสุด",
       },
@@ -69,6 +78,52 @@ function copy(locale: AppLocale) {
     };
   }
 
+  if (locale === "lo") {
+    return {
+      brand: "Kittisap",
+      nav: {
+        home: "ໜ້າຫຼັກ",
+        products: "ສິນຄ້າຂອງພວກເຮົາ",
+        pricing: "ຕາຕະລາງລາຄາ",
+        promotions: "ກິດຈະກຳ + ຄູປອງ",
+        contact: "ຕິດຕໍ່",
+      },
+      cta: {
+        products: "ເບິ່ງສິນຄ້າ",
+      },
+      hero: {
+        eyebrow: "KITTISAP CUSTOMER SITE",
+        title: "ແພລດຟອມລູກຄ້າ ເຊື່ອມສິນຄ້າ ແລະຄໍາສັ່ງຊື້ກັບລະບົບແອດມິນ",
+        desc: "ລູກຄ້າເລືອກເບິ່ງສິນຄ້າ ລາຄາ ໂປຣໂມຊັນ ສັ່ງຊື້ ແລະຊໍາລະເງິນໃນລະບົບດຽວ",
+      },
+      sections: {
+        updates: "ສິນຄ້າແນະນໍາ",
+        updatesSub: "",
+        news: "ກິດຈະກໍາ ແລະຂ່າວສານ",
+        newsSub: "ອັບເດດໂປຣໂມຊັນ ແລະຄູປອງຫຼ້າສຸດ",
+      },
+      tags: {
+        latest: "Live Products",
+        updates: "Promotions",
+      },
+      card: {
+        model: "ສິນຄ້າ",
+        meta: "ລາຄາ • ສະຕັອກ",
+        article: "ຫົວຂໍ້ຂ່າວ / ກິດຈະກໍາ",
+        articleMeta: "ວັນທີ • ໝວດໝູ່",
+      },
+      footer: {
+        title: "Kittisap",
+        desc1: "ເວັບໄຊລູກຄ້າເຊື່ອມຂໍ້ມູນກັບລະບົບແອດມິນ ແລະ Supabase",
+        desc2: "ຮອງຮັບການສັ່ງຊື້ ຊໍາລະເງິນ ແລະກວດສອບສະຖານະຄໍາສັ່ງຊື້ຄົບວົງຈອນ",
+        quick: "Quick Links",
+        contact: "Contact",
+        admin: "Admin Login",
+        dev: "Developer Console",
+      },
+    };
+  }
+
   return {
     brand: "Kittisap",
     nav: {
@@ -77,10 +132,8 @@ function copy(locale: AppLocale) {
       pricing: "Pricing",
       promotions: "Promotions + Coupons",
       contact: "Contact",
-      auth: "Register/Login",
     },
     cta: {
-      auth: "Customer Login",
       products: "Browse Products",
     },
     hero: {
@@ -90,7 +143,7 @@ function copy(locale: AppLocale) {
     },
     sections: {
       updates: "Featured Products",
-      updatesSub: "Live products from the same dataset as /admin/products",
+      updatesSub: "",
       news: "Activities and Updates",
       newsSub: "Latest promotions and coupon updates",
     },
@@ -147,11 +200,13 @@ type ShowroomItem = {
   price: number;
   stock: number;
   coverUrl: string | null;
+  description: string | null;
 };
 
 async function loadShowroomItems(locale: AppLocale): Promise<ShowroomItem[]> {
   try {
-    const source = await listPublicProducts({ page: 1, pageSize: 4 });
+    const featuredSource = await listPublicProducts({ featuredOnly: true, page: 1, pageSize: 4 });
+    const source = featuredSource.items.length > 0 ? featuredSource : await listPublicProducts({ page: 1, pageSize: 4 });
     return source.items.map((item) => ({
       id: item.id,
       slug: item.slug,
@@ -159,38 +214,14 @@ async function loadShowroomItems(locale: AppLocale): Promise<ShowroomItem[]> {
       price: item.price,
       stock: item.stock,
       coverUrl: item.cover_url,
+      description:
+        locale === "en"
+          ? item.description_en?.trim() || item.description_th?.trim() || null
+          : item.description_th?.trim() || item.description_en?.trim() || null,
     }));
   } catch {
     return [];
   }
-}
-
-function ProductCard({
-  locale,
-  useLocalePrefix,
-  item,
-}: {
-  locale: AppLocale;
-  useLocalePrefix: boolean;
-  item: ShowroomItem;
-}) {
-  const detailPath = withLocale(locale, `/products/${item.slug}`, useLocalePrefix);
-
-  return (
-    <Link href={detailPath} className="tap-ripple app-press overflow-hidden rounded-2xl border border-slate-400/20 bg-gradient-to-b from-slate-900/90 to-slate-950/80 shadow-[0_14px_50px_rgba(0,0,0,0.28)] transition hover:-translate-y-0.5 hover:border-amber-400/40">
-      {item.coverUrl ? (
-        <div className="relative aspect-[16/10] w-full overflow-hidden">
-          <Image src={item.coverUrl} alt={item.title} fill sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 25vw" className="object-cover" loading="lazy" />
-        </div>
-      ) : (
-        <div className="aspect-[16/10] bg-[linear-gradient(135deg,rgba(245,158,11,0.22),rgba(59,130,246,0.12)),radial-gradient(800px_300px_at_20%_20%,rgba(255,255,255,0.08),transparent_45%)]" />
-      )}
-      <div className="p-4">
-        <p className="text-sm font-extrabold tracking-tight text-slate-100">{item.title}</p>
-        <p className="mt-1 text-xs text-slate-300/70">THB {item.price.toLocaleString()} • Stock {item.stock}</p>
-      </div>
-    </Link>
-  );
 }
 
 export async function MarketingLandingPage({
@@ -201,71 +232,213 @@ export async function MarketingLandingPage({
 }: MarketingLandingPageProps) {
   const t = copy(locale);
   const showroomItems = await loadShowroomItems(locale);
+  let bannerSettings = getDefaultWebBannerSettings();
+  let homepageAppearance = getDefaultWebHomepageAppearanceSettings();
+  let homepageImageStrip = getDefaultWebHomepageImageStripSettings();
+  try {
+    bannerSettings = await getWebBannerSettings();
+  } catch {
+    bannerSettings = getDefaultWebBannerSettings();
+  }
+  try {
+    homepageAppearance = await getWebHomepageAppearanceSettings();
+  } catch {
+    homepageAppearance = getDefaultWebHomepageAppearanceSettings();
+  }
+  try {
+    homepageImageStrip = await getWebHomepageImageStripSettings();
+  } catch {
+    homepageImageStrip = getDefaultWebHomepageImageStripSettings();
+  }
   const homePath = withLocale(locale, "/", useLocalePrefix);
   const productsPath = withLocale(locale, "/products", useLocalePrefix);
   const pricingPath = withLocale(locale, "/pricing", useLocalePrefix);
   const promotionsPath = withLocale(locale, "/promotions", useLocalePrefix);
   const contactPath = withLocale(locale, "/contact", useLocalePrefix);
+  const heroImageUrl = bannerSettings.imageUrl || showroomItems[0]?.coverUrl || null;
+  const heroImageAlt = bannerSettings.title || showroomItems[0]?.title || "Banner image";
+  const bannerMotionClass = bannerSettings.imageMotion === "none" ? "" : `banner-motion-${bannerSettings.imageMotion}`;
+  const bannerFrameClass = `banner-frame-${bannerSettings.imageFrameStyle}`;
+  const contentAlignClass =
+    bannerSettings.contentAlign === "center"
+      ? "items-center text-center"
+      : bannerSettings.contentAlign === "right"
+        ? "items-end text-right"
+        : "items-start text-left";
+  const buttonAlignClass =
+    bannerSettings.contentAlign === "center"
+      ? "justify-center"
+      : bannerSettings.contentAlign === "right"
+        ? "justify-end"
+        : "justify-start";
+  const titleEffectClass =
+    bannerSettings.textEffect === "gradient"
+      ? "bg-gradient-to-r from-amber-200 via-white to-cyan-200 bg-clip-text text-transparent"
+      : "";
+  const titleEffectStyle =
+    bannerSettings.textEffect === "shadow"
+      ? { textShadow: "0 10px 26px rgba(15,23,42,0.45)" }
+      : bannerSettings.textEffect === "glow"
+        ? { textShadow: "0 0 24px rgba(56,189,248,0.5)" }
+        : undefined;
 
   return (
     <Frame showOuterFrame={showOuterFrame}>
-      {showTopNav ? (
-        <MarketingTopNav locale={locale} useLocalePrefix={useLocalePrefix} brand={t.brand} nav={t.nav} cta={t.cta} />
-      ) : null}
+      <div
+        style={{
+          backgroundColor: homepageAppearance.pageBackgroundColor,
+          color: homepageAppearance.textColor,
+        }}
+      >
+        {showTopNav ? (
+          <MarketingTopNav locale={locale} useLocalePrefix={useLocalePrefix} brand={t.brand} nav={t.nav} cta={t.cta} />
+        ) : null}
 
       <section id="showroom" className="mx-auto w-full max-w-7xl px-4 py-7">
-        <article className="relative overflow-hidden rounded-[28px] border border-slate-400/20 bg-gradient-to-br from-slate-900/95 to-slate-950/90 shadow-[0_18px_60px_rgba(0,0,0,0.45)]">
+        <article
+          className="relative overflow-hidden rounded-[28px] border border-slate-400/20 shadow-[0_18px_60px_rgba(0,0,0,0.45)]"
+          style={{ background: `linear-gradient(135deg, ${bannerSettings.backgroundFrom}, ${bannerSettings.backgroundTo})` }}
+        >
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(closest-side,rgba(245,158,11,0.26),transparent_55%),radial-gradient(closest-side,rgba(59,130,246,0.16),transparent_62%),linear-gradient(120deg,transparent_35%,rgba(255,255,255,0.08)_45%,transparent_55%)] opacity-70" />
 
           <div className="relative grid gap-5 p-6 md:grid-cols-[1.15fr_0.85fr] md:p-8">
-            <div>
-              <p className="inline-flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.2em] text-amber-200">{t.hero.eyebrow}</p>
-              <h1 className="mt-2 text-3xl font-black leading-tight tracking-tight text-slate-50 md:text-5xl">{t.hero.title}</h1>
-              <p className="mt-3 max-w-3xl text-sm text-slate-200/80 md:text-base">{t.hero.desc}</p>
-              <div className="mt-5 flex flex-wrap gap-2">
-                <Link href={productsPath} className="inline-flex rounded-full border border-amber-400/40 bg-amber-500/15 px-4 py-2 text-xs font-extrabold text-amber-200">{t.nav.products}</Link>
-                <Link href={promotionsPath} className="inline-flex rounded-full border border-slate-400/30 bg-white/5 px-4 py-2 text-xs font-extrabold text-slate-100">{t.nav.promotions}</Link>
-              </div>
+            <div
+              className={`flex flex-col ${contentAlignClass}`}
+              style={{ minHeight: bannerSettings.autoHeight ? undefined : `${bannerSettings.minHeightPx}px` }}
+            >
+              <p className="inline-flex items-center gap-2 uppercase tracking-[0.2em] text-amber-200" style={{ fontSize: `${bannerSettings.eyebrowFontSizePx}px`, fontWeight: 800 }}>{bannerSettings.eyebrow || t.hero.eyebrow}</p>
+              <h1
+                className={`mt-2 leading-tight tracking-tight md:text-5xl ${titleEffectClass}`}
+                style={{
+                  fontSize: `clamp(30px,3.8vw,${bannerSettings.titleFontSizePx}px)`,
+                  color: bannerSettings.textEffect === "gradient" ? undefined : "#f8fafc",
+                  ...titleEffectStyle,
+                }}
+              >
+                {bannerSettings.title || t.hero.title}
+              </h1>
+              <p className="mt-3 max-w-3xl text-slate-200/80" style={{ fontSize: `clamp(14px,1.6vw,${bannerSettings.descriptionFontSizePx}px)` }}>{bannerSettings.description || t.hero.desc}</p>
+              {bannerSettings.showButtons ? (
+                <div className={`mt-5 flex w-full flex-wrap gap-2 ${buttonAlignClass}`}>
+                  <Link href={productsPath} className="inline-flex rounded-full border border-amber-400/40 bg-amber-500/15 px-4 py-2 text-xs font-extrabold text-amber-200">{bannerSettings.primaryButtonLabel || t.nav.products}</Link>
+                  <Link href={promotionsPath} className="inline-flex rounded-full border border-slate-400/30 bg-white/5 px-4 py-2 text-xs font-extrabold text-slate-100">{bannerSettings.secondaryButtonLabel || t.nav.promotions}</Link>
+                </div>
+              ) : null}
             </div>
 
-            <aside className="rounded-2xl border border-white/15 bg-white/5 p-3">
-              <div className="relative aspect-[16/10] overflow-hidden rounded-2xl border border-white/15 bg-[linear-gradient(135deg,rgba(245,158,11,0.22),rgba(59,130,246,0.12)),repeating-linear-gradient(135deg,rgba(255,255,255,0.06)_0_10px,transparent_10px_20px)]">
-                {showroomItems[0]?.coverUrl ? (
+            <aside>
+              <div
+                className={`relative aspect-[16/10] overflow-hidden bg-[linear-gradient(135deg,rgba(245,158,11,0.22),rgba(59,130,246,0.12)),repeating-linear-gradient(135deg,rgba(255,255,255,0.06)_0_10px,transparent_10px_20px)] ${
+                  bannerSettings.imageFrameEnabled ? bannerFrameClass : ""
+                }`}
+                style={{
+                  borderRadius: `${bannerSettings.imageFrameRadiusPx}px`,
+                  borderColor: bannerSettings.imageFrameColor,
+                  borderWidth: bannerSettings.imageFrameEnabled ? `${bannerSettings.imageFrameBorderWidthPx}px` : "0px",
+                  borderStyle: bannerSettings.imageFrameEnabled ? "solid" : "none",
+                }}
+              >
+                {heroImageUrl ? (
                   <Image
-                    src={showroomItems[0].coverUrl}
-                    alt={showroomItems[0].title}
+                    src={heroImageUrl}
+                    alt={heroImageAlt}
                     fill
                     sizes="(max-width: 768px) 100vw, 40vw"
                     priority
                     fetchPriority="high"
-                    className="object-cover"
+                    className={`object-cover ${bannerMotionClass}`}
                   />
                 ) : null}
               </div>
-              <p className="mt-2 text-xs text-slate-200/70">Slider image placeholder</p>
             </aside>
           </div>
         </article>
       </section>
 
+      <section
+        className="mx-auto w-full max-w-7xl px-4"
+        style={{ marginTop: `${homepageAppearance.sectionGapPx}px` }}
+      >
+        <article
+          className="rounded-3xl px-6 py-10 text-center shadow-sm md:px-12 md:py-12"
+          style={{ backgroundColor: homepageAppearance.introCardBackgroundColor }}
+        >
+          <h2
+            className="tracking-tight"
+            style={{
+              color: homepageAppearance.introTitleColor,
+              fontWeight: homepageAppearance.introTitleFontWeight,
+              fontSize: `clamp(28px, 3.2vw, ${homepageAppearance.introTitleFontSizePx}px)`,
+              textShadow: homepageAppearance.introTextGlow ? "0 0 18px rgba(56, 189, 248, 0.28)" : "none",
+            }}
+          >
+            {homepageAppearance.introTitle}
+          </h2>
+          <p
+            className="mx-auto mt-4 max-w-5xl whitespace-pre-line leading-8"
+            style={{
+              color: homepageAppearance.introContentColor,
+              fontWeight: homepageAppearance.introContentFontWeight,
+              fontSize: `clamp(16px, 1.8vw, ${homepageAppearance.introContentFontSizePx}px)`,
+              textShadow: homepageAppearance.introTextGlow ? "0 0 14px rgba(56, 189, 248, 0.22)" : "none",
+            }}
+          >
+            {homepageAppearance.introContent}
+          </p>
+        </article>
+      </section>
+
+      {homepageImageStrip.items.length > 0 ? (
+        <section
+          className="mx-auto w-full max-w-7xl px-4"
+          style={{ marginTop: `${homepageImageStrip.sectionGapPx}px` }}
+        >
+          <div
+            className={`grid gap-4 ${
+              homepageImageStrip.items.length >= 4
+                ? "grid-cols-1 sm:grid-cols-2 xl:grid-cols-4"
+                : "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3"
+            }`}
+          >
+            {homepageImageStrip.items.slice(0, 4).map((item) => (
+              <article
+                key={item.id}
+                className="overflow-hidden rounded-2xl border border-slate-300/30 bg-white shadow-sm"
+              >
+                <div className="relative aspect-[16/7]">
+                  <Image
+                    src={item.imageUrl}
+                    alt={item.altText || "Homepage image"}
+                    fill
+                    sizes="(max-width: 768px) 100vw, (max-width: 1280px) 33vw, 25vw"
+                    className="object-cover"
+                    loading="lazy"
+                  />
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       <section id="updates" className="mx-auto w-full max-w-7xl px-4 py-12">
         <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="text-2xl font-black tracking-tight text-slate-100 md:text-3xl">{t.sections.updates}</h2>
-            <p className="mt-1 text-sm text-slate-300/70">{t.sections.updatesSub}</p>
+            {t.sections.updatesSub ? <p className="mt-1 text-sm text-slate-300/70">{t.sections.updatesSub}</p> : null}
           </div>
           <span className="rounded-full border border-slate-400/20 bg-white/5 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-200/85">{t.tags.latest}</span>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {showroomItems.length > 0
-            ? showroomItems.map((item) => (
-              <ProductCard key={item.id} locale={locale} useLocalePrefix={useLocalePrefix} item={item} />
-            ))
-            : [1, 2, 3, 4].map((item) => (
+        {showroomItems.length > 0 ? (
+          <FeaturedProductsShowcase items={showroomItems} locale={locale} useLocalePrefix={useLocalePrefix} />
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {[1, 2, 3, 4].map((item) => (
               <PlaceholderCard key={item} title={t.card.model} meta={t.card.meta} />
             ))}
-        </div>
+          </div>
+        )}
       </section>
 
       <section id="news" className="mx-auto w-full max-w-7xl px-4 py-12">
@@ -284,7 +457,11 @@ export async function MarketingLandingPage({
         </div>
       </section>
 
-      <footer id="contact" className="border-t border-slate-400/20 py-10 text-slate-300/85">
+      <footer
+        id="contact"
+        className="border-t border-slate-400/20 py-10 text-slate-300/85"
+        style={{ color: homepageAppearance.textColor }}
+      >
         <div className="mx-auto grid w-full max-w-7xl gap-4 px-4 md:grid-cols-[1.2fr_1fr_1fr]">
           <div>
             <p className="text-base font-black text-slate-100">{t.footer.title}</p>
@@ -313,7 +490,13 @@ export async function MarketingLandingPage({
           </div>
         </div>
 
-        <div className="mx-auto mt-5 w-full max-w-7xl border-t border-slate-400/20 px-4 pt-4 text-xs text-slate-400">
+        <div
+          className="mx-auto mt-5 w-full max-w-7xl border-t border-slate-400/20 px-4 pt-4 text-xs"
+          style={{
+            backgroundColor: homepageAppearance.footerBottomBackgroundColor,
+            color: homepageAppearance.textColor,
+          }}
+        >
           © {new Date().getFullYear()} {t.footer.title}
           <span className="mx-2">|</span>
           <Link href="/login" className="hover:text-amber-200">{t.footer.admin}</Link>
@@ -321,6 +504,7 @@ export async function MarketingLandingPage({
           <Link href="/admin/developer" className="hover:text-amber-200">{t.footer.dev}</Link>
         </div>
       </footer>
+      </div>
     </Frame>
   );
 }

@@ -9,10 +9,11 @@ type LocalizedCartPageProps = {
 
 export default async function LocalizedCartPage({ params }: LocalizedCartPageProps) {
   const locale = (await params).locale.toLowerCase();
-  if (locale !== "th" && locale !== "en") {
+  if (locale !== "th" && locale !== "en" && locale !== "lo") {
     notFound();
   }
 
   return <CartPageClient locale={locale as AppLocale} useLocalePrefix />;
 }
+
 

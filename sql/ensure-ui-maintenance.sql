@@ -33,5 +33,6 @@ values
   ('/admin/products', false, array['admin','staff'], array['windows','android','ios'], 'This page is temporarily under maintenance.'),
   ('/admin/orders', false, array['admin','staff'], array['windows','android','ios'], 'This page is temporarily under maintenance.'),
   ('/admin/coupons', false, array['admin','staff'], array['windows','android','ios'], 'This page is temporarily under maintenance.'),
-  ('/admin/settings', false, array['admin','staff'], array['windows','android','ios'], 'This page is temporarily under maintenance.')
+  ('/admin/settings', false, array['admin','staff'], array['windows','android','ios'], 'This page is temporarily under maintenance.'),
+  ('/admin/web-settings', false, array['admin','staff'], array['windows','android','ios'], 'This page is temporarily under maintenance.')
 on conflict (path) do nothing;

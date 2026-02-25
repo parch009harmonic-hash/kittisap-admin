@@ -26,6 +26,37 @@ type UiMaintenanceCache = {
 
 let rulesCache: UiMaintenanceCache | null = null;
 
+function isTransientNetworkError(error: unknown) {
+  const message = error instanceof Error ? error.message.toLowerCase() : String(error ?? "").toLowerCase();
+  return (
+    message.includes("econnreset") ||
+    message.includes("fetch failed") ||
+    message.includes("socket hang up") ||
+    message.includes("connect timeout") ||
+    message.includes("network")
+  );
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function retryOnTransient<T>(task: () => Promise<T>, attempts = 3, delayMs = 180): Promise<T> {
+  let lastError: unknown;
+  for (let i = 0; i < attempts; i += 1) {
+    try {
+      return await task();
+    } catch (error) {
+      lastError = error;
+      if (!isTransientNetworkError(error) || i === attempts - 1) {
+        throw error;
+      }
+      await sleep(delayMs * (i + 1));
+    }
+  }
+  throw lastError;
+}
+
 function toRoleList(value: string[] | null | undefined): UiRole[] {
   const normalized = (value ?? []).filter((item): item is UiRole => item === "admin" || item === "staff");
   return normalized.length > 0 ? normalized : ["admin", "staff"];
@@ -74,10 +105,12 @@ function invalidateUiMaintenanceRulesCache() {
 
 async function fetchUiMaintenanceRulesFromDb() {
   const supabase = getSupabaseServiceRoleClient();
-  const { data, error } = await supabase
-    .from("ui_maintenance_rules")
-    .select("path,enabled,roles,platforms,message,updated_at,updated_by")
-    .order("path", { ascending: true });
+  const { data, error } = await retryOnTransient(async () => {
+    return await supabase
+      .from("ui_maintenance_rules")
+      .select("path,enabled,roles,platforms,message,updated_at,updated_by")
+      .order("path", { ascending: true });
+  });
 
   if (error) {
     if (isMissingTable(error)) {
@@ -101,7 +134,18 @@ export async function listUiMaintenanceRules(options?: { bypassCache?: boolean }
     return rulesCache.rules;
   }
 
-  const rules = await fetchUiMaintenanceRulesFromDb();
+  let rules: UiMaintenanceRule[];
+  try {
+    rules = await fetchUiMaintenanceRulesFromDb();
+  } catch (error) {
+    if (isTransientNetworkError(error)) {
+      if (rulesCache?.rules?.length) {
+        return rulesCache.rules;
+      }
+      return buildDefaultRules();
+    }
+    throw error;
+  }
   rulesCache = {
     rules,
     expiresAt: now + cacheTtlMs(),

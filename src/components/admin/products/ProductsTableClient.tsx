@@ -12,6 +12,7 @@ import { AdminTable } from "../AdminTable";
 type ProductsTableClientProps = {
   products: Product[];
   onDelete: (formData: FormData) => Promise<void>;
+  onToggleFeatured: (formData: FormData) => Promise<void>;
   locale: AdminLocale;
 };
 
@@ -20,7 +21,7 @@ function statusClass(status: string) {
   return "bg-slate-100 text-slate-700";
 }
 
-export function ProductsTableClient({ products, onDelete, locale }: ProductsTableClientProps) {
+export function ProductsTableClient({ products, onDelete, onToggleFeatured, locale }: ProductsTableClientProps) {
   const formsRef = useRef<Map<string, HTMLFormElement>>(new Map());
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [mobileLayout, setMobileLayout] = useState(false);
@@ -74,8 +75,8 @@ export function ProductsTableClient({ products, onDelete, locale }: ProductsTabl
           <AdminTable
             columns={
               locale === "th"
-                ? ["ภาพ", "SKU", "ชื่อสินค้า", "ราคา", "สต็อก", "สถานะ", "จัดการ"]
-                : ["Cover", "SKU", "Title TH", "Price", "Stock", "Status", "Actions"]
+                ? ["ภาพ", "SKU", "ชื่อสินค้า", "ราคา", "สต็อก", "สถานะ", "สินค้าแนะนำ", "จัดการ"]
+                : ["Cover", "SKU", "Title TH", "Price", "Stock", "Status", "Featured", "Actions"]
             }
           >
             {products.map((product) => (
@@ -109,6 +110,24 @@ export function ProductsTableClient({ products, onDelete, locale }: ProductsTabl
                   <span className={`rounded-md px-2.5 py-1 text-xs font-semibold ${statusClass(product.status)}`}>
                     {locale === "th" ? (product.status === "active" ? "ใช้งาน" : "ปิดใช้งาน") : product.status}
                   </span>
+                </td>
+                <td className="px-5 py-3">
+                  <form action={onToggleFeatured} className="inline-flex items-center">
+                    <input type="hidden" name="id" value={product.id} />
+                    <input type="hidden" name="is_featured" value={product.is_featured ? "0" : "1"} />
+                    <label className="inline-flex cursor-pointer items-center gap-2 text-xs text-slate-700">
+                      <input
+                        type="checkbox"
+                        checked={product.is_featured}
+                        onChange={(event) => {
+                          const form = event.currentTarget.form;
+                          if (form) form.requestSubmit();
+                        }}
+                        className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span>{locale === "th" ? "แนะนำ" : "Featured"}</span>
+                    </label>
+                  </form>
                 </td>
                 <td className="px-5 py-3">
                   <div className="flex items-center gap-2">

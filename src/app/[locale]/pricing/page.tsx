@@ -11,7 +11,7 @@ type LocalizedPricingPageProps = {
 };
 
 function normalizeLocale(input: string): AppLocale | null {
-  if (input === "th" || input === "en") {
+  if (input === "th" || input === "en" || input === "lo") {
     return input;
   }
   return null;
@@ -32,6 +32,22 @@ export async function generateMetadata({ params }: LocalizedPricingPageProps): P
         languages: {
           th: "/pricing",
           en: "/en/pricing",
+          lo: "/lo/pricing",
+        },
+      },
+    };
+  }
+
+  if (locale === "lo") {
+    return {
+      title: "ຕາຕະລາງລາຄາ | Kittisap",
+      description: "ຕາຕະລາງລາຄາລ່າສຸດຂອງສິນຄ້າ Kittisap ທີ່ເປີດຂາຍ",
+      alternates: {
+        canonical: "/lo/pricing",
+        languages: {
+          th: "/pricing",
+          en: "/en/pricing",
+          lo: "/lo/pricing",
         },
       },
     };
@@ -45,6 +61,7 @@ export async function generateMetadata({ params }: LocalizedPricingPageProps): P
       languages: {
         th: "/pricing",
         en: "/en/pricing",
+        lo: "/lo/pricing",
       },
     },
   };
@@ -55,5 +72,6 @@ export default async function LocalizedPricingPage({ params }: LocalizedPricingP
   if (!locale) {
     notFound();
   }
-  return <PricingTablePage locale={locale} />;
+  return <PricingTablePage locale={locale} useLocalePrefix />;
 }
+

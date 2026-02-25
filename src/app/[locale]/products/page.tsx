@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import { getAppLocale, type AppLocale } from "../../../../lib/i18n/locale";
 import { ProductsCatalogPage } from "../../../components/storefront/ProductsCatalogPage";
 
@@ -8,7 +8,7 @@ type LocalizedProductsPageProps = {
 };
 
 function normalizeLocale(input: string): AppLocale | null {
-  if (input === "th" || input === "en") {
+  if (input === "th" || input === "en" || input === "lo") {
     return input;
   }
   return null;
@@ -30,7 +30,18 @@ export async function generateMetadata({ params }: LocalizedProductsPageMetaProp
       description: "Browse available products and order online.",
       alternates: {
         canonical: "/en/products",
-        languages: { th: "/products", en: "/en/products" },
+        languages: { th: "/products", en: "/en/products", lo: "/lo/products" },
+      },
+    };
+  }
+
+  if (locale === "lo") {
+    return {
+      title: "ສິນຄ້າ | Kittisap",
+      description: "ເລືອກເບິ່ງສິນຄ້າທີ່ພ້ອມຈໍາໜ່າຍຈາກລະບົບ",
+      alternates: {
+        canonical: "/lo/products",
+        languages: { th: "/products", en: "/en/products", lo: "/lo/products" },
       },
     };
   }
@@ -40,7 +51,7 @@ export async function generateMetadata({ params }: LocalizedProductsPageMetaProp
     description: "เลือกชมสินค้าที่พร้อมจำหน่ายจากระบบ",
     alternates: {
       canonical: "/products",
-      languages: { th: "/products", en: "/en/products" },
+      languages: { th: "/products", en: "/en/products", lo: "/lo/products" },
     },
   };
 }
@@ -55,3 +66,4 @@ export default async function LocalizedProductsPage({
   const query = (await searchParams) ?? {};
   return <ProductsCatalogPage locale={locale} searchParams={query} useLocalePrefix />;
 }
+

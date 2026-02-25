@@ -10,9 +10,10 @@ type LocalizedLayoutProps = {
 
 export default async function LocalizedLayout({ children, params }: LocalizedLayoutProps) {
   const locale = (await params).locale.toLowerCase();
-  if (locale !== "th" && locale !== "en") {
+  if (locale !== "th" && locale !== "en" && locale !== "lo") {
     notFound();
   }
 
   return <PublicLocaleShell locale={locale}>{children}</PublicLocaleShell>;
 }
+

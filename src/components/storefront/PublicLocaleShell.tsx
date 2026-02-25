@@ -12,7 +12,7 @@ const MobileBottomNav = dynamic(
   { ssr: false },
 );
 
-type AppLocale = "th" | "en";
+type AppLocale = "th" | "en" | "lo";
 
 type PublicLocaleShellProps = {
   locale: AppLocale;
@@ -26,9 +26,16 @@ function withLocale(locale: AppLocale, path: string) {
 
 function switchLocalePath(pathname: string, nextLocale: AppLocale) {
   const segments = pathname.split("/").filter(Boolean);
-  if (segments[0] === "th" || segments[0] === "en") {
+  if (segments[0] === "th" || segments[0] === "en" || segments[0] === "lo") {
+    if (nextLocale === "th") {
+      const rest = segments.slice(1).join("/");
+      return rest ? `/${rest}` : "/";
+    }
     segments[0] = nextLocale;
     return `/${segments.join("/")}`;
+  }
+  if (nextLocale === "th") {
+    return pathname || "/";
   }
   return withLocale(nextLocale, pathname || "/");
 }
@@ -63,6 +70,7 @@ export function PublicLocaleShell({ locale, children }: PublicLocaleShellProps) 
 
   const enPath = switchLocalePath(pathname, "en");
   const thPath = switchLocalePath(pathname, "th");
+  const loPath = switchLocalePath(pathname, "lo");
   const cartPath = withLocale(locale, "/cart");
   const homePath = withLocale(locale, "/");
   const productsPath = withLocale(locale, "/products");
@@ -145,6 +153,7 @@ export function PublicLocaleShell({ locale, children }: PublicLocaleShellProps) 
           <div className="flex items-center gap-2">
             <Link href={thPath} className={`rounded-md px-2.5 py-1 text-xs font-semibold ${locale === "th" ? "bg-amber-500/20 text-amber-200" : "text-amber-100/80"}`}>TH</Link>
             <Link href={enPath} className={`rounded-md px-2.5 py-1 text-xs font-semibold ${locale === "en" ? "bg-amber-500/20 text-amber-200" : "text-amber-100/80"}`}>EN</Link>
+            <Link href={loPath} className={`rounded-md px-2.5 py-1 text-xs font-semibold ${locale === "lo" ? "bg-amber-500/20 text-amber-200" : "text-amber-100/80"}`}>LO</Link>
           </div>
         </div>
       </footer>

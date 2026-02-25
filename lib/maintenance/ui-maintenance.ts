@@ -17,6 +17,7 @@ export const UI_MAINTENANCE_PATHS = [
   "/admin/orders",
   "/admin/coupons",
   "/admin/settings",
+  "/admin/web-settings",
 ] as const;
 
 export function normalizeUiPath(pathname: string): string | null {

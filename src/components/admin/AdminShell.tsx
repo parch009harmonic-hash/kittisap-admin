@@ -21,7 +21,7 @@ type AdminShellProps = {
 
 type OsTheme = "windows" | "mobile-os";
 type MobilePlatform = "ios" | "android" | "other";
-type NavIcon = "dashboard" | "products" | "orders" | "coupons" | "settings" | "developer";
+type NavIcon = "dashboard" | "products" | "orders" | "coupons" | "settings" | "webSettings" | "developer";
 
 type NavLinkItem = {
   href: string;
@@ -75,6 +75,14 @@ const DEVELOPER_NAV_LINK: NavLinkItem = {
   short: { th: "\u0e19", en: "DV" },
   mobileLabel: { th: "\u0e19\u0e31\u0e01\u0e1e\u0e31\u0e12\u0e19\u0e32", en: "Dev" },
   icon: "developer",
+};
+
+const WEB_SETTINGS_NAV_LINK: NavLinkItem = {
+  href: "/admin/web-settings/banner",
+  label: { th: "ตั้งค่าเว็บ", en: "Website Settings" },
+  short: { th: "ว", en: "WS" },
+  mobileLabel: { th: "ตั้งค่าเว็บ", en: "Website" },
+  icon: "webSettings",
 };
 
 const BRAND_LOGO_URL =
@@ -132,7 +140,9 @@ export function AdminShell({
   const themeClass = `admin-theme-${themePreset}`;
   const mobileThemeClass =
     isMobileTheme && mobilePlatform === "ios" ? "os-mobile-ios" : isMobileTheme ? "os-mobile-android" : "";
-  const baseLinks = actorRole === "staff" ? NAV_LINKS.filter((item) => item.href !== "/admin/settings") : NAV_LINKS;
+  const mainLinks =
+    actorRole === "staff" ? NAV_LINKS.filter((item) => item.href !== "/admin/settings") : NAV_LINKS;
+  const baseLinks = actorRole === "admin" ? [...mainLinks, WEB_SETTINGS_NAV_LINK] : mainLinks;
   const navLinks = showDeveloperMenu ? [...baseLinks, DEVELOPER_NAV_LINK] : baseLinks;
   const isDeveloperConsoleRoute =
     pathname === "/admin/developer" || pathname.startsWith("/admin/developer/");
@@ -807,6 +817,14 @@ function MenuIcon({ icon, className }: { icon: NavIcon; className?: string }) {
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={base} aria-hidden>
           <path d="M12 9.5A2.5 2.5 0 1 1 9.5 12 2.5 2.5 0 0 1 12 9.5Z" />
           <path d="M19.4 15a1 1 0 0 0 .2 1.1l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1 1 0 0 0-1.1-.2 1 1 0 0 0-.6.9V20a2 2 0 1 1-4 0v-.2a1 1 0 0 0-.6-.9 1 1 0 0 0-1.1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1 1 0 0 0 .2-1.1 1 1 0 0 0-.9-.6H4a2 2 0 1 1 0-4h.2a1 1 0 0 0 .9-.6 1 1 0 0 0-.2-1.1l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1 1 0 0 0 1.1.2 1 1 0 0 0 .6-.9V4a2 2 0 1 1 4 0v.2a1 1 0 0 0 .6.9 1 1 0 0 0 1.1-.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1 1 0 0 0-.2 1.1 1 1 0 0 0 .9.6H20a2 2 0 1 1 0 4h-.2a1 1 0 0 0-.9.6Z" />
+        </svg>
+      );
+    case "webSettings":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={base} aria-hidden>
+          <rect x="3" y="4" width="18" height="14" rx="2" />
+          <path d="M8 20h8" />
+          <path d="M9 8h6M9 12h3" />
         </svg>
       );
     case "developer":

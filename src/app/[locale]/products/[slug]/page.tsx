@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { getPublicProductBySlug } from "../../../../../lib/db/publicProducts";
@@ -10,7 +10,7 @@ type LocalizedProductSlugPageProps = {
 };
 
 function normalizeLocale(input: string): AppLocale | null {
-  if (input === "th" || input === "en") {
+  if (input === "th" || input === "en" || input === "lo") {
     return input;
   }
   return null;
@@ -28,9 +28,17 @@ export async function generateMetadata({ params }: LocalizedProductSlugPageProps
 
   const product = await getPublicProductBySlug(slug);
   if (!product) {
+    const title =
+      locale === "en" ? "Product not found" : locale === "lo" ? "ບໍ່ພົບສິນຄ້າ" : "ไม่พบสินค้า";
+    const description =
+      locale === "en"
+        ? "Product not found."
+        : locale === "lo"
+          ? "ບໍ່ພົບສິນຄ້າທີ່ຕ້ອງການ"
+          : "ไม่พบสินค้าที่ต้องการ";
     return {
-      title: locale === "en" ? "Product not found" : "ไม่พบสินค้า",
-      description: locale === "en" ? "Product not found." : "ไม่พบสินค้าที่ต้องการ",
+      title,
+      description,
     };
   }
 
@@ -51,3 +59,4 @@ export default async function LocalizedProductSlugPage({ params }: LocalizedProd
 
   return <ProductDetailPage locale={locale} product={product} />;
 }
+

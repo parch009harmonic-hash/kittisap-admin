@@ -1,16 +1,17 @@
 ﻿"use client";
 
 import { useState } from "react";
+import type { AppLocale } from "../../../lib/i18n/locale";
 
 type OrderNowButtonProps = {
   productId: string;
   disabled?: boolean;
   className?: string;
   label: string;
-  locale: "th" | "en";
+  locale: AppLocale;
 };
 
-function withLocale(locale: "th" | "en", path: string) {
+function withLocale(locale: AppLocale, path: string) {
   if (locale === "th") {
     return path;
   }
@@ -77,7 +78,9 @@ export function OrderNowButton({ productId, disabled = false, className = "", la
         const msg =
           locale === "th"
             ? "กรุณาอัปเดตชื่อและเบอร์โทรในหน้า Account ก่อนสั่งซื้อ"
-            : "Please complete your name and phone in Account before ordering.";
+            : locale === "lo"
+              ? "ກະລຸນາອັບເດດຊື່ ແລະ ເບີໂທ ກ່ອນສັ່ງຊື້"
+              : "Please complete your name and phone in Account before ordering.";
         alert(msg);
         window.location.href = withLocale(locale, "/account");
         return;
@@ -119,7 +122,7 @@ export function OrderNowButton({ productId, disabled = false, className = "", la
       disabled={disabled || loading}
       className={className}
     >
-      {loading ? (locale === "th" ? "กำลังสร้าง..." : "Creating...") : label}
+      {loading ? (locale === "th" ? "กำลังสร้าง..." : locale === "lo" ? "ກຳລັງສ້າງ..." : "Creating...") : label}
     </button>
   );
 }

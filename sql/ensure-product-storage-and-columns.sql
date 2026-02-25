@@ -4,7 +4,8 @@ alter table public.products
   add column if not exists updated_at timestamptz not null default now(),
   add column if not exists price numeric not null default 0,
   add column if not exists stock integer not null default 0,
-  add column if not exists status text not null default 'active';
+  add column if not exists status text not null default 'active',
+  add column if not exists is_featured boolean not null default false;
 
 do $$
 begin
@@ -48,6 +49,9 @@ create index if not exists products_created_at_idx
 
 create index if not exists products_status_created_at_idx
   on public.products (status, created_at desc);
+
+create index if not exists products_is_featured_status_created_at_idx
+  on public.products (is_featured, status, created_at desc);
 
 create index if not exists products_sku_lower_idx
   on public.products (lower(sku));

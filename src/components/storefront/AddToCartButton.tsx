@@ -21,6 +21,22 @@ type AddToCartButtonProps = {
   busyLabel?: string;
 };
 
+function withLocale(locale: AppLocale, path: string) {
+  if (locale === "th") return path;
+  return `/${locale}${path}`;
+}
+
+async function ensureCustomerSession() {
+  const response = await fetch("/api/customer/profile", { cache: "no-store" });
+  if (response.status === 401) {
+    return { authorized: false as const };
+  }
+  if (!response.ok) {
+    throw new Error("Failed to validate customer session");
+  }
+  return { authorized: true as const };
+}
+
 export function AddToCartButton({
   locale,
   productId,
@@ -48,6 +64,17 @@ export function AddToCartButton({
     setNotice(null);
 
     try {
+      const session = await ensureCustomerSession();
+      if (!session.authorized) {
+        alert(
+          locale === "th"
+            ? "ต้องสมัครสมาชิกหรือเข้าสู่ระบบก่อน จึงจะสั่งซื้อสินค้าได้"
+            : "Please register or sign in before ordering products.",
+        );
+        window.location.href = withLocale(locale, "/auth/login");
+        return;
+      }
+
       addPublicCartItem({
         productId,
         slug: productSlug,

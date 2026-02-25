@@ -3,6 +3,14 @@
 const nextConfig: NextConfig = {
   reactCompiler: true,
   poweredByHeader: false,
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "zbedxvzrbotwngxaktgj.supabase.co",
+      },
+    ],
+  },
   turbopack: {
     root: process.cwd(),
   },

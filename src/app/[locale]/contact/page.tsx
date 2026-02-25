@@ -16,7 +16,7 @@ function siteUrl() {
 }
 
 function normalizeLocale(input: string): AppLocale | null {
-  if (input === "th" || input === "en") {
+  if (input === "th" || input === "en" || input === "lo") {
     return input;
   }
   return null;
@@ -37,6 +37,22 @@ export async function generateMetadata({ params }: LocalizedContactPageProps): P
         languages: {
           th: "/contact",
           en: "/en/contact",
+          lo: "/lo/contact",
+        },
+      },
+    };
+  }
+
+  if (locale === "lo") {
+    return {
+      title: "ຕິດຕໍ່ພວກເຮົາ | Kittisap",
+      description: "ຊ່ອງທາງຕິດຕໍ່ Kittisap ຜ່ານໂທລະສັບ, LINE, ແຜນທີ່ ແລະເວລາເຮັດການ",
+      alternates: {
+        canonical: "/lo/contact",
+        languages: {
+          th: "/contact",
+          en: "/en/contact",
+          lo: "/lo/contact",
         },
       },
     };
@@ -50,6 +66,7 @@ export async function generateMetadata({ params }: LocalizedContactPageProps): P
       languages: {
         th: "/contact",
         en: "/en/contact",
+        lo: "/lo/contact",
       },
     },
   };
@@ -62,7 +79,7 @@ export default async function LocalizedContactPage({ params }: LocalizedContactP
   }
 
   const root = siteUrl();
-  const url = locale === "en" ? `${root}/en/contact` : `${root}/contact`;
+  const url = locale === "th" ? `${root}/contact` : `${root}/${locale}/contact`;
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -75,7 +92,8 @@ export default async function LocalizedContactPage({ params }: LocalizedContactP
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <ContactPage locale={locale} />
+      <ContactPage locale={locale} useLocalePrefix />
     </>
   );
 }
+

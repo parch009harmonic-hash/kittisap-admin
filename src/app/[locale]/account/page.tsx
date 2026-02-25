@@ -11,10 +11,11 @@ export const dynamic = "force-dynamic";
 
 export default async function LocalizedAccountPage({ params }: LocalizedAccountPageProps) {
   const locale = (await params).locale.toLowerCase();
-  if (locale !== "th" && locale !== "en") {
+  if (locale !== "th" && locale !== "en" && locale !== "lo") {
     notFound();
   }
 
   await requireCustomer();
   return <CustomerAccountClient />;
 }
+

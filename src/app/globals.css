@@ -1637,3 +1637,66 @@ picture {
     transform: none !important;
   }
 }
+
+/* Banner image frame styles */
+.banner-frame-soft {
+  box-shadow: 0 16px 44px rgba(15, 23, 42, 0.35);
+}
+
+.banner-frame-glass {
+  backdrop-filter: blur(3px);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.26), 0 20px 44px rgba(15, 23, 42, 0.28);
+}
+
+.banner-frame-neon {
+  box-shadow:
+    0 0 0 1px rgba(56, 189, 248, 0.45),
+    0 0 14px rgba(56, 189, 248, 0.45),
+    0 0 28px rgba(14, 165, 233, 0.3);
+}
+
+.banner-frame-minimal {
+  box-shadow: none;
+}
+
+/* Banner image motion effects */
+.banner-motion-slide_lr {
+  animation: banner-slide-lr 4.8s ease-in-out infinite;
+}
+
+.banner-motion-float_ud {
+  animation: banner-float-ud 3.8s ease-in-out infinite;
+}
+
+.banner-motion-zoom {
+  animation: banner-zoom-pulse 4.5s ease-in-out infinite;
+}
+
+.banner-motion-tilt {
+  animation: banner-tilt-sway 5s ease-in-out infinite;
+}
+
+@keyframes banner-slide-lr {
+  0% { transform: translateX(-10px); }
+  50% { transform: translateX(10px); }
+  100% { transform: translateX(-10px); }
+}
+
+@keyframes banner-float-ud {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0); }
+}
+
+@keyframes banner-zoom-pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+
+@keyframes banner-tilt-sway {
+  0% { transform: rotate(0deg); }
+  25% { transform: rotate(1.2deg); }
+  75% { transform: rotate(-1.2deg); }
+  100% { transform: rotate(0deg); }
+}

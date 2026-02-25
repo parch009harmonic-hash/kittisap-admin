@@ -1,6 +1,8 @@
+import "server-only";
+
 import { z } from "zod";
 
-import { supabase } from "../supabase/client";
+import { getSupabaseServiceRoleClient } from "../supabase/service";
 
 const PublicProductRowSchema = z.object({
   id: z.string().uuid(),
@@ -17,6 +19,7 @@ const PublicProductRowSchema = z.object({
   price: z.coerce.number(),
   stock: z.coerce.number().int(),
   status: z.enum(["active", "inactive"]),
+  is_featured: z.boolean().optional(),
   created_at: z.string().nullable().optional(),
 });
 
@@ -56,14 +59,10 @@ function asErrorMessage(error: unknown, fallback: string) {
   return fallback;
 }
 
-function isMissingCategoryColumnError(error: unknown) {
-  const message = asErrorMessage(error, "").toLowerCase();
-  return message.includes("category") && message.includes("column");
-}
-
 export async function listPublicProducts(input?: {
   q?: string;
   category?: string;
+  featuredOnly?: boolean;
   page?: number;
   pageSize?: number;
 }): Promise<{
@@ -73,6 +72,7 @@ export async function listPublicProducts(input?: {
   pageSize: number;
   totalPages: number;
 }> {
+  const supabase = getSupabaseServiceRoleClient();
   const q = input?.q?.trim();
   const page = Math.max(1, input?.page ?? 1);
   const pageSize = Math.min(200, Math.max(1, input?.pageSize ?? 20));
@@ -81,11 +81,12 @@ export async function listPublicProducts(input?: {
 
   // category is reserved for upcoming category schema.
   void input?.category;
+  const featuredOnly = Boolean(input?.featuredOnly);
 
   let query = supabase
     .from("products")
     .select(
-      "id,sku,slug,category,category_name,title_th,title_en,title_lo,description_th,description_en,description_lo,price,stock,status,created_at",
+      "id,sku,slug,title_th,title_en,title_lo,description_th,description_en,description_lo,price,stock,status,is_featured,created_at",
       { count: "planned" },
     )
     .eq("status", "active")
@@ -95,33 +96,14 @@ export async function listPublicProducts(input?: {
   if (q) {
     query = query.or(`slug.ilike.%${q}%,sku.ilike.%${q}%,title_th.ilike.%${q}%,title_en.ilike.%${q}%`);
   }
+  if (featuredOnly) {
+    query = query.eq("is_featured", true);
+  }
 
   const queryResult = await query;
-  let data: unknown[] | null = queryResult.data as unknown[] | null;
-  let error = queryResult.error;
-  let count = queryResult.count;
-  if (error) {
-    if (isMissingCategoryColumnError(error)) {
-      let fallback = supabase
-        .from("products")
-        .select(
-          "id,sku,slug,title_th,title_en,title_lo,description_th,description_en,description_lo,price,stock,status,created_at",
-          { count: "planned" },
-        )
-        .eq("status", "active")
-        .order("created_at", { ascending: false })
-        .range(from, to);
-
-      if (q) {
-        fallback = fallback.or(`slug.ilike.%${q}%,sku.ilike.%${q}%,title_th.ilike.%${q}%,title_en.ilike.%${q}%`);
-      }
-
-      const fallbackResult = await fallback;
-      data = fallbackResult.data as unknown[] | null;
-      error = fallbackResult.error;
-      count = fallbackResult.count;
-    }
-  }
+  const data = queryResult.data as unknown[] | null;
+  const error = queryResult.error;
+  const count = queryResult.count;
 
   if (error) {
     throw new PublicProductsError("PRODUCTS_FETCH_FAILED", asErrorMessage(error, "Failed to fetch products"));
@@ -166,6 +148,7 @@ export async function listPublicProducts(input?: {
 }
 
 export async function getPublicProductBySlug(slug: string): Promise<PublicProductDetail | null> {
+  const supabase = getSupabaseServiceRoleClient();
   const normalizedSlug = slug.trim().toLowerCase();
   if (!normalizedSlug) {
     return null;
@@ -174,50 +157,13 @@ export async function getPublicProductBySlug(slug: string): Promise<PublicProduc
   const { data: productRow, error: productError } = await supabase
     .from("products")
     .select(
-      "id,sku,slug,category,category_name,title_th,title_en,title_lo,description_th,description_en,description_lo,price,stock,status,created_at",
+      "id,sku,slug,title_th,title_en,title_lo,description_th,description_en,description_lo,price,stock,status,is_featured,created_at",
     )
     .eq("slug", normalizedSlug)
     .eq("status", "active")
     .maybeSingle();
 
   if (productError) {
-    if (isMissingCategoryColumnError(productError)) {
-      const fallback = await supabase
-        .from("products")
-        .select(
-          "id,sku,slug,title_th,title_en,title_lo,description_th,description_en,description_lo,price,stock,status,created_at",
-        )
-        .eq("slug", normalizedSlug)
-        .eq("status", "active")
-        .maybeSingle();
-
-      if (fallback.error) {
-        throw new PublicProductsError("PRODUCT_FETCH_FAILED", asErrorMessage(fallback.error, "Failed to fetch product"));
-      }
-      if (!fallback.data) {
-        return null;
-      }
-
-      const product = PublicProductRowSchema.parse(fallback.data);
-      const { data: imageRows, error: imageError } = await supabase
-        .from("product_images")
-        .select("id,product_id,url,sort,is_primary")
-        .eq("product_id", product.id)
-        .order("sort", { ascending: true });
-
-      if (imageError) {
-        throw new PublicProductsError("PRODUCT_IMAGES_FETCH_FAILED", asErrorMessage(imageError, "Failed to fetch product images"));
-      }
-
-      const images = (imageRows ?? []).map((row) => ProductImageRowSchema.parse(row));
-      const primary = images.find((image) => image.is_primary) ?? images[0] ?? null;
-
-      return {
-        ...product,
-        images,
-        cover_url: primary?.url ?? null,
-      };
-    }
     throw new PublicProductsError("PRODUCT_FETCH_FAILED", asErrorMessage(productError, "Failed to fetch product"));
   }
   if (!productRow) {
@@ -246,24 +192,15 @@ export async function getPublicProductBySlug(slug: string): Promise<PublicProduc
 }
 
 export async function listPublicPricingProducts(): Promise<PublicPricingProduct[]> {
-  const withCategoryColumns = await supabase
+  const supabase = getSupabaseServiceRoleClient();
+  const result = await supabase
     .from("products")
-    .select("id,sku,slug,category,category_name,title_th,title_en,title_lo,price,stock,status,created_at")
+    .select("id,sku,slug,title_th,title_en,title_lo,price,stock,status,is_featured,created_at")
     .eq("status", "active")
     .order("created_at", { ascending: false });
 
-  let data: unknown[] | null = withCategoryColumns.data as unknown[] | null;
-  let error = withCategoryColumns.error;
-
-  if (error && isMissingCategoryColumnError(error)) {
-    const fallback = await supabase
-      .from("products")
-      .select("id,sku,slug,title_th,title_en,title_lo,price,stock,status,created_at")
-      .eq("status", "active")
-      .order("created_at", { ascending: false });
-    data = fallback.data as unknown[] | null;
-    error = fallback.error;
-  }
+  const data: unknown[] | null = result.data as unknown[] | null;
+  const error = result.error;
 
   if (error) {
     throw new PublicProductsError("PRODUCTS_FETCH_FAILED", asErrorMessage(error, "Failed to fetch pricing products"));

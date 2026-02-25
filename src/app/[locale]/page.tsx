@@ -8,7 +8,7 @@ type LocalizedHomeProps = {
 };
 
 function normalizeLocale(input: string): AppLocale | null {
-  if (input === "th" || input === "en") {
+  if (input === "th" || input === "en" || input === "lo") {
     return input;
   }
   return null;
@@ -20,6 +20,7 @@ export default async function LocalizedHomePage({ params }: LocalizedHomeProps) 
     notFound();
   }
 
-  return <MarketingLandingPage locale={locale} useLocalePrefix showOuterFrame={false} showTopNav={false} />;
+  return <MarketingLandingPage locale={locale} useLocalePrefix showOuterFrame={false} showTopNav />;
 }
+
 

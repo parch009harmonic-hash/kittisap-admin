@@ -33,6 +33,7 @@ export const ImageInputSchema = z.object({
 export const ListProductsFilterSchema = z.object({
   q: z.string().trim().optional(),
   status: ProductStatusSchema.optional(),
+  featuredOnly: z.boolean().optional(),
   page: z.coerce.number().int().min(1).optional(),
   pageSize: z.coerce.number().int().min(1).max(100).optional(),
 });

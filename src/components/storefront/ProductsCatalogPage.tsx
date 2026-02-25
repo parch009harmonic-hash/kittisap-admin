@@ -1,9 +1,9 @@
-﻿import Image from "next/image";
-import Link from "next/link";
+﻿import Link from "next/link";
 
 import { listPublicProducts } from "../../../lib/db/publicProducts";
 import type { AppLocale } from "../../../lib/i18n/locale";
-import { OrderNowButton } from "./OrderNowButton";
+import { ProductsCatalogInteractiveGrid } from "./ProductsCatalogInteractiveGrid";
+import { StorefrontTopMenu } from "./StorefrontTopMenu";
 
 type ProductsCatalogPageProps = {
   locale: AppLocale;
@@ -48,7 +48,7 @@ function t(locale: AppLocale) {
   if (locale === "th") {
     return {
       title: "สินค้าทั้งหมด",
-      subtitle: "เลือกสินค้าจากรายการจริงที่ซิงก์จากระบบแอดมิน",
+      subtitle: "เลือกสินค้าจากรายการด้านล่าง",
       searchPlaceholder: "ค้นหาสินค้าหรือ SKU...",
       status: "สถานะ",
       category: "หมวดหมู่",
@@ -70,12 +70,15 @@ function t(locale: AppLocale) {
       prev: "ก่อนหน้า",
       next: "ถัดไป",
       page: "หน้า",
+      viewDetails: "ดูรายละเอียดสินค้า",
+      close: "ปิด",
+      noImage: "ไม่มีรูป",
     };
   }
 
   return {
     title: "All Products",
-    subtitle: "Browse live products synced from admin catalog.",
+    subtitle: "Browse products from the list below.",
     searchPlaceholder: "Search product or SKU...",
     status: "Status",
     category: "Category",
@@ -97,6 +100,9 @@ function t(locale: AppLocale) {
     prev: "Prev",
     next: "Next",
     page: "Page",
+    viewDetails: "View product details",
+    close: "Close",
+    noImage: "No image",
   };
 }
 
@@ -148,170 +154,147 @@ export async function ProductsCatalogPage({ locale, searchParams = {}, useLocale
     if (sort === "stock_desc") return b.stock - a.stock;
     return 0;
   });
+
   const categoryOptions = Array.from(
     new Set(source.items.map((item) => item.category_name?.trim()).filter((value): value is string => Boolean(value))),
   ).sort((a, b) => a.localeCompare(b));
 
   return (
-    <main className="min-h-screen bg-[#f4f6fb] text-slate-900">
-      <section className="mx-auto w-full max-w-7xl px-3 py-4 md:px-4 md:py-8">
-        <header className="mb-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:mb-4 md:p-5">
-          <h1 className="text-2xl font-extrabold tracking-tight md:text-3xl">{text.title}</h1>
-          <p className="mt-1 text-sm text-slate-600">{text.subtitle}</p>
-        </header>
+    <>
+      <StorefrontTopMenu locale={locale} useLocalePrefix={useLocalePrefix} />
+      <main className="min-h-screen bg-[#f4f6fb] text-slate-900">
+        <section className="mx-auto w-full max-w-7xl px-3 py-4 md:px-4 md:py-8">
+          <header className="mb-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:mb-4 md:p-5">
+            <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+              <div>
+                <h1 className="text-2xl font-extrabold tracking-tight md:text-3xl">{text.title}</h1>
+                <p className="mt-1 text-sm text-slate-600">{text.subtitle}</p>
+              </div>
 
-        <form className="sticky top-[62px] z-20 mb-3 rounded-xl border border-slate-200 bg-white/95 p-3 shadow-sm backdrop-blur md:top-[74px] md:mb-4 md:p-4">
-          <div className="grid grid-cols-2 gap-2 md:grid-cols-6 md:gap-3">
-            <input
-              type="text"
-              name="q"
-              defaultValue={q}
-              placeholder={text.searchPlaceholder}
-              className="col-span-2 h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-amber-500"
+              <form className="w-full xl:w-auto">
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="text"
+                    name="q"
+                    defaultValue={q}
+                    placeholder={text.searchPlaceholder}
+                    className="h-10 w-full min-w-[280px] rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-amber-500 xl:w-[360px]"
+                  />
+
+                  <select
+                    name="sort"
+                    defaultValue={sort}
+                    className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-amber-500"
+                  >
+                    <option value="newest">{text.sort}: {text.sortNewest}</option>
+                    <option value="price_asc">{text.sortPriceAsc}</option>
+                    <option value="price_desc">{text.sortPriceDesc}</option>
+                    <option value="stock_desc">{text.sortStockDesc}</option>
+                  </select>
+
+                  <select
+                    name="status"
+                    defaultValue={status}
+                    className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-amber-500"
+                  >
+                    <option value="all">{text.status}: {text.all}</option>
+                    <option value="in_stock">{text.inStock}</option>
+                    <option value="out_of_stock">{text.outOfStock}</option>
+                  </select>
+
+                  <select
+                    name="category"
+                    defaultValue={category || "all"}
+                    className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-amber-500"
+                  >
+                    <option value="all">{text.category}: {text.all}</option>
+                    {categoryOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+
+                  <button
+                    type="submit"
+                    className="app-press h-10 rounded-lg bg-amber-500 px-4 text-sm font-bold text-zinc-900 transition hover:bg-amber-400"
+                  >
+                    {text.filter}
+                  </button>
+
+                  <Link
+                    href={buildProductsHref(locale, {}, useLocalePrefix)}
+                    className="app-press inline-flex h-10 items-center justify-center rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                  >
+                    {text.clear}
+                  </Link>
+                </div>
+              </form>
+            </div>
+          </header>
+
+          {items.length === 0 ? (
+            <section className="rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm">
+              <p className="text-xl font-semibold text-slate-900">{text.noItemsTitle}</p>
+              <p className="mt-2 text-sm text-slate-600">{text.noItemsDesc}</p>
+            </section>
+          ) : (
+            <ProductsCatalogInteractiveGrid
+              items={items.map((item) => ({
+                id: item.id,
+                slug: item.slug,
+                title: locale === "en" ? item.title_en || item.title_th : item.title_th,
+                description:
+                  locale === "en"
+                    ? item.description_en || item.description_th || text.noItemsDesc
+                    : item.description_th || item.description_en || text.noItemsDesc,
+                price: item.price,
+                stock: item.stock,
+                coverUrl: item.cover_url,
+              }))}
+              locale={locale}
+              useLocalePrefix={useLocalePrefix}
+              text={{
+                stock: text.stock,
+                outOfStockLabel: text.outOfStockLabel,
+                orderNow: text.orderNow,
+                viewDetails: text.viewDetails,
+                close: text.close,
+                noImage: text.noImage,
+              }}
             />
+          )}
 
-            <select
-              name="sort"
-              defaultValue={sort}
-              className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-amber-500"
-            >
-              <option value="newest">{text.sort}: {text.sortNewest}</option>
-              <option value="price_asc">{text.sortPriceAsc}</option>
-              <option value="price_desc">{text.sortPriceDesc}</option>
-              <option value="stock_desc">{text.sortStockDesc}</option>
-            </select>
-
-            <select
-              name="status"
-              defaultValue={status}
-              className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-amber-500"
-            >
-              <option value="all">{text.status}: {text.all}</option>
-              <option value="in_stock">{text.inStock}</option>
-              <option value="out_of_stock">{text.outOfStock}</option>
-            </select>
-
-            <select
-              name="category"
-              defaultValue={category || "all"}
-              className="col-span-2 h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-amber-500 md:col-span-1"
-            >
-              <option value="all">{text.category}: {text.all}</option>
-              {categoryOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-
-            <button
-              type="submit"
-              className="app-press h-10 rounded-lg bg-amber-500 px-4 text-sm font-bold text-zinc-900 transition hover:bg-amber-400 md:col-span-1"
-            >
-              {text.filter}
-            </button>
-
-            <Link
-              href={buildProductsHref(locale, {}, useLocalePrefix)}
-              className="app-press inline-flex h-10 items-center justify-center rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 md:col-span-1"
-            >
-              {text.clear}
-            </Link>
-          </div>
-        </form>
-
-        {items.length === 0 ? (
-          <section className="rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm">
-            <p className="text-xl font-semibold text-slate-900">{text.noItemsTitle}</p>
-            <p className="mt-2 text-sm text-slate-600">{text.noItemsDesc}</p>
-          </section>
-        ) : (
-          <section className="grid grid-cols-2 gap-2.5 md:grid-cols-4 md:gap-4">
-            {items.map((item) => {
-              const localizedTitle = locale === "en" ? item.title_en || item.title_th : item.title_th;
-              const isOut = item.stock <= 0;
-
-              return (
-                <article
-                  key={item.id}
-                  className="tap-ripple app-press overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm transition active:scale-[0.985] md:hover:-translate-y-1 md:hover:shadow-md"
+          <footer className="mt-5 flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 shadow-sm">
+            <span>
+              {text.page} {source.page} / {source.totalPages}
+            </span>
+            <div className="flex items-center gap-2">
+              {source.page > 1 ? (
+                <Link
+                  href={buildProductsHref(locale, { q, status, category, sort, page: source.page - 1 }, useLocalePrefix)}
+                  className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm hover:bg-slate-50"
                 >
-                  <div className="relative aspect-square bg-slate-100">
-                    {item.cover_url ? (
-                      <Image
-                        src={item.cover_url}
-                        alt={localizedTitle}
-                        fill
-                        sizes="(max-width: 768px) 50vw, 25vw"
-                        className="object-cover"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="grid h-full place-items-center text-[11px] text-slate-500">No Image</div>
-                    )}
-                  </div>
+                  {text.prev}
+                </Link>
+              ) : (
+                <span className="rounded-md border border-slate-200 bg-slate-100 px-3 py-1.5 text-slate-400">{text.prev}</span>
+              )}
 
-                  <div className="space-y-2 p-2.5 md:p-3">
-                    <p className="line-clamp-2 min-h-[2.5rem] text-xs font-semibold text-slate-800 md:text-sm">{localizedTitle}</p>
-                    <p className="text-sm font-extrabold text-amber-600 md:text-base">THB {item.price.toLocaleString()}</p>
-
-                    <div className="flex items-center justify-between gap-2">
-                      <span
-                        className={`rounded-full px-2 py-1 text-[10px] font-semibold leading-none ${
-                          isOut ? "bg-rose-100 text-rose-600" : "bg-emerald-100 text-emerald-700"
-                        }`}
-                      >
-                        {isOut ? text.outOfStockLabel : `${text.stock} ${item.stock}`}
-                      </span>
-
-                      <OrderNowButton
-                        productId={item.id}
-                        locale={locale}
-                        label={text.orderNow}
-                        disabled={isOut}
-                        className={`rounded-md px-2 py-1 text-[10px] font-bold md:text-xs ${
-                          isOut
-                            ? "cursor-not-allowed bg-slate-300 text-slate-500"
-                            : "bg-amber-500 text-zinc-900 hover:bg-amber-400"
-                        }`}
-                      />
-                    </div>
-                  </div>
-                </article>
-              );
-            })}
-          </section>
-        )}
-
-        <footer className="mt-5 flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 shadow-sm">
-          <span>
-            {text.page} {source.page} / {source.totalPages}
-          </span>
-          <div className="flex items-center gap-2">
-            {source.page > 1 ? (
-              <Link
-                href={buildProductsHref(locale, { q, status, category, sort, page: source.page - 1 }, useLocalePrefix)}
-                className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm hover:bg-slate-50"
-              >
-                {text.prev}
-              </Link>
-            ) : (
-              <span className="rounded-md border border-slate-200 bg-slate-100 px-3 py-1.5 text-slate-400">{text.prev}</span>
-            )}
-
-            {source.page < source.totalPages ? (
-              <Link
-                href={buildProductsHref(locale, { q, status, category, sort, page: source.page + 1 }, useLocalePrefix)}
-                className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm hover:bg-slate-50"
-              >
-                {text.next}
-              </Link>
-            ) : (
-              <span className="rounded-md border border-slate-200 bg-slate-100 px-3 py-1.5 text-slate-400">{text.next}</span>
-            )}
-          </div>
-        </footer>
-      </section>
-    </main>
+              {source.page < source.totalPages ? (
+                <Link
+                  href={buildProductsHref(locale, { q, status, category, sort, page: source.page + 1 }, useLocalePrefix)}
+                  className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm hover:bg-slate-50"
+                >
+                  {text.next}
+                </Link>
+              ) : (
+                <span className="rounded-md border border-slate-200 bg-slate-100 px-3 py-1.5 text-slate-400">{text.next}</span>
+              )}
+            </div>
+          </footer>
+        </section>
+      </main>
+    </>
   );
 }

@@ -20,6 +20,7 @@ export type Product = ProductInput & {
   id: string;
   created_at: string | null;
   updated_at: string | null;
+  is_featured: boolean;
   cover_url?: string | null;
   primary_image: ProductImage | null;
   images?: ProductImage[];
