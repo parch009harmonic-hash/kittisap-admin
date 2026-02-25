@@ -7,15 +7,27 @@ import {
   getWebBannerSettings,
   getWebHomepageAppearanceSettings,
   getWebHomepageImageStripSettings,
+  getWebMiddleBannerSettings,
+  getWebBrandGuaranteeSettings,
+  getWebNewsCardsSettings,
+  getWebWhyChooseUsSettings,
 } from "../../../lib/db/web-settings";
 import type { AppLocale } from "../../../lib/i18n/locale";
 import {
   getDefaultWebBannerSettings,
   getDefaultWebHomepageAppearanceSettings,
   getDefaultWebHomepageImageStripSettings,
+  getDefaultWebMiddleBannerSettings,
+  getDefaultWebBrandGuaranteeSettings,
+  getDefaultWebNewsCardsSettings,
+  getDefaultWebWhyChooseUsSettings,
+  WhyChooseUsIcon,
 } from "../../../lib/types/web-settings";
+import { ActivitiesNewsGrid } from "./ActivitiesNewsGrid";
 import { FeaturedProductsShowcase } from "./FeaturedProductsShowcase";
+import { MiddleBannerStrip } from "./MiddleBannerStrip";
 import { MarketingTopNav } from "./MarketingTopNav";
+import { NewsletterSubscribeSection } from "./NewsletterSubscribeSection";
 
 type MarketingLandingPageProps = {
   locale: AppLocale;
@@ -75,6 +87,17 @@ function copy(locale: AppLocale) {
         admin: "เข้าสู่ระบบแอดมิน",
         dev: "Developer Console",
       },
+      newsletter: {
+        title: "รับข่าวสารและโปรโมชันล่าสุด",
+        subtitle: "กรอกชื่อและอีเมลของคุณ เพื่อรับข้อเสนอพิเศษและอัปเดตกิจกรรมใหม่ก่อนใคร",
+        nameLabel: "ชื่อ",
+        emailLabel: "อีเมล",
+        namePlaceholder: "ชื่อของคุณ",
+        emailPlaceholder: "you@example.com",
+        cta: "สมัครรับข่าวสาร",
+        success: "สมัครรับข่าวสารเรียบร้อยแล้ว",
+        error: "สมัครรับข่าวสารไม่สำเร็จ",
+      },
     };
   }
 
@@ -121,6 +144,17 @@ function copy(locale: AppLocale) {
         admin: "Admin Login",
         dev: "Developer Console",
       },
+      newsletter: {
+        title: "ຮັບຂ່າວສານ ແລະ ໂປຣໂມຊັນຫຼ້າສຸດ",
+        subtitle: "ກອກຊື່ ແລະ ອີເມວ ເພື່ອຮັບຂໍ້ສະເໜີພິເສດ ແລະ ການອັບເດດໃໝ່ກ່ອນໃຜ",
+        nameLabel: "ຊື່",
+        emailLabel: "ອີເມວ",
+        namePlaceholder: "ຊື່ຂອງທ່ານ",
+        emailPlaceholder: "you@example.com",
+        cta: "ສະໝັກຮັບຂ່າວສານ",
+        success: "ສະໝັກຮັບຂ່າວສານສຳເລັດແລ້ວ",
+        error: "ສະໝັກຮັບຂ່າວສານບໍ່ສຳເລັດ",
+      },
     };
   }
 
@@ -166,6 +200,17 @@ function copy(locale: AppLocale) {
       admin: "Admin Login",
       dev: "Developer Console",
     },
+    newsletter: {
+      title: "Get Latest News and Promotions",
+      subtitle: "Enter your name and email to receive exclusive offers and campaign updates.",
+      nameLabel: "Name",
+      emailLabel: "Email",
+      namePlaceholder: "Your name",
+      emailPlaceholder: "you@example.com",
+      cta: "Subscribe",
+      success: "Subscription received successfully.",
+      error: "Subscription failed",
+    },
   };
 }
 
@@ -191,6 +236,31 @@ function PlaceholderCard({ title, meta }: { title: string; meta: string }) {
       </div>
     </a>
   );
+}
+
+function WhyChooseUsIconSvg({ icon }: { icon: WhyChooseUsIcon }) {
+  if (icon === "shield") {
+    return <path d="M12 3l7 3v5c0 4.7-2.9 8.8-7 10-4.1-1.2-7-5.3-7-10V6l7-3zm0 5v7m-3-4h6" />;
+  }
+  if (icon === "spark") {
+    return <path d="M12 3l2.2 4.8L19 10l-4.8 2.2L12 17l-2.2-4.8L5 10l4.8-2.2L12 3zm7 13l1 2 2 1-2 1-1 2-1-2-2-1 2-1 1-2zM5 14l.8 1.8L8 16.6l-2.2.8L5 19l-.8-1.6L2 16.6l2.2-.8L5 14z" />;
+  }
+  if (icon === "award") {
+    return <path d="M12 3a5 5 0 0 1 5 5c0 2.8-2.2 5-5 5s-5-2.2-5-5a5 5 0 0 1 5-5zm0 10v8l-2.5-2-2.5 2v-6.2M12 13l2.5 2 2.5-2v6.2" />;
+  }
+  if (icon === "layers") {
+    return <path d="M12 4l8 4-8 4-8-4 8-4zm-8 8l8 4 8-4M4 16l8 4 8-4" />;
+  }
+  if (icon === "rocket") {
+    return <path d="M14 5c3 .2 4.8 2 5 5-2 2-4 4-6.5 5.5L9 19l.5-3.5C11 13 13 11 15 9c.3-1.6.1-2.8-1-4zM8 16l-3 3m2-8l-2.5.5L4 14l2.5-.5L7 11z" />;
+  }
+  if (icon === "support") {
+    return <path d="M4 12a8 8 0 1 1 16 0v3a2 2 0 0 1-2 2h-2v-5h4M4 12H8v5H6a2 2 0 0 1-2-2v-3zm4 8h8" />;
+  }
+  if (icon === "speed") {
+    return <path d="M4 14a8 8 0 1 1 16 0h-3a5 5 0 1 0-10 0H4zm8-5l4 3-4 3z" />;
+  }
+  return <path d="M20 7L9 18l-5-5" />;
 }
 
 type ShowroomItem = {
@@ -235,6 +305,10 @@ export async function MarketingLandingPage({
   let bannerSettings = getDefaultWebBannerSettings();
   let homepageAppearance = getDefaultWebHomepageAppearanceSettings();
   let homepageImageStrip = getDefaultWebHomepageImageStripSettings();
+  let middleBannerSettings = getDefaultWebMiddleBannerSettings();
+  let brandGuaranteeSettings = getDefaultWebBrandGuaranteeSettings();
+  let newsCardsSettings = getDefaultWebNewsCardsSettings();
+  let whyChooseUsSettings = getDefaultWebWhyChooseUsSettings();
   try {
     bannerSettings = await getWebBannerSettings();
   } catch {
@@ -249,6 +323,26 @@ export async function MarketingLandingPage({
     homepageImageStrip = await getWebHomepageImageStripSettings();
   } catch {
     homepageImageStrip = getDefaultWebHomepageImageStripSettings();
+  }
+  try {
+    whyChooseUsSettings = await getWebWhyChooseUsSettings();
+  } catch {
+    whyChooseUsSettings = getDefaultWebWhyChooseUsSettings();
+  }
+  try {
+    middleBannerSettings = await getWebMiddleBannerSettings();
+  } catch {
+    middleBannerSettings = getDefaultWebMiddleBannerSettings();
+  }
+  try {
+    brandGuaranteeSettings = await getWebBrandGuaranteeSettings();
+  } catch {
+    brandGuaranteeSettings = getDefaultWebBrandGuaranteeSettings();
+  }
+  try {
+    newsCardsSettings = await getWebNewsCardsSettings();
+  } catch {
+    newsCardsSettings = getDefaultWebNewsCardsSettings();
   }
   const homePath = withLocale(locale, "/", useLocalePrefix);
   const productsPath = withLocale(locale, "/products", useLocalePrefix);
@@ -441,7 +535,99 @@ export async function MarketingLandingPage({
         )}
       </section>
 
-      <section id="news" className="mx-auto w-full max-w-7xl px-4 py-12">
+      <MiddleBannerStrip
+        items={middleBannerSettings.items}
+        backgroundColor={middleBannerSettings.backgroundColor}
+        sectionGapRem={middleBannerSettings.sectionGapRem}
+      />
+
+      {brandGuaranteeSettings.items.length > 0 ? (
+        <section
+          className="mx-auto w-full max-w-7xl px-4"
+          style={{ marginTop: `${brandGuaranteeSettings.sectionGapPx}px` }}
+        >
+          <div className="mb-4">
+            <h2 className="text-2xl font-black tracking-tight text-slate-100 md:text-3xl">{brandGuaranteeSettings.sectionTitle}</h2>
+            {brandGuaranteeSettings.sectionSubtitle ? (
+              <p className="mt-1 text-sm text-slate-300/70">{brandGuaranteeSettings.sectionSubtitle}</p>
+            ) : null}
+          </div>
+
+          <div className="overflow-x-auto pb-1 [scrollbar-width:thin]">
+            <div
+              className={`flex min-w-max gap-4 ${
+                brandGuaranteeSettings.align === "left"
+                  ? "justify-start"
+                  : brandGuaranteeSettings.align === "right"
+                    ? "justify-end"
+                    : "justify-center"
+              }`}
+            >
+              {brandGuaranteeSettings.items.map((item) => {
+                const effectClass =
+                  brandGuaranteeSettings.effect === "lift"
+                    ? "hover:-translate-y-1 hover:shadow-xl"
+                    : brandGuaranteeSettings.effect === "glow"
+                      ? "hover:shadow-[0_0_30px_rgba(59,130,246,0.45)]"
+                      : brandGuaranteeSettings.effect === "pulse"
+                        ? "hover:scale-[1.04]"
+                        : "";
+                const card = (
+                  <article className={`rounded-2xl border border-slate-200/40 bg-white p-4 transition ${effectClass}`}>
+                    <div className="relative h-[90px] w-[150px]">
+                      <Image src={item.logoUrl} alt={item.altText || ""} fill className="object-contain" loading="lazy" unoptimized />
+                    </div>
+                  </article>
+                );
+                return item.linkUrl ? (
+                  <a key={item.id} href={item.linkUrl} target="_blank" rel="noreferrer" className="inline-block">
+                    {card}
+                  </a>
+                ) : (
+                  <div key={item.id} className="inline-block">
+                    {card}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {whyChooseUsSettings.items.length > 0 ? (
+        <section
+          className="mx-auto w-full max-w-7xl px-4"
+          style={{ marginTop: `${whyChooseUsSettings.sectionGapPx}px` }}
+        >
+          <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 className="text-2xl font-black tracking-tight text-slate-100 md:text-4xl">{whyChooseUsSettings.sectionTitle}</h2>
+              {whyChooseUsSettings.sectionSubtitle ? (
+                <p className="mt-1 text-sm text-slate-300/75">{whyChooseUsSettings.sectionSubtitle}</p>
+              ) : null}
+            </div>
+            {whyChooseUsSettings.sectionTagline ? (
+              <p className="text-sm text-slate-300/70">{whyChooseUsSettings.sectionTagline}</p>
+            ) : null}
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {whyChooseUsSettings.items.slice(0, 6).map((item) => (
+              <article key={item.id} className="rounded-2xl border border-slate-300/25 bg-white/5 p-5 shadow-[0_10px_30px_rgba(0,0,0,0.15)] backdrop-blur-[1px]">
+                <div className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100/95 text-blue-600">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5" aria-hidden>
+                    <WhyChooseUsIconSvg icon={item.icon} />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-black tracking-tight text-slate-100">{item.title}</h3>
+                <p className="mt-2 whitespace-pre-line text-sm leading-6 text-slate-300/85">{item.description}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      <section id="news" className="mx-auto w-full max-w-7xl px-4 py-12" style={{ marginTop: `${newsCardsSettings.sectionGapPx}px` }}>
         <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="text-2xl font-black tracking-tight text-slate-100 md:text-3xl">{t.sections.news}</h2>
@@ -449,13 +635,20 @@ export async function MarketingLandingPage({
           </div>
           <span className="rounded-full border border-slate-400/20 bg-white/5 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-200/85">{t.tags.updates}</span>
         </div>
-
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {[1, 2, 3].map((item) => (
-            <PlaceholderCard key={item} title={t.card.article} meta={t.card.articleMeta} />
-          ))}
-        </div>
+        <ActivitiesNewsGrid items={newsCardsSettings.items} placeholderTitle={t.card.article} placeholderMeta={t.card.articleMeta} />
       </section>
+
+      <NewsletterSubscribeSection
+        title={t.newsletter.title}
+        subtitle={t.newsletter.subtitle}
+        nameLabel={t.newsletter.nameLabel}
+        emailLabel={t.newsletter.emailLabel}
+        namePlaceholder={t.newsletter.namePlaceholder}
+        emailPlaceholder={t.newsletter.emailPlaceholder}
+        ctaLabel={t.newsletter.cta}
+        successMessage={t.newsletter.success}
+        errorMessage={t.newsletter.error}
+      />
 
       <footer
         id="contact"

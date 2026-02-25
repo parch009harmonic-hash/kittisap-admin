@@ -5,6 +5,7 @@ import { FormEvent, useMemo, useState } from "react";
 
 import { AdminLocale } from "../../../../lib/i18n/admin";
 import { WebHomepageAppearanceSettings } from "../../../../lib/types/web-settings";
+import SaveStatePopup from "./SaveStatePopup";
 
 type HomepageSettingsClientProps = {
   locale: AdminLocale;
@@ -37,6 +38,10 @@ export default function HomepageSettingsClient({
             bannerMenu: "แบนเนอร์",
             homepageMenu: "หน้าแรก",
             imageBoxesMenu: "บ็อกภาพ",
+            whyChooseUsMenu: "บ็อกข้อความทำไมเลือกเรา",
+            middleBannerMenu: "แถบแบนเนอร์กลางเว็บ",
+            newsCardsMenu: "กิจกรรมและข่าวสาร",
+            brandGuaranteeMenu: "แบรนด์การันตี",
             pageBackgroundColor: "ส่วนที่ 1: พื้นหลังเว็บ",
             footerBottomBackgroundColor: "ส่วนที่ 2: พื้นหลังล่างสุด",
             textColor: "สีตัวหนังสือทั่วไป",
@@ -67,6 +72,10 @@ export default function HomepageSettingsClient({
             bannerMenu: "Banner",
             homepageMenu: "Homepage",
             imageBoxesMenu: "Image Boxes",
+            whyChooseUsMenu: "Why Choose Us Boxes",
+            middleBannerMenu: "Middle Website Banner",
+            newsCardsMenu: "Activities & News",
+            brandGuaranteeMenu: "Brand Guarantee",
             pageBackgroundColor: "Section 1: Website Background",
             footerBottomBackgroundColor: "Section 2: Bottom Footer Background",
             textColor: "Global Text Color",
@@ -156,7 +165,7 @@ export default function HomepageSettingsClient({
         <p className="mt-1 text-sm text-slate-600">{text.subtitle}</p>
       </header>
 
-      <div className="grid gap-4 lg:grid-cols-[220px_1fr]">
+      <div className="grid gap-4 lg:grid-cols-[minmax(200px,240px)_minmax(0,1fr)]">
         <aside className="settings-quicknav sst-card-soft rounded-2xl p-4">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-500">{text.quickMenu}</p>
           <Link
@@ -173,6 +182,30 @@ export default function HomepageSettingsClient({
             className="mt-2 block rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
           >
             {text.imageBoxesMenu}
+          </Link>
+          <Link
+            href="/admin/web-settings/why-choose-us"
+            className="mt-2 block rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            {text.whyChooseUsMenu}
+          </Link>
+          <Link
+            href="/admin/web-settings/middle-banner"
+            className="mt-2 block rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            {text.middleBannerMenu}
+          </Link>
+          <Link
+            href="/admin/web-settings/news-cards"
+            className="mt-2 block rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            {text.newsCardsMenu}
+          </Link>
+          <Link
+            href="/admin/web-settings/brand-guarantee"
+            className="mt-2 block rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            {text.brandGuaranteeMenu}
           </Link>
         </aside>
 
@@ -284,6 +317,7 @@ export default function HomepageSettingsClient({
           </div>
         </form>
       </div>
+      <SaveStatePopup isSaving={isSaving} isSuccess={status.tone === "success"} savingText={text.saving} successText={text.saved} />
     </section>
   );
 }

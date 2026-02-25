@@ -6,6 +6,7 @@ import { FormEvent, ReactNode, useMemo, useState } from "react";
 
 import { AdminLocale } from "../../../../lib/i18n/admin";
 import { WebBannerSettings } from "../../../../lib/types/web-settings";
+import SaveStatePopup from "./SaveStatePopup";
 
 type BannerSettingsClientProps = {
   locale: AdminLocale;
@@ -33,6 +34,10 @@ export default function BannerSettingsClient({ locale, initialSettings, bootstra
             bannerMenu: "แบนเนอร์",
             homepageMenu: "หน้าแรก",
             imageBoxesMenu: "บ็อกภาพ",
+            whyChooseUsMenu: "บ็อกข้อความทำไมเลือกเรา",
+            middleBannerMenu: "แถบแบนเนอร์กลางเว็บ",
+            newsCardsMenu: "กิจกรรมและข่าวสาร",
+            brandGuaranteeMenu: "แบรนด์การันตี",
             eyebrow: "หัวข้อย่อย",
             heading: "หัวข้อหลัก",
             description: "คำอธิบาย",
@@ -94,6 +99,10 @@ export default function BannerSettingsClient({ locale, initialSettings, bootstra
             bannerMenu: "Banner",
             homepageMenu: "Homepage",
             imageBoxesMenu: "Image Boxes",
+            whyChooseUsMenu: "Why Choose Us Boxes",
+            middleBannerMenu: "Middle Website Banner",
+            newsCardsMenu: "Activities & News",
+            brandGuaranteeMenu: "Brand Guarantee",
             eyebrow: "Eyebrow",
             heading: "Heading",
             description: "Description",
@@ -246,12 +255,16 @@ export default function BannerSettingsClient({ locale, initialSettings, bootstra
         <p className="mt-1 text-sm text-slate-600">{text.subtitle}</p>
       </header>
 
-      <div className="grid gap-4 lg:grid-cols-[220px_1fr]">
+      <div className="grid gap-4 lg:grid-cols-[minmax(200px,240px)_minmax(0,1fr)]">
         <aside className="settings-quicknav sst-card-soft rounded-2xl p-4">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-500">{text.quickMenu}</p>
           <div className="mt-3 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-700">{text.bannerMenu}</div>
           <Link href="/admin/web-settings/homepage" className="mt-2 block rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">{text.homepageMenu}</Link>
           <Link href="/admin/web-settings/homepage-images" className="mt-2 block rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">{text.imageBoxesMenu}</Link>
+          <Link href="/admin/web-settings/why-choose-us" className="mt-2 block rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">{text.whyChooseUsMenu}</Link>
+          <Link href="/admin/web-settings/middle-banner" className="mt-2 block rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">{text.middleBannerMenu}</Link>
+          <Link href="/admin/web-settings/news-cards" className="mt-2 block rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">{text.newsCardsMenu}</Link>
+          <Link href="/admin/web-settings/brand-guarantee" className="mt-2 block rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">{text.brandGuaranteeMenu}</Link>
         </aside>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -401,6 +414,7 @@ export default function BannerSettingsClient({ locale, initialSettings, bootstra
           </div>
         </form>
       </div>
+      <SaveStatePopup isSaving={isSaving} isSuccess={status.tone === "success"} savingText={text.saving} successText={text.saved} />
     </section>
   );
 }

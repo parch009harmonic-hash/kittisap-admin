@@ -54,6 +54,77 @@ export type WebHomepageImageStripSettings = {
   updatedAt: string | null;
 };
 
+export type WhyChooseUsIcon =
+  | "shield"
+  | "spark"
+  | "award"
+  | "layers"
+  | "rocket"
+  | "support"
+  | "speed"
+  | "check";
+
+export type WebWhyChooseUsItem = {
+  id: string;
+  icon: WhyChooseUsIcon;
+  title: string;
+  description: string;
+};
+
+export type WebWhyChooseUsSettings = {
+  sectionGapPx: number;
+  sectionTitle: string;
+  sectionSubtitle: string;
+  sectionTagline: string;
+  items: WebWhyChooseUsItem[];
+  updatedAt: string | null;
+};
+
+export type WebMiddleBannerSettings = {
+  sectionGapRem: number;
+  backgroundColor: string;
+  items: WebHomepageImageItem[];
+  updatedAt: string | null;
+};
+
+export type WebNewsCardMediaType = "image" | "youtube";
+
+export type WebNewsCardItem = {
+  id: string;
+  mediaType: WebNewsCardMediaType;
+  title: string;
+  meta: string;
+  description: string;
+  imageUrl: string;
+  videoUrl: string;
+};
+
+export type WebNewsCardsSettings = {
+  sectionGapPx: number;
+  items: WebNewsCardItem[];
+  updatedAt: string | null;
+};
+
+export type WebBrandGuaranteeAlign = "left" | "center" | "right";
+export type WebBrandGuaranteeEffect = "none" | "lift" | "glow" | "pulse";
+
+export type WebBrandGuaranteeItem = {
+  id: string;
+  logoUrl: string;
+  altText: string;
+  linkUrl: string;
+};
+
+export type WebBrandGuaranteeSettings = {
+  sectionGapPx: number;
+  sectionTitle: string;
+  sectionSubtitle: string;
+  align: WebBrandGuaranteeAlign;
+  effect: WebBrandGuaranteeEffect;
+  items: WebBrandGuaranteeItem[];
+  updatedAt: string | null;
+};
+
 export function getDefaultWebBannerSettings(): WebBannerSettings {
   return {
     eyebrow: "KITTISAP CUSTOMER SITE",
@@ -106,6 +177,71 @@ export function getDefaultWebHomepageAppearanceSettings(): WebHomepageAppearance
 export function getDefaultWebHomepageImageStripSettings(): WebHomepageImageStripSettings {
   return {
     sectionGapPx: 36,
+    items: [],
+    updatedAt: null,
+  };
+}
+
+export function getDefaultWebWhyChooseUsSettings(): WebWhyChooseUsSettings {
+  return {
+    sectionGapPx: 44,
+    sectionTitle: "ทำไมต้อง SST INNOVATION Pro",
+    sectionSubtitle: "ออกแบบเพื่อธุรกิจที่ต้องการความแตกต่างและความน่าเชื่อถือ",
+    sectionTagline: "ยกระดับเว็บไซต์ให้เป็นสินทรัพย์เชิงธุรกิจ",
+    items: [
+      {
+        id: "why-1",
+        icon: "shield",
+        title: "ดีไซน์ระดับองค์กร",
+        description: "วางโครงสร้าง UI/UX อย่างมีระบบ ถ่ายทอดภาพลักษณ์แบรนด์ที่เป็นมืออาชีพ",
+      },
+      {
+        id: "why-2",
+        icon: "spark",
+        title: "ประสิทธิภาพสูง",
+        description: "โค้ดโครงสร้างทันสมัย โหลดไว รองรับ SEO และ Core Web Vitals",
+      },
+      {
+        id: "why-3",
+        icon: "award",
+        title: "ความปลอดภัยและมาตรฐาน",
+        description: "รองรับการเชื่อมต่อกับระบบภายใน พร้อมมาตรฐานความปลอดภัย",
+      },
+      {
+        id: "why-4",
+        icon: "layers",
+        title: "ดูแลต่อเนื่อง",
+        description: "ทีมที่เชี่ยวชาญดูแลหลังส่งมอบ อัปเดตและขยายได้ง่าย",
+      },
+    ],
+    updatedAt: null,
+  };
+}
+
+export function getDefaultWebMiddleBannerSettings(): WebMiddleBannerSettings {
+  return {
+    sectionGapRem: 0.15,
+    backgroundColor: "#050b14",
+    items: [],
+    updatedAt: null,
+  };
+}
+
+export function getDefaultWebNewsCardsSettings(): WebNewsCardsSettings {
+  return {
+    sectionGapPx: 48,
+    items: [],
+    updatedAt: null,
+  };
+}
+
+export function getDefaultWebBrandGuaranteeSettings(): WebBrandGuaranteeSettings {
+  return {
+    sectionGapPx: 24,
+    sectionTitle: "แบรนด์การันตีมาตรฐาน / ชั้นนำประเทศไทย",
+    sectionSubtitle: "พันธมิตรและมาตรฐานที่เราได้รับความไว้วางใจ",
+    align: "center",
+    effect: "lift",
     items: [],
     updatedAt: null,
   };

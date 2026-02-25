@@ -21,7 +21,7 @@ type AdminShellProps = {
 
 type OsTheme = "windows" | "mobile-os";
 type MobilePlatform = "ios" | "android" | "other";
-type NavIcon = "dashboard" | "products" | "orders" | "coupons" | "settings" | "webSettings" | "developer";
+type NavIcon = "dashboard" | "products" | "orders" | "coupons" | "settings" | "webSettings" | "broadcast" | "developer";
 
 type NavLinkItem = {
   href: string;
@@ -85,6 +85,14 @@ const WEB_SETTINGS_NAV_LINK: NavLinkItem = {
   icon: "webSettings",
 };
 
+const BROADCAST_NAV_LINK: NavLinkItem = {
+  href: "/admin/broadcast",
+  label: { th: "บอร์ดแคส", en: "Broadcast" },
+  short: { th: "บ", en: "BC" },
+  mobileLabel: { th: "บอร์ดแคส", en: "Broadcast" },
+  icon: "broadcast",
+};
+
 const BRAND_LOGO_URL =
   "https://zbedxvzrbotwngxaktgj.supabase.co/storage/v1/object/sign/Kittisap%20Admin/products/image.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV8wYTM3NDc3Mi1jM2RhLTQ5Y2ItOGMzNy1kODkyYzRlOWIxZWEiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJLaXR0aXNhcCBBZG1pbi9wcm9kdWN0cy9pbWFnZS5wbmciLCJpYXQiOjE3NzE1MTQwNTMsImV4cCI6MTgwMzA1MDA1M30.xtxuD8s_JZAKPvfwAORsuVMZZ3KOZSIe83_ujc5nDFk";
 
@@ -127,12 +135,8 @@ export function AdminShell({
     message: null,
     loading: false,
   });
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
-    if (typeof window === "undefined") {
-      return false;
-    }
-    return window.localStorage.getItem("admin_sidebar_collapsed") === "1";
-  });
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [hasHydratedSidebarState, setHasHydratedSidebarState] = useState(false);
 
   const osTheme: OsTheme =
     uiMode === "auto" ? detectedOsTheme : uiMode === "mobile" ? "mobile-os" : "windows";
@@ -142,7 +146,7 @@ export function AdminShell({
     isMobileTheme && mobilePlatform === "ios" ? "os-mobile-ios" : isMobileTheme ? "os-mobile-android" : "";
   const mainLinks =
     actorRole === "staff" ? NAV_LINKS.filter((item) => item.href !== "/admin/settings") : NAV_LINKS;
-  const baseLinks = actorRole === "admin" ? [...mainLinks, WEB_SETTINGS_NAV_LINK] : mainLinks;
+  const baseLinks = actorRole === "admin" ? [...mainLinks, WEB_SETTINGS_NAV_LINK, BROADCAST_NAV_LINK] : mainLinks;
   const navLinks = showDeveloperMenu ? [...baseLinks, DEVELOPER_NAV_LINK] : baseLinks;
   const isDeveloperConsoleRoute =
     pathname === "/admin/developer" || pathname.startsWith("/admin/developer/");
@@ -193,6 +197,14 @@ export function AdminShell({
     setIsRouteChanging(false);
     setPendingHref(null);
   }, [pathname]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    setSidebarCollapsed(window.localStorage.getItem("admin_sidebar_collapsed") === "1");
+    setHasHydratedSidebarState(true);
+  }, []);
 
   useEffect(() => {
     if (!pathname) {
@@ -360,10 +372,14 @@ export function AdminShell({
       className={`admin-ui app-surface min-h-screen ${themeClass} ${isMobileTheme ? "os-mobile" : "os-windows"} ${mobileThemeClass}`}
     >
       <div
-        className={`mx-auto grid min-h-screen grid-cols-1 transition-[grid-template-columns] duration-300 ${
+        className={`grid min-h-screen grid-cols-1 transition-[grid-template-columns] duration-300 ${
           isMobileTheme
-            ? "max-w-[500px]"
-            : `max-w-[1440px] ${sidebarCollapsed ? "lg:grid-cols-[104px_1fr]" : "lg:grid-cols-[300px_1fr]"}`
+            ? "mx-auto max-w-[500px]"
+            : `w-full ${
+                hasHydratedSidebarState && sidebarCollapsed
+                  ? "lg:grid-cols-[104px_minmax(0,1fr)]"
+                  : "lg:grid-cols-[300px_minmax(0,1fr)]"
+              }`
         }`}
       >
         {!isMobileTheme ? (
@@ -825,6 +841,14 @@ function MenuIcon({ icon, className }: { icon: NavIcon; className?: string }) {
           <rect x="3" y="4" width="18" height="14" rx="2" />
           <path d="M8 20h8" />
           <path d="M9 8h6M9 12h3" />
+        </svg>
+      );
+    case "broadcast":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={base} aria-hidden>
+          <path d="M4 7h10a3 3 0 0 1 3 3v1a3 3 0 0 1-3 3H4z" />
+          <path d="M17 10h3M18 7l2-2M18 14l2 2" />
+          <path d="M7 15v4m4-4v4" />
         </svg>
       );
     case "developer":

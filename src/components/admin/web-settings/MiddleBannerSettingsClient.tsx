@@ -5,22 +5,23 @@ import Link from "next/link";
 import { FormEvent, useMemo, useState } from "react";
 
 import { AdminLocale } from "../../../../lib/i18n/admin";
-import { WebHomepageImageItem, WebHomepageImageStripSettings } from "../../../../lib/types/web-settings";
+import { WebHomepageImageItem, WebMiddleBannerSettings } from "../../../../lib/types/web-settings";
 import SaveStatePopup from "./SaveStatePopup";
 
-type HomepageImageBoxesClientProps = {
+type MiddleBannerSettingsClientProps = {
   locale: AdminLocale;
-  initialSettings: WebHomepageImageStripSettings;
+  initialSettings: WebMiddleBannerSettings;
   bootstrapError: string | null;
 };
 
-type ImageStripResponse = {
+type MiddleBannerResponse = {
   ok: boolean;
-  data?: WebHomepageImageStripSettings;
+  data?: WebMiddleBannerSettings;
   error?: string;
 };
 
-const MAX_ITEMS = 4;
+const HEX_COLOR_RE = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+const MAX_ITEMS = 3;
 
 function createItem(): WebHomepageImageItem {
   return {
@@ -30,18 +31,18 @@ function createItem(): WebHomepageImageItem {
   };
 }
 
-export default function HomepageImageBoxesClient({
+export default function MiddleBannerSettingsClient({
   locale,
   initialSettings,
   bootstrapError,
-}: HomepageImageBoxesClientProps) {
+}: MiddleBannerSettingsClientProps) {
   const text = useMemo(
     () =>
       locale === "th"
         ? {
             section: "ตั้งค่าเว็บ",
-            title: "บ็อกภาพใต้เนื้อหา",
-            subtitle: "เพิ่มกล่องภาพต่อจากเนื้อหาได้สูงสุด 4 กล่อง (แนะนำ 3 กล่อง)",
+            title: "แถบแบนเนอร์กลางเว็บ",
+            subtitle: "เพิ่มแถบภาพยาวใต้สินค้าแนะนำ ได้ไม่เกิน 3 แถบ พร้อมปรับสีพื้นหลัง",
             quickMenu: "เมนูตั้งค่าเว็บ",
             bannerMenu: "แบนเนอร์",
             homepageMenu: "หน้าแรก",
@@ -50,24 +51,29 @@ export default function HomepageImageBoxesClient({
             middleBannerMenu: "แถบแบนเนอร์กลางเว็บ",
             newsCardsMenu: "กิจกรรมและข่าวสาร",
             brandGuaranteeMenu: "แบรนด์การันตี",
-            sectionGapPx: "ระยะห่างหลังเนื้อหา (px)",
-            imageUrl: "ลิงก์ภาพ",
-            altText: "คำบรรยายภาพ (alt)",
-            upload: "อัปโหลด",
+            sectionGapRem: "ระยะห่างใต้สินค้าแนะนำ (rem)",
+            backgroundColor: "สีพื้นหลังแถบ",
+            imageUrl: "ลิงก์รูปแบนเนอร์",
+            imageAlt: "คำอธิบายรูป (alt)",
+            upload: "อัปโหลดรูป",
             uploading: "กำลังอัปโหลด...",
-            add: "เพิ่มบ็อกภาพ",
+            clearImage: "ล้างรูป",
+            add: "เพิ่มแถบ",
+            maxReached: "เพิ่มได้สูงสุด 3 แถบ",
             remove: "ลบ",
+            preview: "ตัวอย่างแถบแบนเนอร์",
             save: "บันทึกการตั้งค่า",
             saving: "กำลังบันทึก...",
             saved: "บันทึกเรียบร้อย",
             saveFailed: "บันทึกไม่สำเร็จ",
             loadError: "โหลดค่าเริ่มต้นไม่สำเร็จ ใช้ค่า default ชั่วคราว",
-            maxReached: "เพิ่มได้สูงสุด 4 กล่อง",
+            invalidColor: "รูปแบบสีต้องเป็น #RGB หรือ #RRGGBB",
+            uploadFailed: "อัปโหลดรูปไม่สำเร็จ",
           }
         : {
             section: "Website Settings",
-            title: "Image Boxes Below Intro",
-            subtitle: "Add up to 4 image boxes after intro content (3 recommended).",
+            title: "Middle Website Banner",
+            subtitle: "Add up to 3 long banners below featured products.",
             quickMenu: "Website Menu",
             bannerMenu: "Banner",
             homepageMenu: "Homepage",
@@ -76,40 +82,50 @@ export default function HomepageImageBoxesClient({
             middleBannerMenu: "Middle Website Banner",
             newsCardsMenu: "Activities & News",
             brandGuaranteeMenu: "Brand Guarantee",
-            sectionGapPx: "Gap after Intro (px)",
-            imageUrl: "Image URL",
-            altText: "Image Alt Text",
-            upload: "Upload",
+            sectionGapRem: "Gap below Featured Products (rem)",
+            backgroundColor: "Banner Background Color",
+            imageUrl: "Banner Image URL",
+            imageAlt: "Image Alt Text",
+            upload: "Upload Image",
             uploading: "Uploading...",
-            add: "Add Box",
+            clearImage: "Clear Image",
+            add: "Add Banner",
+            maxReached: "Maximum 3 banners",
             remove: "Remove",
+            preview: "Middle Banner Preview",
             save: "Save Settings",
             saving: "Saving...",
             saved: "Saved",
             saveFailed: "Save failed",
             loadError: "Failed to load initial settings. Using defaults.",
-            maxReached: "Maximum 4 boxes",
+            invalidColor: "Color must be #RGB or #RRGGBB",
+            uploadFailed: "Upload failed",
           },
     [locale],
   );
 
-  const [values, setValues] = useState<WebHomepageImageStripSettings>(initialSettings);
+  const [values, setValues] = useState<WebMiddleBannerSettings>(initialSettings);
   const [isSaving, setIsSaving] = useState(false);
   const [uploadingById, setUploadingById] = useState<Record<string, boolean>>({});
+  const [brokenPreviewIds, setBrokenPreviewIds] = useState<string[]>([]);
   const [status, setStatus] = useState<{ tone: "idle" | "success" | "error"; message: string | null }>({
     tone: bootstrapError ? "error" : "idle",
     message: bootstrapError ? `${text.loadError}: ${bootstrapError}` : null,
   });
+
+  function setField<K extends keyof WebMiddleBannerSettings>(field: K, value: WebMiddleBannerSettings[K]) {
+    setValues((prev) => ({ ...prev, [field]: value }));
+  }
 
   function updateItem(id: string, patch: Partial<WebHomepageImageItem>) {
     setValues((prev) => ({
       ...prev,
       items: prev.items.map((item) => (item.id === id ? { ...item, ...patch } : item)),
     }));
+    setBrokenPreviewIds((prev) => prev.filter((itemId) => itemId !== id));
   }
 
   function addItem() {
-    setStatus({ tone: "idle", message: null });
     setValues((prev) => {
       if (prev.items.length >= MAX_ITEMS) {
         return prev;
@@ -120,6 +136,7 @@ export default function HomepageImageBoxesClient({
 
   function removeItem(id: string) {
     setValues((prev) => ({ ...prev, items: prev.items.filter((item) => item.id !== id) }));
+    setBrokenPreviewIds((prev) => prev.filter((itemId) => itemId !== id));
   }
 
   async function handleUpload(itemId: string, fileList: FileList | null) {
@@ -138,13 +155,13 @@ export default function HomepageImageBoxesClient({
       });
       const result = (await response.json()) as { url?: string; error?: string };
       if (!response.ok || !result.url) {
-        throw new Error(result.error ?? text.saveFailed);
+        throw new Error(result.error ?? text.uploadFailed);
       }
       updateItem(itemId, { imageUrl: result.url });
     } catch (error) {
       setStatus({
         tone: "error",
-        message: `${text.saveFailed}: ${error instanceof Error ? error.message : "Unknown error"}`,
+        message: `${text.uploadFailed}: ${error instanceof Error ? error.message : "Unknown error"}`,
       });
     } finally {
       setUploadingById((prev) => ({ ...prev, [itemId]: false }));
@@ -155,21 +172,27 @@ export default function HomepageImageBoxesClient({
     event.preventDefault();
     setStatus({ tone: "idle", message: null });
 
+    if (!HEX_COLOR_RE.test(values.backgroundColor)) {
+      setStatus({ tone: "error", message: text.invalidColor });
+      return;
+    }
+
     const filtered = values.items.filter((item) => item.imageUrl.trim().length > 0).slice(0, MAX_ITEMS);
 
     setIsSaving(true);
     try {
-      const response = await fetch("/api/admin/web-settings/homepage-images", {
+      const response = await fetch("/api/admin/web-settings/middle-banner", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         cache: "no-store",
         body: JSON.stringify({
-          sectionGapPx: values.sectionGapPx,
+          sectionGapRem: values.sectionGapRem,
+          backgroundColor: values.backgroundColor,
           items: filtered,
         }),
       });
 
-      const result = (await response.json()) as ImageStripResponse;
+      const result = (await response.json()) as MiddleBannerResponse;
       if (!response.ok || !result.ok || !result.data) {
         throw new Error(result.error || text.saveFailed);
       }
@@ -201,26 +224,57 @@ export default function HomepageImageBoxesClient({
           <p className="text-xs uppercase tracking-[0.2em] text-slate-500">{text.quickMenu}</p>
           <Link href="/admin/web-settings/banner" className="mt-3 block rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">{text.bannerMenu}</Link>
           <Link href="/admin/web-settings/homepage" className="mt-2 block rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">{text.homepageMenu}</Link>
-          <div className="mt-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-700">{text.imageBoxesMenu}</div>
+          <Link href="/admin/web-settings/homepage-images" className="mt-2 block rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">{text.imageBoxesMenu}</Link>
           <Link href="/admin/web-settings/why-choose-us" className="mt-2 block rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">{text.whyChooseUsMenu}</Link>
-          <Link href="/admin/web-settings/middle-banner" className="mt-2 block rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">{text.middleBannerMenu}</Link>
+          <div className="mt-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-700">{text.middleBannerMenu}</div>
           <Link href="/admin/web-settings/news-cards" className="mt-2 block rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">{text.newsCardsMenu}</Link>
           <Link href="/admin/web-settings/brand-guarantee" className="mt-2 block rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">{text.brandGuaranteeMenu}</Link>
         </aside>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <header className="border-b border-slate-100 px-4 py-3">
+              <p className="text-sm font-semibold text-slate-900">{text.preview}</p>
+            </header>
+            <div className="space-y-3 p-4" style={{ backgroundColor: values.backgroundColor }}>
+              {values.items.filter((item) => !brokenPreviewIds.includes(item.id)).length > 0 ? values.items.filter((item) => !brokenPreviewIds.includes(item.id)).map((item) => (
+                <article key={item.id} className="overflow-hidden rounded-2xl border border-white/20 bg-black/20">
+                  <div className="relative aspect-[21/6] w-full">
+                    <Image
+                      src={item.imageUrl}
+                      alt=""
+                      fill
+                      className="object-cover"
+                      unoptimized
+                      onError={() => {
+                        setBrokenPreviewIds((prev) => (prev.includes(item.id) ? prev : [...prev, item.id]));
+                      }}
+                    />
+                  </div>
+                </article>
+              )) : (
+                <div className="grid aspect-[21/6] place-items-center rounded-2xl border border-white/20 bg-black/20 text-sm text-slate-200/80">No banner image</div>
+              )}
+            </div>
+          </section>
+
           <section className="sst-card-soft rounded-2xl p-4">
             <div className="grid gap-4 md:grid-cols-2">
-              <label className="space-y-1 text-sm font-medium text-slate-700 md:col-span-2">
-                <span>{text.sectionGapPx}</span>
-                <input type="number" min={0} max={200} value={values.sectionGapPx} onChange={(event) => setValues((prev) => ({ ...prev, sectionGapPx: Number(event.target.value || 0) }))} className="input-base" />
+              <label className="space-y-1 text-sm font-medium text-slate-700">
+                <span>{text.sectionGapRem}</span>
+                <input type="number" step="0.01" min={0} max={5} value={values.sectionGapRem} onChange={(event) => setField("sectionGapRem", Number(event.target.value || 0))} className="input-base" />
               </label>
 
-              <div className="md:col-span-2 grid gap-3">
+              <label className="space-y-1 text-sm font-medium text-slate-700">
+                <span>{text.backgroundColor}</span>
+                <input value={values.backgroundColor} onChange={(event) => setField("backgroundColor", event.target.value)} className="input-base" />
+              </label>
+
+              <div className="grid gap-3 md:col-span-2">
                 {values.items.map((item, index) => (
                   <article key={item.id} className="rounded-xl border border-slate-200 bg-white p-3">
                     <div className="mb-2 flex items-center justify-between">
-                      <p className="text-sm font-semibold text-slate-700">Box {index + 1}</p>
+                      <p className="text-sm font-semibold text-slate-700">Banner {index + 1}</p>
                       <button type="button" onClick={() => removeItem(item.id)} className="rounded-md border border-rose-200 bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-600">{text.remove}</button>
                     </div>
 
@@ -234,22 +288,13 @@ export default function HomepageImageBoxesClient({
                         {uploadingById[item.id] ? text.uploading : text.upload}
                         <input type="file" accept="image/*" className="hidden" disabled={uploadingById[item.id]} onChange={(event) => handleUpload(item.id, event.target.files)} />
                       </label>
+                      <button type="button" onClick={() => updateItem(item.id, { imageUrl: "" })} className="ml-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">{text.clearImage}</button>
                     </div>
 
                     <label className="mt-2 block space-y-1 text-sm font-medium text-slate-700">
-                      <span>{text.altText}</span>
+                      <span>{text.imageAlt}</span>
                       <input value={item.altText} onChange={(event) => updateItem(item.id, { altText: event.target.value })} className="input-base" maxLength={180} />
                     </label>
-
-                    <div className="mt-3 overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
-                      {item.imageUrl ? (
-                        <div className="relative aspect-[16/6]">
-                          <Image src={item.imageUrl} alt={item.altText || "Preview"} fill className="object-cover" unoptimized />
-                        </div>
-                      ) : (
-                        <div className="grid aspect-[16/6] place-items-center text-xs text-slate-500">No image</div>
-                      )}
-                    </div>
                   </article>
                 ))}
 
