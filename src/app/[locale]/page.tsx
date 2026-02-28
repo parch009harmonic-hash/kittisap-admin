@@ -1,7 +1,9 @@
-﻿import { notFound } from "next/navigation";
+import { notFound } from "next/navigation";
 
 import type { AppLocale } from "../../../lib/i18n/locale";
 import { MarketingLandingPage } from "../../components/storefront/MarketingLandingPage";
+
+export const dynamic = "force-dynamic";
 
 type LocalizedHomeProps = {
   params: Promise<{ locale: string }>;
@@ -20,7 +22,8 @@ export default async function LocalizedHomePage({ params }: LocalizedHomeProps) 
     notFound();
   }
 
-  return <MarketingLandingPage locale={locale} useLocalePrefix showOuterFrame={false} showTopNav />;
+  return <MarketingLandingPage locale={locale} useLocalePrefix showOuterFrame={false} showTopNav={false} />;
 }
+
 
 

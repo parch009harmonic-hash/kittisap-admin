@@ -7,11 +7,15 @@ create table if not exists public.customer_profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   full_name text not null default '',
   phone text not null default '',
+  address text not null default '',
   line_id text,
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.customer_profiles
+  add column if not exists address text not null default '';
 
 create table if not exists public.payment_settings (
   id text primary key default 'default',
@@ -93,6 +97,8 @@ begin
       execute function public.set_timestamp_updated_at();
   end if;
 end $$;
+
+notify pgrst, 'reload schema';
 
 do $$
 begin

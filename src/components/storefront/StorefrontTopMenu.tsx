@@ -20,9 +20,11 @@ export function StorefrontTopMenu({
           pricing: "ตารางราคา",
           promotions: "กิจกรรม + ส่วนลด/คูปอง",
           contact: "ติดต่อเรา",
+          auth: "เข้าสู่ระบบ/สมัครสมาชิก",
         }}
         cta={{
-          products: "ดูสินค้า",
+          call: "โทรหาเรา",
+          phone: "+66843374982",
         }}
       />
     );
@@ -40,9 +42,11 @@ export function StorefrontTopMenu({
           pricing: "ຕາຕະລາງລາຄາ",
           promotions: "ກິດຈະກຳ + ຄູປອງ",
           contact: "ຕິດຕໍ່",
+          auth: "ເຂົ້າລະບົບ/ສະໝັກສະມາຊິກ",
         }}
         cta={{
-          products: "ເບິ່ງສິນຄ້າ",
+          call: "ໂທຫາພວກເຮົາ",
+          phone: "+66843374982",
         }}
       />
     );
@@ -59,9 +63,11 @@ export function StorefrontTopMenu({
         pricing: "Pricing",
         promotions: "Promotions + Coupons",
         contact: "Contact",
+        auth: "Login/Register",
       }}
       cta={{
-        products: "Browse Products",
+        call: "Call Us",
+        phone: "+66843374982",
       }}
     />
   );

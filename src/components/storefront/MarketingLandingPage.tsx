@@ -24,10 +24,12 @@ import {
   WhyChooseUsIcon,
 } from "../../../lib/types/web-settings";
 import { ActivitiesNewsGrid } from "./ActivitiesNewsGrid";
+import { FeaturedProductsLiveSection } from "./FeaturedProductsLiveSection";
 import { FeaturedProductsShowcase } from "./FeaturedProductsShowcase";
 import { MiddleBannerStrip } from "./MiddleBannerStrip";
 import { MarketingTopNav } from "./MarketingTopNav";
 import { NewsletterSubscribeSection } from "./NewsletterSubscribeSection";
+import { StorefrontRealtimeRefresh } from "./StorefrontRealtimeRefresh";
 
 type MarketingLandingPageProps = {
   locale: AppLocale;
@@ -41,6 +43,17 @@ function withLocale(locale: AppLocale, path: string, useLocalePrefix: boolean) {
     return path;
   }
   return `/${locale}${path}`;
+}
+
+function hasThaiChars(value: string) {
+  return /[\u0E00-\u0E7F]/.test(value);
+}
+
+function localizeSettingText(raw: string | null | undefined, locale: AppLocale, fallback: string) {
+  const value = (raw ?? "").trim();
+  if (!value) return fallback;
+  if (locale === "th") return value;
+  return hasThaiChars(value) ? fallback : value;
 }
 
 function copy(locale: AppLocale) {
@@ -226,15 +239,15 @@ function Frame({ children, showOuterFrame }: { children: ReactNode; showOuterFra
   );
 }
 
-function PlaceholderCard({ title, meta }: { title: string; meta: string }) {
+function PlaceholderCard({ title, meta, href }: { title: string; meta: string; href: string }) {
   return (
-    <a href="#" className="tap-ripple app-press overflow-hidden rounded-2xl border border-slate-400/20 bg-gradient-to-b from-slate-900/90 to-slate-950/80 shadow-[0_14px_50px_rgba(0,0,0,0.28)] transition hover:-translate-y-0.5 hover:border-amber-400/40">
+    <Link href={href} className="tap-ripple app-press overflow-hidden rounded-2xl border border-slate-400/20 bg-gradient-to-b from-slate-900/90 to-slate-950/80 shadow-[0_14px_50px_rgba(0,0,0,0.28)] transition hover:-translate-y-0.5 hover:border-amber-400/40">
       <div className="aspect-[16/10] bg-[linear-gradient(135deg,rgba(245,158,11,0.22),rgba(59,130,246,0.12)),radial-gradient(800px_300px_at_20%_20%,rgba(255,255,255,0.08),transparent_45%)]" />
       <div className="p-4">
         <p className="text-sm font-extrabold tracking-tight text-slate-100">{title}</p>
         <p className="mt-1 text-xs text-slate-300/70">{meta}</p>
       </div>
-    </a>
+    </Link>
   );
 }
 
@@ -280,14 +293,21 @@ async function loadShowroomItems(locale: AppLocale): Promise<ShowroomItem[]> {
     return source.items.map((item) => ({
       id: item.id,
       slug: item.slug,
-      title: locale === "en" ? item.title_en || item.title_th : item.title_th,
+      title:
+        locale === "en"
+          ? item.title_en || item.title_th
+          : locale === "lo"
+            ? item.title_lo || item.title_en || item.title_th
+            : item.title_th,
       price: item.price,
       stock: item.stock,
       coverUrl: item.cover_url,
-      description:
-        locale === "en"
-          ? item.description_en?.trim() || item.description_th?.trim() || null
-          : item.description_th?.trim() || item.description_en?.trim() || null,
+        description:
+          locale === "en"
+            ? item.description_en?.trim() || item.description_th?.trim() || null
+            : locale === "lo"
+              ? item.description_lo?.trim() || item.description_en?.trim() || item.description_th?.trim() || null
+              : item.description_th?.trim() || item.description_en?.trim() || null,
     }));
   } catch {
     return [];
@@ -309,48 +329,86 @@ export async function MarketingLandingPage({
   let brandGuaranteeSettings = getDefaultWebBrandGuaranteeSettings();
   let newsCardsSettings = getDefaultWebNewsCardsSettings();
   let whyChooseUsSettings = getDefaultWebWhyChooseUsSettings();
-  try {
-    bannerSettings = await getWebBannerSettings();
-  } catch {
-    bannerSettings = getDefaultWebBannerSettings();
-  }
-  try {
-    homepageAppearance = await getWebHomepageAppearanceSettings();
-  } catch {
-    homepageAppearance = getDefaultWebHomepageAppearanceSettings();
-  }
-  try {
-    homepageImageStrip = await getWebHomepageImageStripSettings();
-  } catch {
-    homepageImageStrip = getDefaultWebHomepageImageStripSettings();
-  }
-  try {
-    whyChooseUsSettings = await getWebWhyChooseUsSettings();
-  } catch {
-    whyChooseUsSettings = getDefaultWebWhyChooseUsSettings();
-  }
-  try {
-    middleBannerSettings = await getWebMiddleBannerSettings();
-  } catch {
-    middleBannerSettings = getDefaultWebMiddleBannerSettings();
-  }
-  try {
-    brandGuaranteeSettings = await getWebBrandGuaranteeSettings();
-  } catch {
-    brandGuaranteeSettings = getDefaultWebBrandGuaranteeSettings();
-  }
-  try {
-    newsCardsSettings = await getWebNewsCardsSettings();
-  } catch {
-    newsCardsSettings = getDefaultWebNewsCardsSettings();
-  }
+  const settingsResults = await Promise.allSettled([
+    getWebBannerSettings(),
+    getWebHomepageAppearanceSettings(),
+    getWebHomepageImageStripSettings(),
+    getWebWhyChooseUsSettings(),
+    getWebMiddleBannerSettings(),
+    getWebBrandGuaranteeSettings(),
+    getWebNewsCardsSettings(),
+  ]);
+  const [
+    bannerResult,
+    homepageAppearanceResult,
+    homepageImageStripResult,
+    whyChooseUsResult,
+    middleBannerResult,
+    brandGuaranteeResult,
+    newsCardsResult,
+  ] = settingsResults;
+  if (bannerResult.status === "fulfilled") bannerSettings = bannerResult.value;
+  if (homepageAppearanceResult.status === "fulfilled") homepageAppearance = homepageAppearanceResult.value;
+  if (homepageImageStripResult.status === "fulfilled") homepageImageStrip = homepageImageStripResult.value;
+  if (whyChooseUsResult.status === "fulfilled") whyChooseUsSettings = whyChooseUsResult.value;
+  if (middleBannerResult.status === "fulfilled") middleBannerSettings = middleBannerResult.value;
+  if (brandGuaranteeResult.status === "fulfilled") brandGuaranteeSettings = brandGuaranteeResult.value;
+  if (newsCardsResult.status === "fulfilled") newsCardsSettings = newsCardsResult.value;
   const homePath = withLocale(locale, "/", useLocalePrefix);
   const productsPath = withLocale(locale, "/products", useLocalePrefix);
   const pricingPath = withLocale(locale, "/pricing", useLocalePrefix);
   const promotionsPath = withLocale(locale, "/promotions", useLocalePrefix);
   const contactPath = withLocale(locale, "/contact", useLocalePrefix);
+  const localizedHeroEyebrow = localizeSettingText(bannerSettings.eyebrow, locale, t.hero.eyebrow);
+  const localizedHeroTitle = localizeSettingText(bannerSettings.title, locale, t.hero.title);
+  const localizedHeroDesc = localizeSettingText(bannerSettings.description, locale, t.hero.desc);
+  const localizedPrimaryButton = localizeSettingText(bannerSettings.primaryButtonLabel, locale, t.nav.products);
+  const localizedSecondaryButton = localizeSettingText(bannerSettings.secondaryButtonLabel, locale, t.nav.promotions);
+  const localizedIntroTitle = localizeSettingText(
+    homepageAppearance.introTitle,
+    locale,
+    locale === "en" ? "KITTISAP ATV" : locale === "lo" ? "KITTISAP ATV" : homepageAppearance.introTitle,
+  );
+  const localizedIntroContent = localizeSettingText(homepageAppearance.introContent, locale, t.hero.desc);
+  const localizedBrandTitle = localizeSettingText(
+    brandGuaranteeSettings.sectionTitle,
+    locale,
+    locale === "en" ? "Trusted Brands and Standards" : locale === "lo" ? "ແບຣນ ແລະ ມາດຕະຖານທີ່ໄວ້ວາງໃຈ" : brandGuaranteeSettings.sectionTitle,
+  );
+  const localizedBrandSubtitle = localizeSettingText(
+    brandGuaranteeSettings.sectionSubtitle,
+    locale,
+    locale === "en"
+      ? "Partners and standards trusted by our customers"
+      : locale === "lo"
+        ? "ພາກສ່ວນຮ່ວມ ແລະ ມາດຕະຖານທີ່ລູກຄ້າໄວ້ວາງໃຈ"
+        : brandGuaranteeSettings.sectionSubtitle,
+  );
+  const localizedWhyTitle = localizeSettingText(
+    whyChooseUsSettings.sectionTitle,
+    locale,
+    locale === "en" ? "Why Choose KITTISAP ATV" : locale === "lo" ? "ເປັນຫຍັງຕ້ອງເລືອກ KITTISAP ATV" : whyChooseUsSettings.sectionTitle,
+  );
+  const localizedWhySubtitle = localizeSettingText(
+    whyChooseUsSettings.sectionSubtitle,
+    locale,
+    locale === "en"
+      ? "Built for riders and businesses that need confidence"
+      : locale === "lo"
+        ? "ອອກແບບສຳລັບຜູ້ໃຊ້ ແລະ ທຸລະກິດທີ່ຕ້ອງການຄວາມໜ້າເຊື່ອຖື"
+        : whyChooseUsSettings.sectionSubtitle,
+  );
+  const localizedWhyTagline = localizeSettingText(
+    whyChooseUsSettings.sectionTagline,
+    locale,
+    locale === "en"
+      ? "Performance, support and reliability in one place"
+      : locale === "lo"
+        ? "ສົມທົບປະສິດທິພາບ ການບໍລິການ ແລະ ຄວາມໄວ້ວາງໃຈ"
+        : whyChooseUsSettings.sectionTagline,
+  );
   const heroImageUrl = bannerSettings.imageUrl || showroomItems[0]?.coverUrl || null;
-  const heroImageAlt = bannerSettings.title || showroomItems[0]?.title || "Banner image";
+  const heroImageAlt = localizedHeroTitle || showroomItems[0]?.title || "Banner image";
   const bannerMotionClass = bannerSettings.imageMotion === "none" ? "" : `banner-motion-${bannerSettings.imageMotion}`;
   const bannerFrameClass = `banner-frame-${bannerSettings.imageFrameStyle}`;
   const contentAlignClass =
@@ -384,6 +442,7 @@ export async function MarketingLandingPage({
           color: homepageAppearance.textColor,
         }}
       >
+        <StorefrontRealtimeRefresh />
         {showTopNav ? (
           <MarketingTopNav locale={locale} useLocalePrefix={useLocalePrefix} brand={t.brand} nav={t.nav} cta={t.cta} />
         ) : null}
@@ -400,7 +459,7 @@ export async function MarketingLandingPage({
               className={`flex flex-col ${contentAlignClass}`}
               style={{ minHeight: bannerSettings.autoHeight ? undefined : `${bannerSettings.minHeightPx}px` }}
             >
-              <p className="inline-flex items-center gap-2 uppercase tracking-[0.2em] text-amber-200" style={{ fontSize: `${bannerSettings.eyebrowFontSizePx}px`, fontWeight: 800 }}>{bannerSettings.eyebrow || t.hero.eyebrow}</p>
+              <p className="inline-flex items-center gap-2 uppercase tracking-[0.2em] text-amber-200" style={{ fontSize: `${bannerSettings.eyebrowFontSizePx}px`, fontWeight: 800 }}>{localizedHeroEyebrow}</p>
               <h1
                 className={`mt-2 leading-tight tracking-tight md:text-5xl ${titleEffectClass}`}
                 style={{
@@ -409,13 +468,13 @@ export async function MarketingLandingPage({
                   ...titleEffectStyle,
                 }}
               >
-                {bannerSettings.title || t.hero.title}
+                {localizedHeroTitle}
               </h1>
-              <p className="mt-3 max-w-3xl text-slate-200/80" style={{ fontSize: `clamp(14px,1.6vw,${bannerSettings.descriptionFontSizePx}px)` }}>{bannerSettings.description || t.hero.desc}</p>
+              <p className="mt-3 max-w-3xl text-slate-200/80" style={{ fontSize: `clamp(14px,1.6vw,${bannerSettings.descriptionFontSizePx}px)` }}>{localizedHeroDesc}</p>
               {bannerSettings.showButtons ? (
                 <div className={`mt-5 flex w-full flex-wrap gap-2 ${buttonAlignClass}`}>
-                  <Link href={productsPath} className="inline-flex rounded-full border border-amber-400/40 bg-amber-500/15 px-4 py-2 text-xs font-extrabold text-amber-200">{bannerSettings.primaryButtonLabel || t.nav.products}</Link>
-                  <Link href={promotionsPath} className="inline-flex rounded-full border border-slate-400/30 bg-white/5 px-4 py-2 text-xs font-extrabold text-slate-100">{bannerSettings.secondaryButtonLabel || t.nav.promotions}</Link>
+                  <Link href={productsPath} className="inline-flex rounded-full border border-amber-400/40 bg-amber-500/15 px-4 py-2 text-xs font-extrabold text-amber-200">{localizedPrimaryButton}</Link>
+                  <Link href={promotionsPath} className="inline-flex rounded-full border border-slate-400/30 bg-white/5 px-4 py-2 text-xs font-extrabold text-slate-100">{localizedSecondaryButton}</Link>
                 </div>
               ) : null}
             </div>
@@ -466,7 +525,7 @@ export async function MarketingLandingPage({
               textShadow: homepageAppearance.introTextGlow ? "0 0 18px rgba(56, 189, 248, 0.28)" : "none",
             }}
           >
-            {homepageAppearance.introTitle}
+            {localizedIntroTitle}
           </h2>
           <p
             className="mx-auto mt-4 max-w-5xl whitespace-pre-line leading-8"
@@ -477,7 +536,7 @@ export async function MarketingLandingPage({
               textShadow: homepageAppearance.introTextGlow ? "0 0 14px rgba(56, 189, 248, 0.22)" : "none",
             }}
           >
-            {homepageAppearance.introContent}
+            {localizedIntroContent}
           </p>
         </article>
       </section>
@@ -525,11 +584,11 @@ export async function MarketingLandingPage({
         </div>
 
         {showroomItems.length > 0 ? (
-          <FeaturedProductsShowcase items={showroomItems} locale={locale} useLocalePrefix={useLocalePrefix} />
+          <FeaturedProductsLiveSection initialItems={showroomItems} locale={locale} useLocalePrefix={useLocalePrefix} />
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {[1, 2, 3, 4].map((item) => (
-              <PlaceholderCard key={item} title={t.card.model} meta={t.card.meta} />
+              <PlaceholderCard key={item} title={t.card.model} meta={t.card.meta} href={productsPath} />
             ))}
           </div>
         )}
@@ -547,9 +606,9 @@ export async function MarketingLandingPage({
           style={{ marginTop: `${brandGuaranteeSettings.sectionGapPx}px` }}
         >
           <div className="mb-4">
-            <h2 className="text-2xl font-black tracking-tight text-slate-100 md:text-3xl">{brandGuaranteeSettings.sectionTitle}</h2>
-            {brandGuaranteeSettings.sectionSubtitle ? (
-              <p className="mt-1 text-sm text-slate-300/70">{brandGuaranteeSettings.sectionSubtitle}</p>
+            <h2 className="text-2xl font-black tracking-tight text-slate-100 md:text-3xl">{localizedBrandTitle}</h2>
+            {localizedBrandSubtitle ? (
+              <p className="mt-1 text-sm text-slate-300/70">{localizedBrandSubtitle}</p>
             ) : null}
           </div>
 
@@ -601,13 +660,13 @@ export async function MarketingLandingPage({
         >
           <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
             <div>
-              <h2 className="text-2xl font-black tracking-tight text-slate-100 md:text-4xl">{whyChooseUsSettings.sectionTitle}</h2>
-              {whyChooseUsSettings.sectionSubtitle ? (
-                <p className="mt-1 text-sm text-slate-300/75">{whyChooseUsSettings.sectionSubtitle}</p>
+              <h2 className="text-2xl font-black tracking-tight text-slate-100 md:text-4xl">{localizedWhyTitle}</h2>
+              {localizedWhySubtitle ? (
+                <p className="mt-1 text-sm text-slate-300/75">{localizedWhySubtitle}</p>
               ) : null}
             </div>
-            {whyChooseUsSettings.sectionTagline ? (
-              <p className="text-sm text-slate-300/70">{whyChooseUsSettings.sectionTagline}</p>
+            {localizedWhyTagline ? (
+              <p className="text-sm text-slate-300/70">{localizedWhyTagline}</p>
             ) : null}
           </div>
 

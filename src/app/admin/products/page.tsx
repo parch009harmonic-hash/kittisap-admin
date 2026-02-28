@@ -1,7 +1,7 @@
 ﻿import Link from "next/link";
 import { revalidatePath } from "next/cache";
 
-import { deleteProduct, listProducts, setProductFeatured } from "../../../../lib/db/products";
+import { deleteProduct, listProducts } from "../../../../lib/db/products";
 import { getAdminLocale } from "../../../../lib/i18n/admin";
 import { ProductStatus } from "../../../../lib/types/product";
 import { ProductsTableClient } from "../../../components/admin/products/ProductsTableClient";
@@ -32,19 +32,6 @@ export default async function AdminProductsPage({ searchParams }: ProductsPagePr
     }
     await deleteProduct(id);
     revalidatePath("/admin/products");
-  }
-
-  async function toggleFeaturedAction(formData: FormData) {
-    "use server";
-    const id = String(formData.get("id") ?? "");
-    const isFeatured = String(formData.get("is_featured") ?? "") === "1";
-    if (!id) {
-      throw new Error("Missing product id");
-    }
-    await setProductFeatured(id, isFeatured);
-    revalidatePath("/admin/products");
-    revalidatePath("/");
-    revalidatePath("/en");
   }
 
   return (
@@ -138,7 +125,7 @@ export default async function AdminProductsPage({ searchParams }: ProductsPagePr
         </Link>
       </nav>
 
-      <ProductsTableClient products={products} onDelete={deleteAction} onToggleFeatured={toggleFeaturedAction} locale={locale} />
+      <ProductsTableClient products={products} onDelete={deleteAction} locale={locale} />
 
       <div className="product-page-pagination sst-card-soft flex flex-col gap-3 rounded-2xl p-3 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between sm:p-0 sm:shadow-none sm:border-0">
         <p>

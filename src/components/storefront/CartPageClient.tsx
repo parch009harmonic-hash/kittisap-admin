@@ -2,12 +2,14 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type { AppLocale } from "../../../lib/i18n/locale";
 import {
+  clearPublicCart,
   getPublicCart,
   removePublicCartItem,
+  savePublicCart,
   sumPublicCart,
   type PublicCartItem,
   updatePublicCartItemQty,
@@ -36,6 +38,34 @@ function text(locale: AppLocale) {
       selectAll: "เลือกทั้งหมด",
       selected: "เลือกแล้ว",
       qty: "จำนวน",
+      back: "ย้อนกลับ",
+      continue: "เลือกสินค้าต่อ",
+      removeSelected: "ลบรายการที่เลือก",
+      noImage: "ไม่มีรูป",
+    };
+  }
+
+  if (locale === "lo") {
+    return {
+      title: "ກະຕ່າສິນຄ້າ",
+      subtitle: "ກວດສອບລາຍການກ່ອນຊຳລະເງິນ",
+      emptyTitle: "ຍັງບໍ່ມີສິນຄ້າໃນກະຕ່າ",
+      emptyDesc: "ເລືອກສິນຄ້າແລ້ວກົດເພີ່ມໃສ່ກະຕ່າຈາກໜ້າສິນຄ້າ",
+      browse: "ເລືອກສິນຄ້າຕໍ່",
+      total: "ລວມທັງໝົດ",
+      checkout: "ໄປຊຳລະເງິນ",
+      remove: "ລຶບ",
+      price: "ລາຄາ",
+      stock: "ຄົງເຫຼືອ",
+      out: "ສິນຄ້າໝົດ",
+      item: "ລາຍການ",
+      selectAll: "ເລືອກທັງໝົດ",
+      selected: "ເລືອກແລ້ວ",
+      qty: "ຈຳນວນ",
+      back: "ກັບຄືນ",
+      continue: "ເລືອກສິນຄ້າຕໍ່",
+      removeSelected: "ລຶບລາຍການທີ່ເລືອກ",
+      noImage: "ບໍ່ມີຮູບ",
     };
   }
 
@@ -55,6 +85,10 @@ function text(locale: AppLocale) {
     selectAll: "Select all",
     selected: "Selected",
     qty: "Qty",
+    back: "Back",
+    continue: "Continue shopping",
+    removeSelected: "Remove selected",
+    noImage: "No image",
   };
 }
 
@@ -106,6 +140,21 @@ export function CartPageClient({ locale, useLocalePrefix = false }: CartPageClie
     setSelectedIds(items.map((item) => item.productId));
   }
 
+  function removeSelectedItems() {
+    if (selectedIds.length === 0) return;
+    const selected = new Set(selectedIds);
+    const next = items.filter((item) => !selected.has(item.productId));
+    if (next.length === 0) {
+      clearPublicCart();
+      setItems([]);
+      setSelectedIds([]);
+      return;
+    }
+    savePublicCart(next);
+    setItems(next);
+    setSelectedIds([]);
+  }
+
   const productsPath = route(locale, "/products", useLocalePrefix);
   const checkoutPath = route(locale, "/checkout", useLocalePrefix);
   const checkoutHref = (() => {
@@ -117,12 +166,50 @@ export function CartPageClient({ locale, useLocalePrefix = false }: CartPageClie
     return qs ? `${checkoutPath}?${qs}` : checkoutPath;
   })();
 
+  useEffect(() => {
+    document.documentElement.classList.add("storefront-no-scrollbar");
+    document.body.classList.add("storefront-no-scrollbar");
+    return () => {
+      document.documentElement.classList.remove("storefront-no-scrollbar");
+      document.body.classList.remove("storefront-no-scrollbar");
+    };
+  }, []);
+
   return (
-    <main className="min-h-screen bg-[#f4f6fb] pb-40 text-slate-900 md:pb-16">
+    <main className="min-h-screen bg-[#f4f6fb] pb-44 text-slate-900 md:pb-24">
       <section className="mx-auto w-full max-w-7xl px-3 py-4 md:px-4 md:py-8">
         <header className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 md:text-3xl">{t.title}</h1>
           <p className="mt-1 text-sm text-slate-600">{t.subtitle}</p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                if (typeof window !== "undefined" && window.history.length > 1) {
+                  window.history.back();
+                  return;
+                }
+                window.location.href = productsPath;
+              }}
+              className="app-press inline-flex rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              {t.back}
+            </button>
+            <Link
+              href={productsPath}
+              className="app-press inline-flex rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-700 hover:bg-amber-100"
+            >
+              {t.continue}
+            </Link>
+            <button
+              type="button"
+              onClick={removeSelectedItems}
+              disabled={selectedIds.length === 0}
+              className="app-press inline-flex rounded-lg border border-rose-300 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {t.removeSelected}
+            </button>
+          </div>
         </header>
 
         {items.length === 0 ? (
@@ -169,7 +256,7 @@ export function CartPageClient({ locale, useLocalePrefix = false }: CartPageClie
                         {item.coverUrl ? (
                           <Image src={item.coverUrl} alt={item.title} fill sizes="96px" className="object-cover" />
                         ) : (
-                          <div className="grid h-full place-items-center text-xs text-slate-500">No Image</div>
+                          <div className="grid h-full place-items-center text-xs text-slate-500">{t.noImage}</div>
                         )}
                       </Link>
 
@@ -251,7 +338,7 @@ export function CartPageClient({ locale, useLocalePrefix = false }: CartPageClie
                               {item.coverUrl ? (
                                 <Image src={item.coverUrl} alt={item.title} fill sizes="64px" className="object-cover" />
                               ) : (
-                                <div className="grid h-full place-items-center text-[10px] text-slate-500">No Image</div>
+                                <div className="grid h-full place-items-center text-[10px] text-slate-500">{t.noImage}</div>
                               )}
                             </Link>
                             <div className="min-w-0">
@@ -306,7 +393,7 @@ export function CartPageClient({ locale, useLocalePrefix = false }: CartPageClie
       </section>
 
       {items.length > 0 ? (
-        <div className="fixed inset-x-0 bottom-16 z-30 border-t border-slate-200 bg-white/95 p-3 backdrop-blur md:bottom-0 md:p-4">
+        <div className="fixed inset-x-0 bottom-0 z-[60] border-t border-slate-200 bg-white/95 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur md:p-4">
           <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-3">
             <div className="min-w-0">
               <p className="text-xs uppercase tracking-[0.14em] text-slate-500">{t.total}</p>

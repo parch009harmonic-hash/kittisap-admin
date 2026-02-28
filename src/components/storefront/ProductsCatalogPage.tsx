@@ -64,6 +64,8 @@ function t(locale: AppLocale) {
       clear: "ล้าง",
       stock: "คงเหลือ",
       outOfStockLabel: "Out of stock",
+      addToCart: "ใส่ตะกร้า",
+      goToCart: "ไปตะกร้า",
       orderNow: "สั่งซื้อ",
       noItemsTitle: "ไม่พบสินค้า",
       noItemsDesc: "ลองเปลี่ยนคำค้นหาหรือเงื่อนไขการกรอง",
@@ -73,6 +75,41 @@ function t(locale: AppLocale) {
       viewDetails: "ดูรายละเอียดสินค้า",
       close: "ปิด",
       noImage: "ไม่มีรูป",
+      overview: "รายละเอียดสินค้า",
+    };
+  }
+
+  if (locale === "lo") {
+    return {
+      title: "ສິນຄ້າທັງໝົດ",
+      subtitle: "ເລືອກສິນຄ້າຈາກລາຍການຂ້າງລຸ່ມ",
+      searchPlaceholder: "ຄົ້ນຫາສິນຄ້າ ຫຼື SKU...",
+      status: "ສະຖານະ",
+      category: "ໝວດໝູ່",
+      sort: "ຈັດຮຽງ",
+      sortNewest: "ລ່າສຸດ",
+      sortPriceAsc: "ລາຄາຕ່ຳ-ສູງ",
+      sortPriceDesc: "ລາຄາສູງ-ຕ່ຳ",
+      sortStockDesc: "ສະຕັອກຫຼາຍສຸດ",
+      all: "ທັງໝົດ",
+      inStock: "ພ້ອມສົ່ງ",
+      outOfStock: "ສິນຄ້າໝົດ",
+      filter: "ນຳໃຊ້",
+      clear: "ລ້າງ",
+      stock: "ຄົງເຫຼືອ",
+      outOfStockLabel: "ສິນຄ້າໝົດ",
+      addToCart: "ໃສ່ກະຕ່າ",
+      goToCart: "ໄປກະຕ່າ",
+      orderNow: "ສັ່ງຊື້",
+      noItemsTitle: "ບໍ່ພົບສິນຄ້າ",
+      noItemsDesc: "ລອງປັບຄຳຄົ້ນຫາ ຫຼື ຕົວກອງ",
+      prev: "ກ່ອນໜ້າ",
+      next: "ຖັດໄປ",
+      page: "ໜ້າ",
+      viewDetails: "ເບິ່ງລາຍລະອຽດ",
+      close: "ປິດ",
+      noImage: "ບໍ່ມີຮູບ",
+      overview: "ລາຍລະອຽດສິນຄ້າ",
     };
   }
 
@@ -94,6 +131,8 @@ function t(locale: AppLocale) {
     clear: "Clear",
     stock: "Stock",
     outOfStockLabel: "Out of stock",
+    addToCart: "Add to cart",
+    goToCart: "Go to cart",
     orderNow: "Order now",
     noItemsTitle: "No products found",
     noItemsDesc: "Try adjusting your filters.",
@@ -103,6 +142,7 @@ function t(locale: AppLocale) {
     viewDetails: "View product details",
     close: "Close",
     noImage: "No image",
+    overview: "Product Overview",
   };
 }
 
@@ -243,11 +283,18 @@ export async function ProductsCatalogPage({ locale, searchParams = {}, useLocale
               items={items.map((item) => ({
                 id: item.id,
                 slug: item.slug,
-                title: locale === "en" ? item.title_en || item.title_th : item.title_th,
+                title:
+                  locale === "en"
+                    ? item.title_en || item.title_th
+                    : locale === "lo"
+                      ? item.title_lo || item.title_en || item.title_th
+                      : item.title_th,
                 description:
                   locale === "en"
                     ? item.description_en || item.description_th || text.noItemsDesc
-                    : item.description_th || item.description_en || text.noItemsDesc,
+                    : locale === "lo"
+                      ? item.description_lo || item.description_en || item.description_th || text.noItemsDesc
+                      : item.description_th || item.description_en || text.noItemsDesc,
                 price: item.price,
                 stock: item.stock,
                 coverUrl: item.cover_url,
@@ -257,10 +304,13 @@ export async function ProductsCatalogPage({ locale, searchParams = {}, useLocale
               text={{
                 stock: text.stock,
                 outOfStockLabel: text.outOfStockLabel,
+                addToCart: text.addToCart,
+                goToCart: text.goToCart,
                 orderNow: text.orderNow,
                 viewDetails: text.viewDetails,
                 close: text.close,
                 noImage: text.noImage,
+                overview: text.overview,
               }}
             />
           )}

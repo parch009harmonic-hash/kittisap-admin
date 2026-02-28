@@ -1,4 +1,5 @@
 export const PUBLIC_CART_KEY = "kittisap_public_cart_v1";
+export const PUBLIC_CART_UPDATED_EVENT = "kittisap_public_cart_updated";
 
 export type PublicCartItem = {
   productId: string;
@@ -55,6 +56,7 @@ export function getPublicCart(): PublicCartItem[] {
 export function savePublicCart(items: PublicCartItem[]) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(PUBLIC_CART_KEY, JSON.stringify(items));
+  window.dispatchEvent(new CustomEvent(PUBLIC_CART_UPDATED_EVENT, { detail: { count: items.length } }));
 }
 
 export function addPublicCartItem(input: AddPublicCartItemInput) {

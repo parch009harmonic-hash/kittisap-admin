@@ -57,7 +57,7 @@ export function NewsletterSubscribeSection(props: NewsletterSubscribeSectionProp
         <div className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-amber-500/25 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-24 left-20 h-56 w-56 rounded-full bg-cyan-500/20 blur-3xl" />
 
-        <div className="relative grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
+        <div className="relative grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-start">
           <div>
             <p className="inline-flex rounded-full border border-amber-300/25 bg-amber-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-amber-200">Newsletter</p>
             <h3 className="mt-3 text-2xl font-black tracking-tight text-slate-100 md:text-3xl">{props.title}</h3>

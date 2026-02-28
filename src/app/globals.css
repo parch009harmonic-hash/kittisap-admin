@@ -1560,13 +1560,35 @@ picture {
   display: none;
 }
 
+html.storefront-no-scrollbar,
+body.storefront-no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+html.storefront-no-scrollbar::-webkit-scrollbar,
+body.storefront-no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+html.storefront-no-scrollbar * {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+html.storefront-no-scrollbar *::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
+  background: transparent !important;
+}
+
 .app-press {
   transition: transform 140ms ease, box-shadow 160ms ease, filter 140ms ease;
-  will-change: transform;
 }
 
 .app-press:active {
-  transform: scale(0.95);
+  transform: scale(0.985);
 }
 
 .tap-ripple {
@@ -1635,6 +1657,24 @@ picture {
     animation: none !important;
     transition: none !important;
     transform: none !important;
+  }
+
+  .banner-motion-slide_lr,
+  .banner-motion-float_ud,
+  .banner-motion-zoom,
+  .banner-motion-tilt {
+    animation: none !important;
+    transform: none !important;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .banner-motion-slide_lr,
+  .banner-motion-float_ud,
+  .banner-motion-zoom,
+  .banner-motion-tilt {
+    animation: none;
+    transform: none;
   }
 }
 

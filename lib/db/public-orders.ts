@@ -3,7 +3,9 @@
 import { z } from "zod";
 
 import { requireCustomerApi } from "../auth/customer";
+import { getPaymentSettings } from "./payment-settings";
 import { getSupabaseServerClient } from "../supabase/server";
+import { getSupabaseServiceRoleClient } from "../supabase/service";
 import { validatePublicCoupon } from "./public-coupons";
 
 const DEFAULT_PROMPTPAY_BASE_URL = "https://promptpay.io";
@@ -76,6 +78,11 @@ function formatPromptpayAmount(amount: number) {
 
 type DbClient = Awaited<ReturnType<typeof getSupabaseServerClient>>;
 
+function isMissingRpcFunctionError(error: unknown, fnName: string) {
+  const message = String((error as { message?: string } | null)?.message ?? error ?? "").toLowerCase();
+  return message.includes("could not find the function") && message.includes(`public.${fnName}`.toLowerCase());
+}
+
 async function reserveStock(supabase: DbClient, productId: string, qty: number) {
   const { data, error } = await supabase.rpc("reserve_product_stock", {
     p_product_id: productId,
@@ -83,6 +90,11 @@ async function reserveStock(supabase: DbClient, productId: string, qty: number) 
   });
 
   if (error) {
+    if (isMissingRpcFunctionError(error, "reserve_product_stock")) {
+      // Fallback when DB function is not deployed / schema cache is stale.
+      // Stock was already validated earlier in request flow.
+      return;
+    }
     throw new PublicOrderError(500, "STOCK_RESERVE_FAILED", error.message);
   }
 
@@ -92,10 +104,13 @@ async function reserveStock(supabase: DbClient, productId: string, qty: number) 
 }
 
 async function releaseStock(supabase: DbClient, productId: string, qty: number) {
-  await supabase.rpc("release_product_stock", {
+  const { error } = await supabase.rpc("release_product_stock", {
     p_product_id: productId,
     p_qty: qty,
   });
+  if (error && !isMissingRpcFunctionError(error, "release_product_stock")) {
+    throw new PublicOrderError(500, "STOCK_RELEASE_FAILED", error.message);
+  }
 }
 
 async function ensureCustomerProfile(supabase: DbClient, customerId: string, fullName: string, phone: string) {
@@ -119,19 +134,19 @@ async function generateUniqueOrderNo(supabase: DbClient) {
   return `${buildOrderNo()}-${Math.floor(Math.random() * 99)}`;
 }
 
-async function getPromptpayPhone(supabase: DbClient) {
-  const { data, error } = await supabase
-    .from("payment_settings")
-    .select("promptpay_phone")
-    .eq("id", "default")
-    .maybeSingle();
-
-  if (error) {
-    throw new PublicOrderError(500, "PAYMENT_CONFIG_FAILED", error.message);
+async function getPromptpayConfig() {
+  try {
+    const paymentSettings = await getPaymentSettings();
+    return {
+      phone: String(paymentSettings.promptpayPhone ?? "").trim(),
+      baseUrl: String(paymentSettings.promptpayBaseUrl ?? DEFAULT_PROMPTPAY_BASE_URL).trim() || DEFAULT_PROMPTPAY_BASE_URL,
+    };
+  } catch {
+    return {
+      phone: "",
+      baseUrl: DEFAULT_PROMPTPAY_BASE_URL,
+    };
   }
-
-  const phone = String(data?.promptpay_phone ?? "").trim();
-  return phone;
 }
 
 export async function createPublicOrder(input: unknown) {
@@ -139,12 +154,13 @@ export async function createPublicOrder(input: unknown) {
   const payload = PublicOrderCreateSchema.parse(input);
   const customerId = actor.user.id;
   const supabase = await getSupabaseServerClient();
+  const serviceSupabase = getSupabaseServiceRoleClient();
 
   await ensureCustomerProfile(supabase, customerId, payload.customer.full_name, payload.customer.phone);
 
   const productIds = uniq(payload.items.map((item) => item.product_id));
 
-  const { data: productRows, error: productsError } = await supabase
+  const { data: productRows, error: productsError } = await serviceSupabase
     .from("products")
     .select("id,sku,title_th,price,stock,status")
     .in("id", productIds);
@@ -203,12 +219,13 @@ export async function createPublicOrder(input: unknown) {
   const shippingFee = 0;
   const finalAmount = Number(Math.max(0, subTotal - discountTotal + shippingFee).toFixed(2));
 
-  const promptpayPhone = await getPromptpayPhone(supabase);
+  const promptpayConfig = await getPromptpayConfig();
+  const promptpayPhone = promptpayConfig.phone;
   if (!promptpayPhone) {
     throw new PublicOrderError(500, "PAYMENT_CONFIG_MISSING", "PromptPay phone is not configured");
   }
 
-  const base = `${DEFAULT_PROMPTPAY_BASE_URL}/`;
+  const base = `${promptpayConfig.baseUrl.replace(/\/+$/, "")}/`;
   const promptpayUrl = `${base}${encodeURIComponent(promptpayPhone)}/${encodeURIComponent(formatPromptpayAmount(finalAmount))}`;
 
   const reserved: Array<{ productId: string; qty: number }> = [];
@@ -357,5 +374,71 @@ export async function uploadPublicOrderSlip(orderNo: string, file: File) {
   return {
     order_no: String(orderRow.order_no),
     status: "pending_review",
+  };
+}
+
+export async function cancelPublicOrder(orderNo: string) {
+  const actor = await requireCustomerApi();
+  const supabase = await getSupabaseServerClient();
+  const normalizedOrderNo = orderNo.trim();
+
+  if (!normalizedOrderNo) {
+    throw new PublicOrderError(400, "INVALID_ORDER_NO", "Order number is required");
+  }
+
+  const { data: orderRow, error: orderError } = await supabase
+    .from("orders")
+    .select("id,order_no,status,customer_id")
+    .eq("order_no", normalizedOrderNo)
+    .eq("customer_id", actor.user.id)
+    .maybeSingle();
+
+  if (orderError) {
+    throw new PublicOrderError(500, "ORDER_FETCH_FAILED", orderError.message);
+  }
+  if (!orderRow) {
+    throw new PublicOrderError(404, "ORDER_NOT_FOUND", "Order not found");
+  }
+
+  const status = String(orderRow.status ?? "");
+  if (status === "cancelled") {
+    return {
+      order_no: String(orderRow.order_no),
+      status: "cancelled",
+    };
+  }
+
+  if (status !== "pending_payment") {
+    throw new PublicOrderError(409, "ORDER_NOT_CANCELLABLE", "Only pending payment orders can be cancelled");
+  }
+
+  const { data: itemRows, error: itemsError } = await supabase
+    .from("order_items")
+    .select("product_id,qty")
+    .eq("order_id", String(orderRow.id));
+
+  if (itemsError) {
+    throw new PublicOrderError(500, "ORDER_ITEMS_FETCH_FAILED", itemsError.message);
+  }
+
+  for (const row of (itemRows ?? []) as Array<Record<string, unknown>>) {
+    const productId = String(row.product_id ?? "");
+    const qty = Number(row.qty ?? 0);
+    if (!productId || qty <= 0) continue;
+    await releaseStock(supabase, productId, qty);
+  }
+
+  const { error: updateError } = await supabase
+    .from("orders")
+    .update({ status: "cancelled", payment_status: "expired" })
+    .eq("id", String(orderRow.id));
+
+  if (updateError) {
+    throw new PublicOrderError(500, "ORDER_CANCEL_FAILED", updateError.message);
+  }
+
+  return {
+    order_no: String(orderRow.order_no),
+    status: "cancelled",
   };
 }

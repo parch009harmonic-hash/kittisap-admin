@@ -1,7 +1,5 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-
 type SaveStatePopupProps = {
   isSaving: boolean;
   isSuccess: boolean;
@@ -15,23 +13,7 @@ export default function SaveStatePopup({
   savingText,
   successText,
 }: SaveStatePopupProps) {
-  const [showSuccess, setShowSuccess] = useState(false);
-  const prevSuccess = useRef(false);
-
-  useEffect(() => {
-    if (isSuccess && !prevSuccess.current) {
-      setShowSuccess(true);
-      const timer = window.setTimeout(() => setShowSuccess(false), 1400);
-      prevSuccess.current = true;
-      return () => window.clearTimeout(timer);
-    }
-    if (!isSuccess) {
-      prevSuccess.current = false;
-    }
-    return;
-  }, [isSuccess]);
-
-  if (!isSaving && !showSuccess) {
+  if (!isSaving && !isSuccess) {
     return null;
   }
 

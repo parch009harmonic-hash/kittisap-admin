@@ -63,6 +63,7 @@ export async function listPublicProducts(input?: {
   q?: string;
   category?: string;
   featuredOnly?: boolean;
+  includeTotal?: boolean;
   page?: number;
   pageSize?: number;
 }): Promise<{
@@ -82,12 +83,13 @@ export async function listPublicProducts(input?: {
   // category is reserved for upcoming category schema.
   void input?.category;
   const featuredOnly = Boolean(input?.featuredOnly);
+  const includeTotal = input?.includeTotal ?? true;
 
   let query = supabase
     .from("products")
     .select(
       "id,sku,slug,title_th,title_en,title_lo,description_th,description_en,description_lo,price,stock,status,is_featured,created_at",
-      { count: "planned" },
+      includeTotal ? { count: "planned" } : undefined,
     )
     .eq("status", "active")
     .order("created_at", { ascending: false })
@@ -103,7 +105,7 @@ export async function listPublicProducts(input?: {
   const queryResult = await query;
   const data = queryResult.data as unknown[] | null;
   const error = queryResult.error;
-  const count = queryResult.count;
+  const count = includeTotal ? queryResult.count : null;
 
   if (error) {
     throw new PublicProductsError("PRODUCTS_FETCH_FAILED", asErrorMessage(error, "Failed to fetch products"));
@@ -137,7 +139,7 @@ export async function listPublicProducts(input?: {
     cover_url: coverByProductId.get(row.id) ?? null,
   }));
 
-  const total = count ?? 0;
+  const total = count ?? items.length;
   return {
     items,
     total,

@@ -8,6 +8,7 @@ export type CustomerProfilePayload = {
   id: string;
   full_name: string;
   phone: string;
+  address?: string;
 };
 
 function isMissingProfileColumnError(error: unknown) {
@@ -62,18 +63,26 @@ function guessPhone(user: User) {
     || asString(user.phone);
 }
 
-export function toCustomerProfilePayload(user: User, input?: { fullName?: string; phone?: string }): CustomerProfilePayload {
+function guessAddress(user: User) {
+  return asString(user.user_metadata?.address)
+    || asString(user.user_metadata?.shipping_address)
+    || asString(user.user_metadata?.location);
+}
+
+export function toCustomerProfilePayload(user: User, input?: { fullName?: string; phone?: string; address?: string }): CustomerProfilePayload {
   const fullName = asString(input?.fullName) || guessFullName(user);
   const phone = asString(input?.phone) || guessPhone(user);
+  const address = asString(input?.address) || guessAddress(user);
 
   return {
     id: user.id,
     full_name: fullName,
     phone,
+    address,
   };
 }
 
-export async function upsertCustomerProfileForSessionUser(input?: { fullName?: string; phone?: string }) {
+export async function upsertCustomerProfileForSessionUser(input?: { fullName?: string; phone?: string; address?: string }) {
   const supabase = await getSupabaseServerClient();
   const { data, error } = await supabase.auth.getUser();
   if (error || !data.user) {
@@ -81,12 +90,19 @@ export async function upsertCustomerProfileForSessionUser(input?: { fullName?: s
   }
 
   const payload = toCustomerProfilePayload(data.user, input);
-  const { error: upsertError } = await supabase
-    .from("customer_profiles")
-    .upsert(payload, { onConflict: "id" });
+  const upsertAttempt = await supabase.from("customer_profiles").upsert(payload, { onConflict: "id" });
 
-  if (upsertError) {
-    throw new Error(upsertError.message);
+  if (upsertAttempt.error) {
+    if (!isMissingProfileColumnError(upsertAttempt.error)) {
+      throw new Error(upsertAttempt.error.message);
+    }
+
+    // Fallback for environments where `address` column is not deployed yet.
+    const fallbackPayload = { id: payload.id, full_name: payload.full_name, phone: payload.phone };
+    const fallbackAttempt = await supabase.from("customer_profiles").upsert(fallbackPayload, { onConflict: "id" });
+    if (fallbackAttempt.error) {
+      throw new Error(fallbackAttempt.error.message);
+    }
   }
 
   await upsertCustomerRoleProfile(data.user.id);
@@ -94,6 +110,6 @@ export async function upsertCustomerProfileForSessionUser(input?: { fullName?: s
   return payload;
 }
 
-export async function upsertCustomerProfileAndRoleForSessionUser(input?: { fullName?: string; phone?: string }) {
+export async function upsertCustomerProfileAndRoleForSessionUser(input?: { fullName?: string; phone?: string; address?: string }) {
   return upsertCustomerProfileForSessionUser(input);
 }

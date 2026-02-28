@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { AdminLocale } from "../../../../lib/i18n/admin";
@@ -12,7 +13,6 @@ import { AdminTable } from "../AdminTable";
 type ProductsTableClientProps = {
   products: Product[];
   onDelete: (formData: FormData) => Promise<void>;
-  onToggleFeatured: (formData: FormData) => Promise<void>;
   locale: AdminLocale;
 };
 
@@ -21,10 +21,13 @@ function statusClass(status: string) {
   return "bg-slate-100 text-slate-700";
 }
 
-export function ProductsTableClient({ products, onDelete, onToggleFeatured, locale }: ProductsTableClientProps) {
+export function ProductsTableClient({ products, onDelete, locale }: ProductsTableClientProps) {
+  const router = useRouter();
   const formsRef = useRef<Map<string, HTMLFormElement>>(new Map());
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [mobileLayout, setMobileLayout] = useState(false);
+  const [featuredById, setFeaturedById] = useState<Record<string, boolean>>({});
+  const [pendingFeaturedById, setPendingFeaturedById] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const media = window.matchMedia("(max-width: 767px)");
@@ -45,6 +48,57 @@ export function ProductsTableClient({ products, onDelete, onToggleFeatured, loca
       window.removeEventListener("resize", updateMode);
     };
   }, []);
+
+  useEffect(() => {
+    const next: Record<string, boolean> = {};
+    for (const product of products) {
+      next[product.id] = Boolean(product.is_featured);
+    }
+    setFeaturedById(next);
+  }, [products]);
+
+  function handleToggleFeatured(product: Product) {
+    if (pendingFeaturedById[product.id]) return;
+    const current = featuredById[product.id] ?? Boolean(product.is_featured);
+    const next = !current;
+
+    setFeaturedById((prev) => ({ ...prev, [product.id]: next }));
+    setPendingFeaturedById((prev) => ({ ...prev, [product.id]: true }));
+
+    void (async () => {
+      try {
+        const response = await fetch(`/api/admin/products/featured?t=${Date.now()}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+          cache: "no-store",
+          body: JSON.stringify({ id: product.id, isFeatured: next }),
+        });
+
+        const data = (await response.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+        if (!response.ok || !data?.ok) {
+          throw new Error(data?.error || "Failed to update featured state");
+        }
+
+        if (typeof window !== "undefined") {
+          const ts = Date.now().toString();
+          window.localStorage.setItem("kittisap_featured_updated_at", ts);
+          try {
+            const channel = new BroadcastChannel("kittisap-sync");
+            channel.postMessage({ type: "featured-products-updated", ts: Number(ts) });
+            channel.close();
+          } catch {
+            // BroadcastChannel is not available in some browsers.
+          }
+        }
+
+        router.refresh();
+      } catch {
+        setFeaturedById((prev) => ({ ...prev, [product.id]: current }));
+      } finally {
+        setPendingFeaturedById((prev) => ({ ...prev, [product.id]: false }));
+      }
+    })();
+  }
 
   if (products.length === 0) {
     return (
@@ -112,22 +166,28 @@ export function ProductsTableClient({ products, onDelete, onToggleFeatured, loca
                   </span>
                 </td>
                 <td className="px-5 py-3">
-                  <form action={onToggleFeatured} className="inline-flex items-center">
-                    <input type="hidden" name="id" value={product.id} />
-                    <input type="hidden" name="is_featured" value={product.is_featured ? "0" : "1"} />
-                    <label className="inline-flex cursor-pointer items-center gap-2 text-xs text-slate-700">
-                      <input
-                        type="checkbox"
-                        checked={product.is_featured}
-                        onChange={(event) => {
-                          const form = event.currentTarget.form;
-                          if (form) form.requestSubmit();
-                        }}
-                        className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                      />
-                      <span>{locale === "th" ? "แนะนำ" : "Featured"}</span>
-                    </label>
-                  </form>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleFeatured(product)}
+                    disabled={Boolean(pendingFeaturedById[product.id])}
+                    aria-pressed={featuredById[product.id] ?? Boolean(product.is_featured)}
+                    className={`inline-flex min-h-10 min-w-[96px] items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition ${
+                      featuredById[product.id] ?? Boolean(product.is_featured)
+                        ? "border-blue-300 bg-blue-50 text-blue-700"
+                        : "border-slate-300 bg-white text-slate-600"
+                    } disabled:cursor-not-allowed`}
+                  >
+                    <span
+                      className={`inline-flex h-5 w-5 items-center justify-center rounded border ${
+                        featuredById[product.id] ?? Boolean(product.is_featured)
+                          ? "border-blue-600 bg-blue-600 text-white"
+                          : "border-slate-300 bg-white text-transparent"
+                      }`}
+                    >
+                      ✓
+                    </span>
+                    <span>{locale === "th" ? "แนะนำ" : "Featured"}</span>
+                  </button>
                 </td>
                 <td className="px-5 py-3">
                   <div className="flex items-center gap-2">

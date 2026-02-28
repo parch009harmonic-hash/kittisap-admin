@@ -108,7 +108,14 @@ export function OrderNowButton({ productId, disabled = false, className = "", la
       params.set("promptpay_url", payload.data.promptpay_url);
       window.location.href = `/checkout?${params.toString()}`;
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to create order";
+      const raw = error instanceof Error ? error.message : "Failed to create order";
+      const message = raw.toLowerCase().includes("product not found")
+        ? locale === "th"
+          ? "ไม่พบสินค้านี้ในระบบล่าสุด กรุณารีเฟรชหน้าแล้วลองใหม่"
+          : locale === "lo"
+            ? "ບໍ່ພົບສິນຄ້ານີ້ໃນລະບົບລ່າສຸດ ກະລຸນາໂຫຼດໜ້າໃໝ່ແລ້ວລອງອີກຄັ້ງ"
+            : "This product is no longer available. Please refresh and try again."
+        : raw;
       alert(message);
     } finally {
       setLoading(false);

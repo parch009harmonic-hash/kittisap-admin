@@ -69,7 +69,9 @@ export function AddToCartButton({
         alert(
           locale === "th"
             ? "ต้องสมัครสมาชิกหรือเข้าสู่ระบบก่อน จึงจะสั่งซื้อสินค้าได้"
-            : "Please register or sign in before ordering products.",
+            : locale === "lo"
+              ? "ກະລຸນາສະໝັກສະມາຊິກ ຫຼື ເຂົ້າລະບົບກ່ອນສັ່ງຊື້"
+              : "Please register or sign in before ordering products.",
         );
         window.location.href = withLocale(locale, "/auth/login");
         return;
@@ -84,7 +86,13 @@ export function AddToCartButton({
         coverUrl: productCoverUrl,
         qty: 1,
       });
-      setNotice(locale === "th" ? "เพิ่มสินค้าในตะกร้าแล้ว" : "Item added to cart.");
+      setNotice(
+        locale === "th"
+          ? "เพิ่มสินค้าในตะกร้าแล้ว"
+          : locale === "lo"
+            ? "ເພີ່ມສິນຄ້າໃສ່ກະຕ່າແລ້ວ"
+            : "Item added to cart.",
+      );
     } finally {
       setBusy(false);
     }
@@ -102,7 +110,9 @@ export function AddToCartButton({
             : "bg-amber-400/25 text-amber-100 hover:bg-amber-300/35"
         }`}
       >
-        {busy ? busyLabel ?? (locale === "th" ? "กำลังเพิ่ม..." : "Adding...") : label ?? "Add to Cart"}
+        {busy
+          ? busyLabel ?? (locale === "th" ? "กำลังเพิ่ม..." : locale === "lo" ? "ກຳລັງເພີ່ມ..." : "Adding...")
+          : label ?? (locale === "lo" ? "ໃສ່ກະຕ່າ" : "Add to Cart")}
       </button>
       {showNotice && notice ? <p className="text-xs text-amber-200/80">{notice}</p> : null}
     </div>

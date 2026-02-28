@@ -41,11 +41,15 @@ function normalizeIntent(raw: string | null): "admin" | "customer" {
   return raw?.toLowerCase() === "customer" ? "customer" : "admin";
 }
 
-function normalizeLocale(raw: string | null): "th" | "en" {
-  return raw?.toLowerCase() === "en" ? "en" : "th";
+function normalizeLocale(raw: string | null): "th" | "en" | "lo" {
+  const locale = raw?.toLowerCase();
+  if (locale === "en" || locale === "lo") {
+    return locale;
+  }
+  return "th";
 }
 
-function customerPath(locale: "th" | "en", path: string) {
+function customerPath(locale: "th" | "en" | "lo", path: string) {
   if (locale === "th") return path;
   return `/${locale}${path}`;
 }

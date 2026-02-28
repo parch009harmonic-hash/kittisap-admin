@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import type { AppLocale } from "../../../lib/i18n/locale";
+import { AddToCartButton } from "./AddToCartButton";
 import { OrderNowButton } from "./OrderNowButton";
 
 type CatalogItem = {
@@ -20,7 +21,10 @@ type CatalogItem = {
 type CatalogText = {
   stock: string;
   outOfStockLabel: string;
+  addToCart: string;
+  goToCart: string;
   orderNow: string;
+  overview: string;
   viewDetails: string;
   close: string;
   noImage: string;
@@ -145,7 +149,7 @@ export function ProductsCatalogInteractiveGrid({
               </div>
 
               <div className="flex flex-col p-6 md:min-h-[430px]">
-                <p className="text-xs uppercase tracking-[0.18em] text-amber-300">{locale === "th" ? "รายละเอียดสินค้า" : "Product Overview"}</p>
+                <p className="text-xs uppercase tracking-[0.18em] text-amber-300">{text.overview}</p>
                 <h3 className="mt-2 text-3xl font-black tracking-tight text-slate-50">{activeItem.title}</h3>
                 <p className="mt-3 text-sm leading-6 text-slate-300">{activeItem.description}</p>
 
@@ -157,6 +161,28 @@ export function ProductsCatalogInteractiveGrid({
                 </div>
 
                 <div className="mt-auto space-y-3 pt-6">
+                  <div className="grid grid-cols-2 gap-2">
+                    <AddToCartButton
+                      locale={locale}
+                      productId={activeItem.id}
+                      productSlug={activeItem.slug}
+                      productTitle={activeItem.title}
+                      productPrice={activeItem.price}
+                      productStock={activeItem.stock}
+                      productCoverUrl={activeItem.coverUrl}
+                      disabled={activeItem.stock <= 0}
+                      showNotice={false}
+                      label={text.addToCart}
+                      className="border border-amber-300/45 bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-200 text-slate-900 shadow-[0_12px_30px_rgba(245,158,11,0.35)] hover:translate-y-[-1px]"
+                    />
+                    <Link
+                      href={withLocale(locale, "/cart", useLocalePrefix)}
+                      className="app-press inline-flex w-full items-center justify-center rounded-xl border border-slate-400/30 bg-white/10 px-4 py-2.5 text-sm font-semibold text-slate-100 hover:bg-white/15"
+                    >
+                      {text.goToCart}
+                    </Link>
+                  </div>
+
                   <OrderNowButton
                     locale={locale}
                     productId={activeItem.id}
@@ -164,7 +190,7 @@ export function ProductsCatalogInteractiveGrid({
                     label={activeItem.stock > 0 ? text.orderNow : text.outOfStockLabel}
                     className={`inline-flex w-full items-center justify-center rounded-2xl px-5 py-3 text-sm font-extrabold tracking-[0.08em] transition ${
                       activeItem.stock > 0
-                        ? "border border-amber-300/45 bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-200 text-slate-900 shadow-[0_12px_30px_rgba(245,158,11,0.35)] hover:translate-y-[-1px]"
+                        ? "border border-slate-400/30 bg-white/10 text-slate-100 hover:bg-white/15"
                         : "cursor-not-allowed border border-slate-500/40 bg-slate-700/40 text-slate-300"
                     }`}
                   />

@@ -1,25 +1,25 @@
-﻿{
-  "name": "Kittisap Admin",
-  "short_name": "Kittisap",
-  "description": "Kittisap Admin Dashboard",
-  "start_url": "/admin",
-  "scope": "/",
-  "display": "standalone",
-  "background_color": "#0b1220",
-  "theme_color": "#2563eb",
-  "lang": "th",
-  "icons": [
-    {
-      "src": "https://zbedxvzrbotwngxaktgj.supabase.co/storage/v1/object/sign/Kittisap%20Admin/products/image.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV8wYTM3NDc3Mi1jM2RhLTQ5Y2ItOGMzNy1kODkyYzRlOWIxZWEiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJLaXR0aXNhcCBBZG1pbi9wcm9kdWN0cy9pbWFnZS5wbmciLCJpYXQiOjE3NzE1NDE1NzYsImV4cCI6MTgwMzA3NzU3Nn0.CFHLbwoS0l_k60tIXWfF3-7frVbfSyN2Cvo02JsDUqo",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "https://zbedxvzrbotwngxaktgj.supabase.co/storage/v1/object/sign/Kittisap%20Admin/products/image.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV8wYTM3NDc3Mi1jM2RhLTQ5Y2ItOGMzNy1kODkyYzRlOWIxZWEiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJLaXR0aXNhcCBBZG1pbi9wcm9kdWN0cy9pbWFnZS5wbmciLCJpYXQiOjE3NzE1NDE1NzYsImV4cCI6MTgwMzA3NzU3Nn0.CFHLbwoS0l_k60tIXWfF3-7frVbfSyN2Cvo02JsDUqo",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    }
-  ]
+{
+    "name":  "Kittisap Admin",
+    "short_name":  "Kittisap Admin",
+    "description":  "Kittisap Admin Dashboard",
+    "start_url":  "/admin",
+    "scope":  "/",
+    "display":  "standalone",
+    "background_color":  "#0b1220",
+    "theme_color":  "#2563eb",
+    "lang":  "th",
+    "icons":  [
+                  {
+                      "src":  "/icons/pwa-icon-192.png",
+                      "sizes":  "192x192",
+                      "type":  "image/png",
+                      "purpose":  "any"
+                  },
+                  {
+                      "src":  "/icons/pwa-icon-512.png",
+                      "sizes":  "512x512",
+                      "type":  "image/png",
+                      "purpose":  "any"
+                  }
+              ]
 }

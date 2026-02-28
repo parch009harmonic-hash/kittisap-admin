@@ -9,6 +9,10 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "zbedxvzrbotwngxaktgj.supabase.co",
       },
+      {
+        protocol: "https",
+        hostname: "api.qrserver.com",
+      },
     ],
   },
   turbopack: {

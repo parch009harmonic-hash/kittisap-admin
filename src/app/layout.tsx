@@ -1,4 +1,4 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import {
   Inter,
   Kanit,
@@ -36,15 +36,15 @@ const notoSansLao = Noto_Sans_Lao({
 
 export const metadata: Metadata = {
   title: {
-    default: "Kittisap",
-    template: "%s | Kittisap",
+    default: "Kittisap Admin",
+    template: "%s | Kittisap Admin",
   },
   description: "Kittisap customer website and commerce platform",
-  manifest: "/manifest.webmanifest",
-  applicationName: "Kittisap",
+  manifest: "/manifest.webmanifest?v=20260225-3",
+  applicationName: "Kittisap Admin",
   icons: {
-    icon: "/icon.png",
-    shortcut: "/icon.png",
+    icon: "/icons/pwa-icon-512.png",
+    shortcut: "/icons/pwa-icon-512.png",
     apple: "/apple-icon.png",
   },
 };
@@ -67,3 +67,4 @@ export default async function RootLayout({
     </html>
   );
 }
+
