@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import type { AppLocale } from "../../../lib/i18n/locale";
@@ -117,8 +117,10 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
   const [resendingConfirm, setResendingConfirm] = useState(false);
   const [pendingConfirmEmail, setPendingConfirmEmail] = useState<string | null>(null);
   const [showGooglePendingModal, setShowGooglePendingModal] = useState(false);
+  const [googlePendingClosing, setGooglePendingClosing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const googlePendingCloseTimer = useRef<NodeJS.Timeout | null>(null);
 
   function isEmailNotConfirmedError(input: string) {
     return input.toLowerCase().includes("email not confirmed");
@@ -150,6 +152,32 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
       setError("ไม่พบ OAuth code ใน callback");
     }
   }, [email]);
+
+  useEffect(() => {
+    return () => {
+      if (googlePendingCloseTimer.current) {
+        clearTimeout(googlePendingCloseTimer.current);
+      }
+    };
+  }, []);
+
+  function openGooglePendingModal() {
+    if (googlePendingCloseTimer.current) {
+      clearTimeout(googlePendingCloseTimer.current);
+      googlePendingCloseTimer.current = null;
+    }
+    setGooglePendingClosing(false);
+    setShowGooglePendingModal(true);
+  }
+
+  function closeGooglePendingModal() {
+    setGooglePendingClosing(true);
+    googlePendingCloseTimer.current = setTimeout(() => {
+      setShowGooglePendingModal(false);
+      setGooglePendingClosing(false);
+      googlePendingCloseTimer.current = null;
+    }, 220);
+  }
 
   async function handlePasswordAuth(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -259,7 +287,7 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
   async function handleGoogleAuth() {
     const googleAuthEnabled = process.env.NEXT_PUBLIC_ENABLE_GOOGLE_AUTH === "true";
     if (!googleAuthEnabled) {
-      setShowGooglePendingModal(true);
+      openGooglePendingModal();
       return;
     }
 
@@ -401,21 +429,34 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
 
       {showGooglePendingModal ? (
         <div
-          className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 px-4"
-          onClick={() => setShowGooglePendingModal(false)}
+          className={`fixed inset-0 z-[120] flex items-center justify-center px-4 transition-opacity duration-200 ${googlePendingClosing ? "bg-black/0 opacity-0" : "bg-black/60 opacity-100"}`}
+          onClick={closeGooglePendingModal}
           role="dialog"
           aria-modal="true"
         >
           <div
-            className="w-full max-w-md rounded-2xl border border-amber-500/40 bg-zinc-950 p-5 text-amber-50 shadow-[0_18px_60px_rgba(0,0,0,0.5)] transition duration-200"
+            className={`w-full max-w-md rounded-2xl border border-amber-500/45 bg-[radial-gradient(circle_at_top,_#312004_0%,_#130f08_42%,_#090909_100%)] p-5 text-amber-50 shadow-[0_24px_80px_rgba(0,0,0,0.56)] transition duration-200 ${googlePendingClosing ? "scale-95 opacity-0" : "scale-100 opacity-100"}`}
             onClick={(event) => event.stopPropagation()}
           >
-            <h2 className="text-xl font-semibold text-amber-300">{t.googlePendingTitle}</h2>
+            <div className="mb-4 flex items-center gap-3">
+              <span className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-amber-400/40 bg-amber-500/15 text-lg">
+                <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
+                  <path fill="#EA4335" d="M12 10.2v4h5.65c-.24 1.29-.97 2.39-2.06 3.12l3.33 2.58c1.94-1.79 3.08-4.43 3.08-7.58 0-.73-.07-1.43-.19-2.1H12z" />
+                  <path fill="#4285F4" d="M12 22c2.78 0 5.1-.92 6.8-2.5l-3.33-2.58c-.92.62-2.1.98-3.47.98-2.67 0-4.92-1.8-5.73-4.22H2.84v2.65A9.99 9.99 0 0 0 12 22z" />
+                  <path fill="#FBBC05" d="M6.27 13.68a6 6 0 0 1 0-3.36V7.67H2.84a9.99 9.99 0 0 0 0 8.66l3.43-2.65z" />
+                  <path fill="#34A853" d="M12 6.1c1.51 0 2.87.52 3.94 1.53l2.95-2.95C17.09 2.98 14.77 2 12 2a9.99 9.99 0 0 0-9.16 5.67l3.43 2.65C7.08 7.9 9.33 6.1 12 6.1z" />
+                </svg>
+              </span>
+              <div>
+                <h2 className="text-lg font-semibold text-amber-300">{t.googlePendingTitle}</h2>
+                <p className="mt-1 text-xs uppercase tracking-[0.2em] text-amber-200/60">Google Auth</p>
+              </div>
+            </div>
             <p className="mt-2 text-sm leading-relaxed text-amber-100/80">{t.googlePendingDescription}</p>
             <div className="mt-5 flex justify-end">
               <button
                 type="button"
-                onClick={() => setShowGooglePendingModal(false)}
+                onClick={closeGooglePendingModal}
                 className="inline-flex h-10 items-center justify-center rounded-full border border-amber-400/75 bg-gradient-to-r from-amber-500 to-yellow-400 px-5 text-sm font-semibold text-zinc-900 transition hover:brightness-105 active:scale-95"
               >
                 {t.googlePendingClose}
