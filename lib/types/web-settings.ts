@@ -13,6 +13,7 @@
   minHeightPx: number;
   eyebrowFontSizePx: number;
   titleFontSizePx: number;
+  titleFontScaleThaiPercent: number;
   descriptionFontSizePx: number;
   textEffect: "none" | "shadow" | "glow" | "gradient";
   imageFrameEnabled: boolean;
@@ -137,10 +138,11 @@ export function getDefaultWebBannerSettings(): WebBannerSettings {
     backgroundTo: "#020617",
     imageUrl: null,
     contentAlign: "left",
-    autoHeight: false,
+    autoHeight: true,
     minHeightPx: 340,
     eyebrowFontSizePx: 11,
     titleFontSizePx: 56,
+    titleFontScaleThaiPercent: 92,
     descriptionFontSizePx: 18,
     textEffect: "none",
     imageFrameEnabled: true,

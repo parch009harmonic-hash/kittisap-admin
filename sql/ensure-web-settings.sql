@@ -12,10 +12,11 @@ create table if not exists public.web_settings (
   banner_image_url text null,
   banner_show_buttons boolean not null default true,
   banner_content_align text not null default 'left',
-  banner_auto_height boolean not null default false,
+  banner_auto_height boolean not null default true,
   banner_min_height_px integer not null default 340,
   banner_eyebrow_font_size_px integer not null default 11,
   banner_title_font_size_px integer not null default 56,
+  banner_title_font_scale_thai_percent integer not null default 92,
   banner_description_font_size_px integer not null default 18,
   banner_text_effect text not null default 'none',
   banner_image_frame_enabled boolean not null default true,
@@ -67,6 +68,7 @@ create table if not exists public.web_settings (
   constraint web_settings_banner_min_height_px_check check (banner_min_height_px between 220 and 720),
   constraint web_settings_banner_eyebrow_font_size_px_check check (banner_eyebrow_font_size_px between 10 and 24),
   constraint web_settings_banner_title_font_size_px_check check (banner_title_font_size_px between 24 and 96),
+  constraint web_settings_banner_title_font_scale_thai_percent_check check (banner_title_font_scale_thai_percent between 70 and 110),
   constraint web_settings_banner_description_font_size_px_check check (banner_description_font_size_px between 12 and 36),
   constraint web_settings_banner_text_effect_check check (banner_text_effect in ('none','shadow','glow','gradient')),
   constraint web_settings_banner_image_frame_style_check check (banner_image_frame_style in ('soft','glass','neon','minimal')),
@@ -120,6 +122,14 @@ alter table public.web_settings
   add column if not exists homepage_brand_guarantee_title text not null default 'แบรนด์การันตีมาตรฐาน / ชั้นนำประเทศไทย';
 alter table public.web_settings
   add column if not exists homepage_brand_guarantee_subtitle text not null default 'พันธมิตรและมาตรฐานที่เราได้รับความไว้วางใจ';
+alter table public.web_settings
+  alter column banner_auto_height set default true;
+alter table public.web_settings
+  add column if not exists banner_title_font_scale_thai_percent integer not null default 92;
+
+update public.web_settings
+set banner_auto_height = true
+where id = 'default';
 
 create or replace function public.touch_web_settings_updated_at()
 returns trigger

@@ -433,6 +433,10 @@ export async function MarketingLandingPage({
       : bannerSettings.textEffect === "glow"
         ? { textShadow: "0 0 24px rgba(56,189,248,0.5)" }
         : undefined;
+  const heroTitleMaxPx =
+    locale === "th"
+      ? Math.round(bannerSettings.titleFontSizePx * (bannerSettings.titleFontScaleThaiPercent / 100))
+      : bannerSettings.titleFontSizePx;
 
   return (
     <Frame showOuterFrame={showOuterFrame}>
@@ -454,23 +458,27 @@ export async function MarketingLandingPage({
         >
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(closest-side,rgba(245,158,11,0.26),transparent_55%),radial-gradient(closest-side,rgba(59,130,246,0.16),transparent_62%),linear-gradient(120deg,transparent_35%,rgba(255,255,255,0.08)_45%,transparent_55%)] opacity-70" />
 
-          <div className="relative grid gap-5 p-6 md:grid-cols-[1.15fr_0.85fr] md:p-8">
+          <div className="relative grid gap-5 p-6 md:p-8 lg:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.75fr)] lg:gap-6">
             <div
-              className={`flex flex-col ${contentAlignClass}`}
-              style={{ minHeight: bannerSettings.autoHeight ? undefined : `${bannerSettings.minHeightPx}px` }}
+              className={`flex max-w-full flex-col ${contentAlignClass}`}
+              style={{
+                minHeight: bannerSettings.autoHeight
+                  ? undefined
+                  : `clamp(240px, 34vw, ${bannerSettings.minHeightPx}px)`,
+              }}
             >
               <p className="inline-flex items-center gap-2 uppercase tracking-[0.2em] text-amber-200" style={{ fontSize: `${bannerSettings.eyebrowFontSizePx}px`, fontWeight: 800 }}>{localizedHeroEyebrow}</p>
               <h1
-                className={`mt-2 leading-tight tracking-tight md:text-5xl ${titleEffectClass}`}
+                className={`mt-2 max-w-[20ch] leading-tight tracking-tight md:max-w-[18ch] md:text-5xl ${titleEffectClass}`}
                 style={{
-                  fontSize: `clamp(30px,3.8vw,${bannerSettings.titleFontSizePx}px)`,
+                  fontSize: `clamp(30px,3.8vw,${heroTitleMaxPx}px)`,
                   color: bannerSettings.textEffect === "gradient" ? undefined : "#f8fafc",
                   ...titleEffectStyle,
                 }}
               >
                 {localizedHeroTitle}
               </h1>
-              <p className="mt-3 max-w-3xl text-slate-200/80" style={{ fontSize: `clamp(14px,1.6vw,${bannerSettings.descriptionFontSizePx}px)` }}>{localizedHeroDesc}</p>
+              <p className="mt-3 max-w-[58ch] text-slate-200/80" style={{ fontSize: `clamp(14px,1.6vw,${bannerSettings.descriptionFontSizePx}px)` }}>{localizedHeroDesc}</p>
               {bannerSettings.showButtons ? (
                 <div className={`mt-5 flex w-full flex-wrap gap-2 ${buttonAlignClass}`}>
                   <Link href={productsPath} className="inline-flex rounded-full border border-amber-400/40 bg-amber-500/15 px-4 py-2 text-xs font-extrabold text-amber-200">{localizedPrimaryButton}</Link>

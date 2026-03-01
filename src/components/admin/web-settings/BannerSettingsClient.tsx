@@ -52,6 +52,7 @@ export default function BannerSettingsClient({ locale, initialSettings, bootstra
             minHeight: "ความสูงแบนเนอร์ขั้นต่ำ (px)",
             eyebrowFontSize: "ขนาดหัวข้อย่อย (px)",
             titleFontSize: "ขนาดหัวข้อหลัก (px)",
+            titleFontScaleThaiPercent: "สเกลหัวข้อภาษาไทย (%)",
             descriptionFontSize: "ขนาดคำอธิบาย (px)",
             textEffect: "ลูกเล่นข้อความ",
             effectNone: "ไม่มี",
@@ -117,6 +118,7 @@ export default function BannerSettingsClient({ locale, initialSettings, bootstra
             minHeight: "Banner Min Height (px)",
             eyebrowFontSize: "Eyebrow Size (px)",
             titleFontSize: "Title Size (px)",
+            titleFontScaleThaiPercent: "Thai Title Scale (%)",
             descriptionFontSize: "Description Size (px)",
             textEffect: "Text Effect",
             effectNone: "None",
@@ -246,6 +248,16 @@ export default function BannerSettingsClient({ locale, initialSettings, bootstra
       : values.textEffect === "glow"
         ? { textShadow: "0 0 20px rgba(59,130,246,0.5)" }
         : undefined;
+  const previewTitleSizePx = Math.max(
+    24,
+    Math.min(
+      Math.round(
+        values.titleFontSizePx
+        * (locale === "th" ? values.titleFontScaleThaiPercent / 100 : 1),
+      ),
+      56,
+    ),
+  );
 
   return (
     <section className="space-y-6">
@@ -291,7 +303,7 @@ export default function BannerSettingsClient({ locale, initialSettings, bootstra
                       <p
                         className={`mt-2 font-black md:text-2xl ${titleEffectClass}`}
                         style={{
-                          fontSize: `${Math.max(24, Math.min(values.titleFontSizePx, 56))}px`,
+                          fontSize: `${previewTitleSizePx}px`,
                           color: values.textEffect === "gradient" ? undefined : "#f8fafc",
                           ...titleEffectStyle,
                         }}
@@ -363,6 +375,7 @@ export default function BannerSettingsClient({ locale, initialSettings, bootstra
               <Field label={text.minHeight}><input type="number" min={220} max={720} value={values.minHeightPx} onChange={(e) => setField("minHeightPx", Number(e.target.value || 220))} className="input-base" disabled={values.autoHeight} /></Field>
               <Field label={text.eyebrowFontSize}><input type="number" min={10} max={24} value={values.eyebrowFontSizePx} onChange={(e) => setField("eyebrowFontSizePx", Number(e.target.value || 11))} className="input-base" /></Field>
               <Field label={text.titleFontSize}><input type="number" min={24} max={96} value={values.titleFontSizePx} onChange={(e) => setField("titleFontSizePx", Number(e.target.value || 56))} className="input-base" /></Field>
+              <Field label={text.titleFontScaleThaiPercent}><input type="number" min={70} max={110} value={values.titleFontScaleThaiPercent} onChange={(e) => setField("titleFontScaleThaiPercent", Number(e.target.value || 92))} className="input-base" /></Field>
               <Field label={text.descriptionFontSize}><input type="number" min={12} max={36} value={values.descriptionFontSizePx} onChange={(e) => setField("descriptionFontSizePx", Number(e.target.value || 18))} className="input-base" /></Field>
               <ColorField label={text.bgFrom} value={values.backgroundFrom} onChange={(v) => setField("backgroundFrom", v)} />
               <ColorField label={text.bgTo} value={values.backgroundTo} onChange={(v) => setField("backgroundTo", v)} />

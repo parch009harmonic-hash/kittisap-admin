@@ -36,10 +36,11 @@ const WebBannerInputSchema = z.object({
   imageUrl: z.string().trim().url().nullable().optional(),
   showButtons: z.boolean().default(true),
   contentAlign: z.enum(["left", "center", "right"]).default("left"),
-  autoHeight: z.boolean().default(false),
+  autoHeight: z.boolean().default(true),
   minHeightPx: z.coerce.number().int().min(220).max(720),
   eyebrowFontSizePx: z.coerce.number().int().min(10).max(24),
   titleFontSizePx: z.coerce.number().int().min(24).max(96),
+  titleFontScaleThaiPercent: z.coerce.number().int().min(70).max(110),
   descriptionFontSizePx: z.coerce.number().int().min(12).max(36),
   textEffect: z.enum(["none", "shadow", "glow", "gradient"]).default("none"),
   imageFrameEnabled: z.boolean().default(true),
@@ -175,6 +176,14 @@ function isMissingWebSettingsTable(error: unknown) {
   );
 }
 
+function isMissingBannerThaiScaleColumn(error: unknown) {
+  const message = errorText(error, "").toLowerCase();
+  return (
+    message.includes("banner_title_font_scale_thai_percent")
+    && (message.includes("does not exist") || message.includes("schema cache") || message.includes("column"))
+  );
+}
+
 function mapBanner(row: Record<string, unknown> | null | undefined): WebBannerSettings {
   const defaults = getDefaultWebBannerSettings();
   if (!row) {
@@ -196,6 +205,9 @@ function mapBanner(row: Record<string, unknown> | null | undefined): WebBannerSe
     minHeightPx: Number(row.banner_min_height_px ?? defaults.minHeightPx),
     eyebrowFontSizePx: Number(row.banner_eyebrow_font_size_px ?? defaults.eyebrowFontSizePx),
     titleFontSizePx: Number(row.banner_title_font_size_px ?? defaults.titleFontSizePx),
+    titleFontScaleThaiPercent: Number(
+      row.banner_title_font_scale_thai_percent ?? defaults.titleFontScaleThaiPercent,
+    ),
     descriptionFontSizePx: Number(
       row.banner_description_font_size_px ?? defaults.descriptionFontSizePx,
     ),
@@ -406,6 +418,7 @@ export async function updateWebBannerSettingsApi(input: unknown) {
     banner_min_height_px: parsed.minHeightPx,
     banner_eyebrow_font_size_px: parsed.eyebrowFontSizePx,
     banner_title_font_size_px: parsed.titleFontSizePx,
+    banner_title_font_scale_thai_percent: parsed.titleFontScaleThaiPercent,
     banner_description_font_size_px: parsed.descriptionFontSizePx,
     banner_text_effect: parsed.textEffect,
     banner_image_frame_enabled: parsed.imageFrameEnabled,
@@ -417,11 +430,22 @@ export async function updateWebBannerSettingsApi(input: unknown) {
     updated_by: actor.user.id,
   };
 
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from("web_settings")
     .upsert(payload, { onConflict: "id" })
     .select("*")
     .single();
+
+  if (error && isMissingBannerThaiScaleColumn(error)) {
+    const { banner_title_font_scale_thai_percent: _ignored, ...fallbackPayload } = payload;
+    const retry = await supabase
+      .from("web_settings")
+      .upsert(fallbackPayload, { onConflict: "id" })
+      .select("*")
+      .single();
+    data = retry.data;
+    error = retry.error;
+  }
 
   if (error) {
     if (isMissingWebSettingsTable(error)) {
