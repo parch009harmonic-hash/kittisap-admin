@@ -138,13 +138,23 @@ async function getPromptpayConfig() {
   try {
     const paymentSettings = await getPaymentSettings();
     return {
+      activeQrMode: paymentSettings.activeQrMode,
       phone: String(paymentSettings.promptpayPhone ?? "").trim(),
       baseUrl: String(paymentSettings.promptpayBaseUrl ?? DEFAULT_PROMPTPAY_BASE_URL).trim() || DEFAULT_PROMPTPAY_BASE_URL,
+      bankName: String(paymentSettings.bankName ?? "").trim(),
+      bankAccountNo: String(paymentSettings.bankAccountNo ?? "").trim(),
+      bankAccountName: String(paymentSettings.bankAccountName ?? "").trim(),
+      bankQrImageUrl: String(paymentSettings.bankQrImageUrl ?? "").trim(),
     };
   } catch {
     return {
+      activeQrMode: "promptpay" as const,
       phone: "",
       baseUrl: DEFAULT_PROMPTPAY_BASE_URL,
+      bankName: "",
+      bankAccountNo: "",
+      bankAccountName: "",
+      bankQrImageUrl: "",
     };
   }
 }
@@ -221,12 +231,20 @@ export async function createPublicOrder(input: unknown) {
 
   const promptpayConfig = await getPromptpayConfig();
   const promptpayPhone = promptpayConfig.phone;
-  if (!promptpayPhone) {
-    throw new PublicOrderError(500, "PAYMENT_CONFIG_MISSING", "PromptPay phone is not configured");
-  }
-
   const base = `${promptpayConfig.baseUrl.replace(/\/+$/, "")}/`;
   const promptpayUrl = `${base}${encodeURIComponent(promptpayPhone)}/${encodeURIComponent(formatPromptpayAmount(finalAmount))}`;
+  const isBankQrMode = promptpayConfig.activeQrMode === "bank_qr";
+  const paymentMethod = isBankQrMode ? "bank_transfer_qr" : "promptpay_transfer";
+  const paymentQrImageUrl = isBankQrMode
+    ? promptpayConfig.bankQrImageUrl
+    : `https://api.qrserver.com/v1/create-qr-code/?size=480x480&data=${encodeURIComponent(promptpayUrl)}`;
+
+  if (!isBankQrMode && !promptpayPhone) {
+    throw new PublicOrderError(500, "PAYMENT_CONFIG_MISSING", "PromptPay phone is not configured");
+  }
+  if (isBankQrMode && !promptpayConfig.bankQrImageUrl) {
+    throw new PublicOrderError(500, "PAYMENT_CONFIG_MISSING", "Bank QR image is not configured");
+  }
 
   const reserved: Array<{ productId: string; qty: number }> = [];
 
@@ -244,14 +262,17 @@ export async function createPublicOrder(input: unknown) {
         customer_id: customerId,
         status: "pending_payment",
         payment_status: "unpaid",
-        payment_method: "promptpay_transfer",
+        payment_method: paymentMethod,
         sub_total: subTotal,
         discount_total: discountTotal,
         shipping_fee: shippingFee,
         grand_total: finalAmount,
         coupon_code_snapshot: couponCode || null,
-        promptpay_phone_snapshot: promptpayPhone,
-        promptpay_link_snapshot: promptpayUrl,
+        promptpay_phone_snapshot: promptpayPhone || "",
+        promptpay_link_snapshot: isBankQrMode ? promptpayConfig.bankQrImageUrl : promptpayUrl,
+        bank_name_snapshot: promptpayConfig.bankName,
+        bank_account_no_snapshot: promptpayConfig.bankAccountNo,
+        bank_account_name_snapshot: promptpayConfig.bankAccountName,
         customer_name_snapshot: payload.customer.full_name,
         customer_phone_snapshot: payload.customer.phone,
         customer_email_snapshot: payload.customer.email ?? actor.user.email ?? null,
@@ -281,7 +302,12 @@ export async function createPublicOrder(input: unknown) {
 
     return {
       order_no: String(orderRow.order_no),
-      promptpay_url: promptpayUrl,
+      promptpay_url: isBankQrMode ? "" : promptpayUrl,
+      payment_mode: isBankQrMode ? "bank_qr" : "promptpay",
+      qr_image_url: paymentQrImageUrl,
+      bank_name: promptpayConfig.bankName,
+      bank_account_no: promptpayConfig.bankAccountNo,
+      bank_account_name: promptpayConfig.bankAccountName,
       final_amount: finalAmount,
     };
   } catch (error) {

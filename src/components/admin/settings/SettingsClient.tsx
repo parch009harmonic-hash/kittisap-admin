@@ -7,6 +7,7 @@ import { AdminSettingField, AdminSettings, SessionPolicy, ThemePreset } from "..
 import { parseAdminApiError } from "../api-error";
 import { ConfirmModal } from "../ConfirmModal";
 import { Toast } from "../Toast";
+import { PaymentShortcutSettingItem } from "./PaymentShortcutSettingItem";
 
 type SettingsText = {
   section: string;
@@ -82,7 +83,7 @@ type SettingsSection = {
   subtitle: string;
   iconTone: string;
   iconColor: string;
-  items: Array<{ id: "createUser" | AdminSettingField | "localeSwitch" | "themePreset"; label: string }>;
+  items: Array<{ id: "createUser" | "paymentShortcut" | AdminSettingField | "localeSwitch" | "themePreset"; label: string }>;
 };
 
 type Option = { value: string; label: string };
@@ -323,6 +324,7 @@ export default function SettingsClient({
           { id: "storeName", label: text.storeName },
           { id: "supportPhone", label: text.supportPhone },
           { id: "currency", label: text.currency },
+          { id: "paymentShortcut", label: locale === "th" ? "ข้อมูลร้านค้าและสลิปเงิน" : "Store payment profile" },
         ],
       },
       {
@@ -427,6 +429,13 @@ export default function SettingsClient({
           text={text}
           locale={locale}
           isMobileMode={popupMode}
+          onSuccess={handleUserSuccess}
+          onError={handleUserError}
+        />
+      ) : item.id === "paymentShortcut" ? (
+        <PaymentShortcutSettingItem
+          key={item.id}
+          locale={locale}
           onSuccess={handleUserSuccess}
           onError={handleUserError}
         />

@@ -40,7 +40,7 @@ export async function GET(_request: Request, { params }: OrderDetailRouteProps) 
     const supabase = await getSupabaseServerClient();
     const { data: orderRow, error: orderError } = await supabase
       .from("orders")
-      .select("id,order_no,customer_id,grand_total,status,payment_status,customer_name_snapshot,customer_phone_snapshot,note")
+      .select("id,order_no,customer_id,grand_total,status,payment_status,payment_method,promptpay_phone_snapshot,promptpay_link_snapshot,bank_name_snapshot,bank_account_no_snapshot,bank_account_name_snapshot,customer_name_snapshot,customer_phone_snapshot,note")
       .eq("order_no", orderNo)
       .eq("customer_id", actor.user.id)
       .maybeSingle();
@@ -69,6 +69,12 @@ export async function GET(_request: Request, { params }: OrderDetailRouteProps) 
         grand_total: Number(orderRow.grand_total ?? 0),
         status: String(orderRow.status ?? ""),
         payment_status: String(orderRow.payment_status ?? ""),
+        payment_method: String(orderRow.payment_method ?? ""),
+        promptpay_phone_snapshot: String(orderRow.promptpay_phone_snapshot ?? ""),
+        promptpay_link_snapshot: String(orderRow.promptpay_link_snapshot ?? ""),
+        bank_name_snapshot: String(orderRow.bank_name_snapshot ?? ""),
+        bank_account_no_snapshot: String(orderRow.bank_account_no_snapshot ?? ""),
+        bank_account_name_snapshot: String(orderRow.bank_account_name_snapshot ?? ""),
         customer_full_name: String(orderRow.customer_name_snapshot ?? ""),
         customer_phone: String(orderRow.customer_phone_snapshot ?? ""),
         shipping_address: extractAddressFromNote(orderRow.note),

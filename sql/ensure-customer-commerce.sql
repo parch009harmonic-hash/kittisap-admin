@@ -22,13 +22,54 @@ create table if not exists public.payment_settings (
   promptpay_phone text not null,
   promptpay_base_url text not null default 'https://promptpay.io',
   allow_custom_amount boolean not null default true,
+  active_qr_mode text not null default 'promptpay',
+  bank_code text not null default '',
+  bank_name text not null default '',
+  bank_account_no text not null default '',
+  bank_account_name text not null default '',
+  bank_qr_image_url text not null default '',
   updated_by uuid references auth.users(id) on delete set null,
   updated_at timestamptz not null default now()
 );
 
-insert into public.payment_settings (id, promptpay_phone, promptpay_base_url, allow_custom_amount)
-values ('default', '0843374982', 'https://promptpay.io', true)
+insert into public.payment_settings (
+  id,
+  promptpay_phone,
+  promptpay_base_url,
+  allow_custom_amount,
+  active_qr_mode,
+  bank_code,
+  bank_name,
+  bank_account_no,
+  bank_account_name,
+  bank_qr_image_url
+)
+values ('default', '0843374982', 'https://promptpay.io', true, 'promptpay', '', '', '', '', '')
 on conflict (id) do nothing;
+
+alter table public.payment_settings
+  add column if not exists active_qr_mode text not null default 'promptpay',
+  add column if not exists bank_code text not null default '',
+  add column if not exists bank_name text not null default '',
+  add column if not exists bank_account_no text not null default '',
+  add column if not exists bank_account_name text not null default '',
+  add column if not exists bank_qr_image_url text not null default '';
+
+do $$
+begin
+  if exists (
+    select 1
+    from pg_constraint
+    where conname = 'payment_settings_active_qr_mode_check'
+      and conrelid = 'public.payment_settings'::regclass
+  ) then
+    alter table public.payment_settings drop constraint payment_settings_active_qr_mode_check;
+  end if;
+end $$;
+
+alter table public.payment_settings
+  add constraint payment_settings_active_qr_mode_check
+  check (active_qr_mode in ('promptpay', 'bank_qr'));
 
 insert into storage.buckets (id, name, public)
 values ('payment-slips', 'payment-slips', false)
@@ -123,7 +164,10 @@ end $$;
 alter table public.orders
   add column if not exists customer_name_snapshot text,
   add column if not exists customer_phone_snapshot text,
-  add column if not exists customer_email_snapshot text;
+  add column if not exists customer_email_snapshot text,
+  add column if not exists bank_name_snapshot text not null default '',
+  add column if not exists bank_account_no_snapshot text not null default '',
+  add column if not exists bank_account_name_snapshot text not null default '';
 
 do $$
 begin

@@ -28,5 +28,11 @@ export type PaymentSettings = {
   promptpayPhone: string;
   promptpayBaseUrl: string;
   allowCustomAmount: boolean;
+  activeQrMode: "promptpay" | "bank_qr";
+  bankCode: string;
+  bankName: string;
+  bankAccountNo: string;
+  bankAccountName: string;
+  bankQrImageUrl: string;
   updatedAt: string | null;
 };

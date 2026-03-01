@@ -11,7 +11,16 @@ const CheckoutClient = dynamic(
 
 type LocalizedCheckoutPageProps = {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ order_no?: string; promptpay_url?: string; selected?: string }>;
+  searchParams: Promise<{
+    order_no?: string;
+    promptpay_url?: string;
+    selected?: string;
+    payment_mode?: string;
+    qr_image_url?: string;
+    bank_name?: string;
+    bank_account_no?: string;
+    bank_account_name?: string;
+  }>;
 };
 
 export default async function LocalizedCheckoutPage({ params, searchParams }: LocalizedCheckoutPageProps) {
@@ -24,6 +33,11 @@ export default async function LocalizedCheckoutPage({ params, searchParams }: Lo
   const query = await searchParams;
   const orderNo = typeof query.order_no === "string" ? query.order_no : "";
   const promptpayUrl = typeof query.promptpay_url === "string" ? query.promptpay_url : "";
+  const paymentMode = query.payment_mode === "bank_qr" ? "bank_qr" : "promptpay";
+  const qrImageUrl = typeof query.qr_image_url === "string" ? query.qr_image_url : "";
+  const bankName = typeof query.bank_name === "string" ? query.bank_name : "";
+  const bankAccountNo = typeof query.bank_account_no === "string" ? query.bank_account_no : "";
+  const bankAccountName = typeof query.bank_account_name === "string" ? query.bank_account_name : "";
   const selectedIds =
     typeof query.selected === "string" ? query.selected.split(",").map((id) => id.trim()).filter(Boolean) : [];
 
@@ -31,6 +45,11 @@ export default async function LocalizedCheckoutPage({ params, searchParams }: Lo
     <CheckoutClient
       initialOrderNo={orderNo}
       initialPromptpayUrl={promptpayUrl}
+      initialPaymentMode={paymentMode}
+      initialQrImageUrl={qrImageUrl}
+      initialBankName={bankName}
+      initialBankAccountNo={bankAccountNo}
+      initialBankAccountName={bankAccountName}
       initialSelectedIds={selectedIds}
       locale={locale as AppLocale}
       useLocalePrefix

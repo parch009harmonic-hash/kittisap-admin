@@ -205,13 +205,17 @@ export async function createCustomerOrder(customerId: string, input: CustomerOrd
 
   const paymentSettings = await getPaymentSettings();
   const promptpayPhone = paymentSettings.promptpayPhone.trim();
-  if (!promptpayPhone) {
-    throw new CommerceApiError(500, "PAYMENT_CONFIG_MISSING", "PromptPay phone is not configured.");
-  }
-
   const base = paymentSettings.promptpayBaseUrl.replace(/\/+$/, "");
   const amount = formatPromptpayAmount(grandTotal);
   const promptpayLink = `${base}/${encodeURIComponent(promptpayPhone)}/${encodeURIComponent(amount)}`;
+  const isBankQrMode = paymentSettings.activeQrMode === "bank_qr";
+
+  if (!isBankQrMode && !promptpayPhone) {
+    throw new CommerceApiError(500, "PAYMENT_CONFIG_MISSING", "PromptPay phone is not configured.");
+  }
+  if (isBankQrMode && !paymentSettings.bankQrImageUrl.trim()) {
+    throw new CommerceApiError(500, "PAYMENT_CONFIG_MISSING", "Bank QR image is not configured.");
+  }
 
   const orderNo = buildOrderNo();
   const orderPayload = {
@@ -219,21 +223,24 @@ export async function createCustomerOrder(customerId: string, input: CustomerOrd
     customer_id: customerId,
     status: "pending_payment",
     payment_status: "unpaid",
-    payment_method: "promptpay_transfer",
+    payment_method: isBankQrMode ? "bank_transfer_qr" : "promptpay_transfer",
     sub_total: subTotal,
     discount_total: discountTotal,
     shipping_fee: shippingFee,
     grand_total: grandTotal,
     coupon_code_snapshot: parsed.couponCode ?? null,
-    promptpay_phone_snapshot: promptpayPhone,
-    promptpay_link_snapshot: promptpayLink,
+    promptpay_phone_snapshot: promptpayPhone || "",
+    promptpay_link_snapshot: isBankQrMode ? paymentSettings.bankQrImageUrl.trim() : promptpayLink,
+    bank_name_snapshot: paymentSettings.bankName.trim(),
+    bank_account_no_snapshot: paymentSettings.bankAccountNo.trim(),
+    bank_account_name_snapshot: paymentSettings.bankAccountName.trim(),
     note: parsed.note ?? null,
   };
 
   const { data: orderRow, error: orderError } = await supabase
     .from("orders")
     .insert(orderPayload)
-    .select("id,order_no,grand_total,promptpay_link_snapshot,promptpay_phone_snapshot")
+    .select("id,order_no,grand_total,promptpay_link_snapshot,promptpay_phone_snapshot,payment_method")
     .single();
 
   if (orderError || !orderRow) {
@@ -261,7 +268,7 @@ export async function createCustomerOrder(customerId: string, input: CustomerOrd
     orderId,
     orderNo: String(orderRow.order_no),
     payment: {
-      method: "promptpay_transfer" as const,
+      method: String(orderRow.payment_method ?? "promptpay_transfer"),
       phone: String(orderRow.promptpay_phone_snapshot),
       amount: Number(orderRow.grand_total),
       link: String(orderRow.promptpay_link_snapshot),

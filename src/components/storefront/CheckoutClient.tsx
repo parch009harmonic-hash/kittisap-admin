@@ -17,6 +17,11 @@ import {
 type CheckoutClientProps = {
   initialOrderNo: string;
   initialPromptpayUrl: string;
+  initialPaymentMode?: "promptpay" | "bank_qr";
+  initialQrImageUrl?: string;
+  initialBankName?: string;
+  initialBankAccountNo?: string;
+  initialBankAccountName?: string;
   initialSelectedIds?: string[];
   locale?: AppLocale;
   useLocalePrefix?: boolean;
@@ -38,6 +43,11 @@ type CreateOrderPayload = {
   data?: {
     order_no?: string;
     promptpay_url?: string;
+    payment_mode?: "promptpay" | "bank_qr";
+    qr_image_url?: string;
+    bank_name?: string;
+    bank_account_no?: string;
+    bank_account_name?: string;
     final_amount?: number;
   };
 };
@@ -61,6 +71,12 @@ type OrderDetailPayload = {
     grand_total?: number;
     status?: string;
     payment_status?: string;
+    payment_method?: string;
+    promptpay_phone_snapshot?: string;
+    promptpay_link_snapshot?: string;
+    bank_name_snapshot?: string;
+    bank_account_no_snapshot?: string;
+    bank_account_name_snapshot?: string;
     customer_full_name?: string;
     customer_phone?: string;
     shipping_address?: string;
@@ -89,6 +105,12 @@ function t(locale: AppLocale) {
       summary: "สรุปคำสั่งซื้อ",
       coupon: "คูปองส่วนลด",
       promptpay: "ชำระผ่าน PromptPay",
+      bankQr: "ชำระผ่าน QR ธนาคาร",
+      paymentModePromptpay: "โหมดพร้อมเพย์",
+      paymentModeBankQr: "โหมด QR ธรรมดา",
+      bankName: "ธนาคาร",
+      bankAccountNo: "เลขที่บัญชี",
+      bankAccountName: "ชื่อบัญชี",
       fullName: "ชื่อ-นามสกุล",
       address: "ที่อยู่จัดส่ง",
       phone: "เบอร์โทร",
@@ -162,6 +184,12 @@ function t(locale: AppLocale) {
       summary: "ສະຫຼຸບຄຳສັ່ງຊື້",
       coupon: "ຄູປອງສ່ວນຫຼຸດ",
       promptpay: "ຈ່າຍຜ່ານ PromptPay",
+      bankQr: "ຈ່າຍຜ່ານ QR ທະນາຄານ",
+      paymentModePromptpay: "ໂໝດ PromptPay",
+      paymentModeBankQr: "ໂໝດ QR ທຳມະດາ",
+      bankName: "ທະນາຄານ",
+      bankAccountNo: "ເລກບັນຊີ",
+      bankAccountName: "ຊື່ບັນຊີ",
       fullName: "ຊື່-ນາມສະກຸນ",
       address: "ທີ່ຢູ່ຈັດສົ່ງ",
       phone: "ເບີໂທ",
@@ -234,6 +262,12 @@ function t(locale: AppLocale) {
     summary: "Order summary",
     coupon: "Coupon apply",
     promptpay: "PromptPay payment",
+    bankQr: "Bank QR payment",
+    paymentModePromptpay: "PromptPay mode",
+    paymentModeBankQr: "Standard QR mode",
+    bankName: "Bank",
+    bankAccountNo: "Account no.",
+    bankAccountName: "Account name",
     fullName: "Full name",
     address: "Shipping address",
     phone: "Phone",
@@ -339,6 +373,11 @@ async function loadProfile() {
 export function CheckoutClient({
   initialOrderNo,
   initialPromptpayUrl,
+  initialPaymentMode = "promptpay",
+  initialQrImageUrl = "",
+  initialBankName = "",
+  initialBankAccountNo = "",
+  initialBankAccountName = "",
   initialSelectedIds = [],
   locale = "th",
   useLocalePrefix = false,
@@ -367,6 +406,12 @@ export function CheckoutClient({
 
   const [orderNo, setOrderNo] = useState(initialOrderNo);
   const [promptpayUrl, setPromptpayUrl] = useState(initialPromptpayUrl);
+  const [paymentMode, setPaymentMode] = useState<"promptpay" | "bank_qr">(initialPaymentMode);
+  const [qrImageUrlManual, setQrImageUrlManual] = useState(initialQrImageUrl);
+  const [bankName, setBankName] = useState(initialBankName);
+  const [bankAccountNo, setBankAccountNo] = useState(initialBankAccountNo);
+  const [bankAccountName, setBankAccountName] = useState(initialBankAccountName);
+  const [orderGrandTotal, setOrderGrandTotal] = useState<number | null>(null);
 
   const [file, setFile] = useState<File | null>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -407,8 +452,16 @@ export function CheckoutClient({
   const subtotal = useMemo(() => sumPublicCart(selectedItems), [selectedItems]);
   const effectiveDiscount = useMemo(() => Math.min(couponDiscount, subtotal), [couponDiscount, subtotal]);
   const previewPayable = useMemo(() => Math.max(0, subtotal - effectiveDiscount), [subtotal, effectiveDiscount]);
-  const qrImageUrl = useMemo(() => (promptpayUrl ? buildQrImageUrl(promptpayUrl) : ""), [promptpayUrl]);
-  const payableAmount = useMemo(() => parsePromptpayAmount(promptpayUrl) ?? previewPayable, [promptpayUrl, previewPayable]);
+  const qrImageUrl = useMemo(
+    () => (paymentMode === "promptpay" ? (promptpayUrl ? buildQrImageUrl(promptpayUrl) : "") : qrImageUrlManual),
+    [paymentMode, promptpayUrl, qrImageUrlManual],
+  );
+  const payableAmount = useMemo(() => {
+    if (paymentMode === "promptpay") {
+      return parsePromptpayAmount(promptpayUrl) ?? orderGrandTotal ?? previewPayable;
+    }
+    return orderGrandTotal ?? previewPayable;
+  }, [paymentMode, promptpayUrl, orderGrandTotal, previewPayable]);
 
   const hasShippingInfo = fullName.trim().length > 0 && address.trim().length > 0 && phone.trim().length > 0;
   const canCreateOrder = !orderNo && selectedItems.length > 0 && hasShippingInfo;
@@ -499,8 +552,31 @@ export function CheckoutClient({
         const loadedFullName = String(payload.data?.customer_full_name ?? "").trim();
         const loadedPhone = String(payload.data?.customer_phone ?? "").trim();
         const loadedAddress = String(payload.data?.shipping_address ?? "").trim();
+        const loadedGrandTotal = Number(payload.data?.grand_total ?? 0);
+        const loadedPaymentMethod = String(payload.data?.payment_method ?? "");
+        const loadedPromptpayPhone = String(payload.data?.promptpay_phone_snapshot ?? "");
+        const loadedPromptpayLink = String(payload.data?.promptpay_link_snapshot ?? "");
+        const loadedBankName = String(payload.data?.bank_name_snapshot ?? "");
+        const loadedBankAccountNo = String(payload.data?.bank_account_no_snapshot ?? "");
+        const loadedBankAccountName = String(payload.data?.bank_account_name_snapshot ?? "");
         setOrderStatus(loadedOrderStatus);
         setPaymentStatus(loadedPaymentStatus);
+        if (Number.isFinite(loadedGrandTotal) && loadedGrandTotal > 0) {
+          setOrderGrandTotal(loadedGrandTotal);
+        }
+        if (loadedPaymentMethod === "bank_transfer_qr") {
+          setPaymentMode("bank_qr");
+          setQrImageUrlManual(loadedPromptpayLink);
+          setBankName((prev) => prev || loadedBankName);
+          setBankAccountNo((prev) => prev || loadedBankAccountNo);
+          setBankAccountName((prev) => prev || loadedBankAccountName);
+        } else {
+          setPaymentMode("promptpay");
+          setPromptpayUrl(loadedPromptpayLink);
+        }
+        if (loadedPromptpayPhone && !bankAccountNo) {
+          setBankAccountNo(loadedPromptpayPhone);
+        }
         setFullName((prev) => prev || loadedFullName);
         setPhone((prev) => prev || loadedPhone);
         setAddress((prev) => prev || loadedAddress);
@@ -599,12 +675,20 @@ export function CheckoutClient({
       });
 
       const payload = (await response.json()) as CreateOrderPayload;
-      if (!response.ok || !payload.ok || !payload.data?.order_no || !payload.data?.promptpay_url) {
+      if (!response.ok || !payload.ok || !payload.data?.order_no) {
         throw new Error(payload.error ?? text.errorCreateOrder);
       }
 
       setOrderNo(payload.data.order_no);
-      setPromptpayUrl(payload.data.promptpay_url);
+      setPaymentMode(payload.data.payment_mode === "bank_qr" ? "bank_qr" : "promptpay");
+      setPromptpayUrl(String(payload.data.promptpay_url ?? ""));
+      setQrImageUrlManual(String(payload.data.qr_image_url ?? ""));
+      setBankName(String(payload.data.bank_name ?? ""));
+      setBankAccountNo(String(payload.data.bank_account_no ?? ""));
+      setBankAccountName(String(payload.data.bank_account_name ?? ""));
+      if (Number.isFinite(Number(payload.data.final_amount ?? 0)) && Number(payload.data.final_amount) > 0) {
+        setOrderGrandTotal(Number(payload.data.final_amount));
+      }
       setCreatedItems(selectedItems);
       setToast(text.successOrder);
 
@@ -994,9 +1078,14 @@ export function CheckoutClient({
               ) : null}
 
               <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
-                <h2 className="text-base font-semibold text-slate-900 md:text-lg">{text.promptpay}</h2>
+                <h2 className="text-base font-semibold text-slate-900 md:text-lg">
+                  {paymentMode === "promptpay" ? text.promptpay : text.bankQr}
+                </h2>
                 <p className="mt-1 text-sm text-slate-600">
                   {text.orderNo}: <span className="font-semibold text-slate-900">{orderNo || "-"}</span>
+                </p>
+                <p className="mt-1 text-xs font-semibold text-slate-500">
+                  {paymentMode === "promptpay" ? text.paymentModePromptpay : text.paymentModeBankQr}
                 </p>
 
                 <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
@@ -1028,6 +1117,14 @@ export function CheckoutClient({
                     <p className="text-xs uppercase tracking-[0.14em] text-slate-500">{text.amount}</p>
                     <p className="mt-1 text-3xl font-extrabold text-amber-600">THB {payableAmount.toLocaleString()}</p>
                   </div>
+
+                  {paymentMode === "bank_qr" ? (
+                    <div className="mt-3 rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-700">
+                      <p><span className="font-semibold">{text.bankName}:</span> {bankName || "-"}</p>
+                      <p className="mt-1"><span className="font-semibold">{text.bankAccountNo}:</span> {bankAccountNo || "-"}</p>
+                      <p className="mt-1"><span className="font-semibold">{text.bankAccountName}:</span> {bankAccountName || "-"}</p>
+                    </div>
+                  ) : null}
 
                   {!paidSubmitted ? (
                     <button

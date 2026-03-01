@@ -32,6 +32,11 @@ type CreateOrderPayload = {
   data?: {
     order_no?: string;
     promptpay_url?: string;
+    payment_mode?: "promptpay" | "bank_qr";
+    qr_image_url?: string;
+    bank_name?: string;
+    bank_account_no?: string;
+    bank_account_name?: string;
   };
 };
 
@@ -99,13 +104,18 @@ export function OrderNowButton({ productId, disabled = false, className = "", la
       });
 
       const payload = (await response.json()) as CreateOrderPayload;
-      if (!response.ok || !payload.ok || !payload.data?.order_no || !payload.data?.promptpay_url) {
+      if (!response.ok || !payload.ok || !payload.data?.order_no) {
         throw new Error(payload.error ?? "Failed to create order");
       }
 
       const params = new URLSearchParams();
       params.set("order_no", payload.data.order_no);
-      params.set("promptpay_url", payload.data.promptpay_url);
+      if (payload.data.promptpay_url) params.set("promptpay_url", payload.data.promptpay_url);
+      if (payload.data.payment_mode) params.set("payment_mode", payload.data.payment_mode);
+      if (payload.data.qr_image_url) params.set("qr_image_url", payload.data.qr_image_url);
+      if (payload.data.bank_name) params.set("bank_name", payload.data.bank_name);
+      if (payload.data.bank_account_no) params.set("bank_account_no", payload.data.bank_account_no);
+      if (payload.data.bank_account_name) params.set("bank_account_name", payload.data.bank_account_name);
       window.location.href = `/checkout?${params.toString()}`;
     } catch (error) {
       const raw = error instanceof Error ? error.message : "Failed to create order";
