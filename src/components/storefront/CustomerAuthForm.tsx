@@ -18,47 +18,52 @@ type CustomerAuthFormProps = {
 
 function text(mode: Mode, locale: AppLocale) {
   const isThai = locale === "th";
+  const isLao = locale === "lo";
 
   if (mode === "register") {
     return {
       eyebrow: "Customer Register",
-      title: isThai ? "สมัครสมาชิก" : "Create account",
+      title: isThai ? "สมัครสมาชิก" : isLao ? "ສະໝັກສະມາຊິກ" : "Create account",
       subtitle: isThai
         ? "สร้างบัญชีลูกค้าเพื่อสั่งซื้อสินค้าและติดตามออเดอร์"
-        : "Create your customer account for faster checkout and order tracking.",
-      action: isThai ? "สร้างบัญชี" : "Create Account",
-      switchLabel: isThai ? "มีบัญชีแล้ว? เข้าสู่ระบบ" : "Already have an account? Sign in",
-      success: isThai ? "สมัครสมาชิกสำเร็จ กำลังพาไปยังหน้าบัญชี..." : "Account created. Redirecting to your account...",
-      continueWithGoogle: isThai ? "ดำเนินการต่อด้วย Google" : "Continue with Google",
-      fullNamePlaceholder: isThai ? "ชื่อ-นามสกุล" : "Full name",
-      phonePlaceholder: isThai ? "เบอร์โทรศัพท์" : "Phone number",
+        : isLao
+          ? "ສ້າງບັນຊີລູກຄ້າເພື່ອສັ່ງຊື້ ແລະ ຕິດຕາມອໍເດີ"
+          : "Create your customer account for faster checkout and order tracking.",
+      action: isThai ? "สร้างบัญชี" : isLao ? "ສ້າງບັນຊີ" : "Create Account",
+      switchLabel: isThai ? "มีบัญชีแล้ว? เข้าสู่ระบบ" : isLao ? "ມີບັນຊີແລ້ວ? ເຂົ້າລະບົບ" : "Already have an account? Sign in",
+      success: isThai ? "สมัครสมาชิกสำเร็จ กำลังพาไปยังหน้าบัญชี..." : isLao ? "ສະໝັກສຳເລັດ ກຳລັງນຳທ່ານໄປໜ້າບັນຊີ..." : "Account created. Redirecting to your account...",
+      continueWithGoogle: isThai ? "ดำเนินการต่อด้วย Google" : isLao ? "ດຳເນີນການຕໍ່ດ້ວຍ Google" : "Continue with Google",
+      continueWithGoogleLoading: isThai ? "กำลังเชื่อมต่อ Google..." : isLao ? "ກຳລັງເຊື່ອມຕໍ່ Google..." : "Connecting to Google...",
+      fullNamePlaceholder: isThai ? "ชื่อ-นามสกุล" : isLao ? "ຊື່-ນາມສະກຸນ" : "Full name",
+      phonePlaceholder: isThai ? "เบอร์โทรศัพท์" : isLao ? "ເບີໂທລະສັບ" : "Phone number",
       emailPlaceholder: "you@example.com",
       passwordPlaceholder: "********",
       or: "OR",
-      emailNotConfirmed: isThai ? "อีเมลยังไม่ยืนยัน กรุณายืนยันอีเมลก่อนเข้าสู่ระบบ" : "Email not confirmed. Please confirm your email before signing in.",
-      resendConfirm: isThai ? "ส่งอีเมลยืนยันใหม่" : "Resend confirmation email",
-      resendConfirmSuccess: isThai ? "ส่งอีเมลยืนยันใหม่แล้ว กรุณาตรวจสอบกล่องจดหมาย" : "Confirmation email sent. Please check your inbox.",
-      resendConfirmNeedEmail: isThai ? "กรุณากรอกอีเมลก่อนส่งอีเมลยืนยัน" : "Please enter your email first.",
+      emailNotConfirmed: isThai ? "อีเมลยังไม่ยืนยัน กรุณายืนยันอีเมลก่อนเข้าสู่ระบบ" : isLao ? "ອີເມວຍັງບໍ່ຖືກຢືນຢັນ ກະລຸນາຢືນຢັນອີເມວກ່ອນ" : "Email not confirmed. Please confirm your email before signing in.",
+      resendConfirm: isThai ? "ส่งอีเมลยืนยันใหม่" : isLao ? "ສົ່ງອີເມວຢືນຢັນອີກຄັ້ງ" : "Resend confirmation email",
+      resendConfirmSuccess: isThai ? "ส่งอีเมลยืนยันใหม่แล้ว กรุณาตรวจสอบกล่องจดหมาย" : isLao ? "ສົ່ງອີເມວຢືນຢັນແລ້ວ ກະລຸນາກວດກ່ອງຂໍ້ຄວາມ" : "Confirmation email sent. Please check your inbox.",
+      resendConfirmNeedEmail: isThai ? "กรุณากรอกอีเมลก่อนส่งอีเมลยืนยัน" : isLao ? "ກະລຸນາກອກອີເມວກ່ອນສົ່ງ" : "Please enter your email first.",
     };
   }
 
   return {
     eyebrow: "Customer Login",
-    title: isThai ? "เข้าสู่ระบบลูกค้า" : "Sign in",
-    subtitle: isThai ? "เข้าสู่ระบบเพื่อดูโปรไฟล์และออเดอร์ของคุณ" : "Sign in to view your account and orders.",
-    action: isThai ? "เข้าสู่ระบบ" : "Sign In",
-    switchLabel: isThai ? "ยังไม่มีบัญชี? สมัครสมาชิก" : "No account yet? Register",
-    success: isThai ? "เข้าสู่ระบบสำเร็จ กำลังพาไปยังหน้าบัญชี..." : "Signed in. Redirecting to your account...",
-    continueWithGoogle: isThai ? "ดำเนินการต่อด้วย Google" : "Continue with Google",
-    fullNamePlaceholder: isThai ? "ชื่อ-นามสกุล" : "Full name",
-    phonePlaceholder: isThai ? "เบอร์โทรศัพท์" : "Phone number",
+    title: isThai ? "เข้าสู่ระบบลูกค้า" : isLao ? "ເຂົ້າລະບົບລູກຄ້າ" : "Sign in",
+    subtitle: isThai ? "เข้าสู่ระบบเพื่อดูโปรไฟล์และออเดอร์ของคุณ" : isLao ? "ເຂົ້າລະບົບເພື່ອເບິ່ງໂປຣໄຟລ໌ ແລະ ອໍເດີຂອງທ່ານ" : "Sign in to view your account and orders.",
+    action: isThai ? "เข้าสู่ระบบ" : isLao ? "ເຂົ້າລະບົບ" : "Sign In",
+    switchLabel: isThai ? "ยังไม่มีบัญชี? สมัครสมาชิก" : isLao ? "ຍັງບໍ່ມີບັນຊີ? ສະໝັກສະມາຊິກ" : "No account yet? Register",
+    success: isThai ? "เข้าสู่ระบบสำเร็จ กำลังพาไปยังหน้าบัญชี..." : isLao ? "ເຂົ້າລະບົບສຳເລັດ ກຳລັງນຳໄປໜ້າບັນຊີ..." : "Signed in. Redirecting to your account...",
+    continueWithGoogle: isThai ? "ดำเนินการต่อด้วย Google" : isLao ? "ດຳເນີນການຕໍ່ດ້ວຍ Google" : "Continue with Google",
+    continueWithGoogleLoading: isThai ? "กำลังเชื่อมต่อ Google..." : isLao ? "ກຳລັງເຊື່ອມຕໍ່ Google..." : "Connecting to Google...",
+    fullNamePlaceholder: isThai ? "ชื่อ-นามสกุล" : isLao ? "ຊື່-ນາມສະກຸນ" : "Full name",
+    phonePlaceholder: isThai ? "เบอร์โทรศัพท์" : isLao ? "ເບີໂທລະສັບ" : "Phone number",
     emailPlaceholder: "you@example.com",
     passwordPlaceholder: "********",
     or: "OR",
-    emailNotConfirmed: isThai ? "อีเมลยังไม่ยืนยัน กรุณายืนยันอีเมลก่อนเข้าสู่ระบบ" : "Email not confirmed. Please confirm your email before signing in.",
-    resendConfirm: isThai ? "ส่งอีเมลยืนยันใหม่" : "Resend confirmation email",
-    resendConfirmSuccess: isThai ? "ส่งอีเมลยืนยันใหม่แล้ว กรุณาตรวจสอบกล่องจดหมาย" : "Confirmation email sent. Please check your inbox.",
-    resendConfirmNeedEmail: isThai ? "กรุณากรอกอีเมลก่อนส่งอีเมลยืนยัน" : "Please enter your email first.",
+    emailNotConfirmed: isThai ? "อีเมลยังไม่ยืนยัน กรุณายืนยันอีเมลก่อนเข้าสู่ระบบ" : isLao ? "ອີເມວຍັງບໍ່ຖືກຢືນຢັນ ກະລຸນາຢືນຢັນອີເມວກ່ອນ" : "Email not confirmed. Please confirm your email before signing in.",
+    resendConfirm: isThai ? "ส่งอีเมลยืนยันใหม่" : isLao ? "ສົ່ງອີເມວຢືນຢັນອີກຄັ້ງ" : "Resend confirmation email",
+    resendConfirmSuccess: isThai ? "ส่งอีเมลยืนยันใหม่แล้ว กรุณาตรวจสอบกล่องจดหมาย" : isLao ? "ສົ່ງອີເມວຢືນຢັນແລ້ວ ກະລຸນາກວດກ່ອງຂໍ້ຄວາມ" : "Confirmation email sent. Please check your inbox.",
+    resendConfirmNeedEmail: isThai ? "กรุณากรอกอีเมลก่อนส่งอีเมลยืนยัน" : isLao ? "ກະລຸນາກອກອີເມວກ່ອນສົ່ງ" : "Please enter your email first.",
   };
 }
 
@@ -353,14 +358,20 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
           <span className="h-px flex-1 bg-amber-500/30" />
         </div>
 
-        <button
-          type="button"
-          onClick={handleGoogleAuth}
-          disabled={loading}
-          className="h-12 w-full rounded-full border border-amber-500/35 bg-black/45 px-5 text-base font-semibold text-amber-100 transition hover:bg-black/60 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {t.continueWithGoogle}
-        </button>
+      <button
+        type="button"
+        onClick={handleGoogleAuth}
+        disabled={loading}
+        className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full border border-slate-300 bg-white px-5 text-base font-semibold text-slate-800 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+      >
+          <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
+            <path fill="#EA4335" d="M12 10.2v4h5.65c-.24 1.29-.97 2.39-2.06 3.12l3.33 2.58c1.94-1.79 3.08-4.43 3.08-7.58 0-.73-.07-1.43-.19-2.1H12z" />
+            <path fill="#4285F4" d="M12 22c2.78 0 5.1-.92 6.8-2.5l-3.33-2.58c-.92.62-2.1.98-3.47.98-2.67 0-4.92-1.8-5.73-4.22H2.84v2.65A9.99 9.99 0 0 0 12 22z" />
+            <path fill="#FBBC05" d="M6.27 13.68a6 6 0 0 1 0-3.36V7.67H2.84a9.99 9.99 0 0 0 0 8.66l3.43-2.65z" />
+            <path fill="#34A853" d="M12 6.1c1.51 0 2.87.52 3.94 1.53l2.95-2.95C17.09 2.98 14.77 2 12 2a9.99 9.99 0 0 0-9.16 5.67l3.43 2.65C7.08 7.9 9.33 6.1 12 6.1z" />
+          </svg>
+          {loading ? t.continueWithGoogleLoading : t.continueWithGoogle}
+      </button>
 
         <Link href={switchPath} className="mt-4 block text-center text-sm text-amber-200/90 hover:text-amber-100">
           {t.switchLabel}

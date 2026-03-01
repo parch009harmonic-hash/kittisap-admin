@@ -54,6 +54,29 @@ export function AddToCartButton({
 }: AddToCartButtonProps) {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [authRequiredOpen, setAuthRequiredOpen] = useState(false);
+
+  const authRequiredText =
+    locale === "th"
+      ? {
+          title: "เข้าสู่ระบบก่อนสั่งซื้อ",
+          message: "ต้องสมัครสมาชิกหรือเข้าสู่ระบบก่อน จึงจะสั่งซื้อสินค้าได้",
+          cancel: "ยกเลิก",
+          goLogin: "ไปหน้าเข้าสู่ระบบ",
+        }
+      : locale === "lo"
+        ? {
+            title: "ເຂົ້າລະບົບກ່ອນສັ່ງຊື້",
+            message: "ກະລຸນາສະໝັກສະມາຊິກ ຫຼື ເຂົ້າລະບົບກ່ອນສັ່ງຊື້",
+            cancel: "ຍົກເລີກ",
+            goLogin: "ໄປໜ້າເຂົ້າລະບົບ",
+          }
+        : {
+            title: "Sign in before ordering",
+            message: "Please register or sign in before ordering products.",
+            cancel: "Cancel",
+            goLogin: "Go to sign in",
+          };
 
   async function handleAddToCart() {
     if (disabled) {
@@ -66,14 +89,7 @@ export function AddToCartButton({
     try {
       const session = await ensureCustomerSession();
       if (!session.authorized) {
-        alert(
-          locale === "th"
-            ? "ต้องสมัครสมาชิกหรือเข้าสู่ระบบก่อน จึงจะสั่งซื้อสินค้าได้"
-            : locale === "lo"
-              ? "ກະລຸນາສະໝັກສະມາຊິກ ຫຼື ເຂົ້າລະບົບກ່ອນສັ່ງຊື້"
-              : "Please register or sign in before ordering products.",
-        );
-        window.location.href = withLocale(locale, "/auth/login");
+        setAuthRequiredOpen(true);
         return;
       }
 
@@ -100,6 +116,33 @@ export function AddToCartButton({
 
   return (
     <div className={`space-y-2 ${containerClassName}`}>
+      {authRequiredOpen ? (
+        <div className="fixed inset-0 z-[85] grid place-items-center bg-slate-950/55 p-4 backdrop-blur-[2px]">
+          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_24px_70px_rgba(2,6,23,0.35)]">
+            <p className="text-base font-bold text-slate-900">{authRequiredText.title}</p>
+            <p className="mt-2 text-sm text-slate-600">{authRequiredText.message}</p>
+            <div className="mt-5 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setAuthRequiredOpen(false)}
+                className="app-press h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700"
+              >
+                {authRequiredText.cancel}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  window.location.href = withLocale(locale, "/auth/login");
+                }}
+                className="app-press h-11 rounded-xl border border-amber-400/80 bg-amber-50 px-3 text-sm font-semibold text-amber-700"
+              >
+                {authRequiredText.goLogin}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <button
         type="button"
         onClick={() => void handleAddToCart()}
