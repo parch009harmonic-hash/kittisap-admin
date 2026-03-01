@@ -34,6 +34,13 @@ function text(mode: Mode, locale: AppLocale) {
       success: isThai ? "สมัครสมาชิกสำเร็จ กำลังพาไปยังหน้าบัญชี..." : isLao ? "ສະໝັກສຳເລັດ ກຳລັງນຳທ່ານໄປໜ້າບັນຊີ..." : "Account created. Redirecting to your account...",
       continueWithGoogle: isThai ? "ดำเนินการต่อด้วย Google" : isLao ? "ດຳເນີນການຕໍ່ດ້ວຍ Google" : "Continue with Google",
       continueWithGoogleLoading: isThai ? "กำลังเชื่อมต่อ Google..." : isLao ? "ກຳລັງເຊື່ອມຕໍ່ Google..." : "Connecting to Google...",
+      googlePendingTitle: isThai ? "Google Login กำลังเตรียมใช้งาน" : isLao ? "Google Login ກຳລັງກຽມໃຊ້ງານ" : "Google Login Is Coming Soon",
+      googlePendingDescription: isThai
+        ? "ระบบล็อกอินด้วย Google อยู่ระหว่างรอดำเนินการ และจะเปิดใช้งานในเร็ว ๆ นี้"
+        : isLao
+          ? "ລະບົບເຂົ້າລະບົບດ້ວຍ Google ກຳລັງລໍຖ້າດຳເນີນການ ແລະ ຈະເປີດໃຊ້ໄວໆນີ້"
+          : "Google sign-in is currently pending setup and will be available soon.",
+      googlePendingClose: isThai ? "รับทราบ" : isLao ? "ຮັບຊາບ" : "Got it",
       fullNamePlaceholder: isThai ? "ชื่อ-นามสกุล" : isLao ? "ຊື່-ນາມສະກຸນ" : "Full name",
       phonePlaceholder: isThai ? "เบอร์โทรศัพท์" : isLao ? "ເບີໂທລະສັບ" : "Phone number",
       emailPlaceholder: "you@example.com",
@@ -55,6 +62,13 @@ function text(mode: Mode, locale: AppLocale) {
     success: isThai ? "เข้าสู่ระบบสำเร็จ กำลังพาไปยังหน้าบัญชี..." : isLao ? "ເຂົ້າລະບົບສຳເລັດ ກຳລັງນຳໄປໜ້າບັນຊີ..." : "Signed in. Redirecting to your account...",
     continueWithGoogle: isThai ? "ดำเนินการต่อด้วย Google" : isLao ? "ດຳເນີນການຕໍ່ດ້ວຍ Google" : "Continue with Google",
     continueWithGoogleLoading: isThai ? "กำลังเชื่อมต่อ Google..." : isLao ? "ກຳລັງເຊື່ອມຕໍ່ Google..." : "Connecting to Google...",
+    googlePendingTitle: isThai ? "Google Login กำลังเตรียมใช้งาน" : isLao ? "Google Login ກຳລັງກຽມໃຊ້ງານ" : "Google Login Is Coming Soon",
+    googlePendingDescription: isThai
+      ? "ระบบล็อกอินด้วย Google อยู่ระหว่างรอดำเนินการ และจะเปิดใช้งานในเร็ว ๆ นี้"
+      : isLao
+        ? "ລະບົບເຂົ້າລະບົບດ້ວຍ Google ກຳລັງລໍຖ້າດຳເນີນການ ແລະ ຈະເປີດໃຊ້ໄວໆນີ້"
+        : "Google sign-in is currently pending setup and will be available soon.",
+    googlePendingClose: isThai ? "รับทราบ" : isLao ? "ຮັບຊາບ" : "Got it",
     fullNamePlaceholder: isThai ? "ชื่อ-นามสกุล" : isLao ? "ຊື່-ນາມສະກຸນ" : "Full name",
     phonePlaceholder: isThai ? "เบอร์โทรศัพท์" : isLao ? "ເບີໂທລະສັບ" : "Phone number",
     emailPlaceholder: "you@example.com",
@@ -102,6 +116,7 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
   const [loading, setLoading] = useState(false);
   const [resendingConfirm, setResendingConfirm] = useState(false);
   const [pendingConfirmEmail, setPendingConfirmEmail] = useState<string | null>(null);
+  const [showGooglePendingModal, setShowGooglePendingModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -242,6 +257,12 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
   }
 
   async function handleGoogleAuth() {
+    const googleAuthEnabled = process.env.NEXT_PUBLIC_ENABLE_GOOGLE_AUTH === "true";
+    if (!googleAuthEnabled) {
+      setShowGooglePendingModal(true);
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -377,6 +398,32 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
           {t.switchLabel}
         </Link>
       </section>
+
+      {showGooglePendingModal ? (
+        <div
+          className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 px-4"
+          onClick={() => setShowGooglePendingModal(false)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="w-full max-w-md rounded-2xl border border-amber-500/40 bg-zinc-950 p-5 text-amber-50 shadow-[0_18px_60px_rgba(0,0,0,0.5)] transition duration-200"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h2 className="text-xl font-semibold text-amber-300">{t.googlePendingTitle}</h2>
+            <p className="mt-2 text-sm leading-relaxed text-amber-100/80">{t.googlePendingDescription}</p>
+            <div className="mt-5 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowGooglePendingModal(false)}
+                className="inline-flex h-10 items-center justify-center rounded-full border border-amber-400/75 bg-gradient-to-r from-amber-500 to-yellow-400 px-5 text-sm font-semibold text-zinc-900 transition hover:brightness-105 active:scale-95"
+              >
+                {t.googlePendingClose}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }
