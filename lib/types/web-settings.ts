@@ -126,6 +126,39 @@ export type WebBrandGuaranteeSettings = {
   updatedAt: string | null;
 };
 
+export type WebStorefrontSettings = {
+  brandName: string;
+  callButtonLabel: string;
+  callPhone: string;
+  footerTitle: string;
+  footerDescription1: string;
+  footerDescription2: string;
+  footerContactTitle: string;
+  footerCallLabel: string;
+  footerLineLabel: string;
+  footerFacebookLabel: string;
+  lineUrl: string;
+  facebookUrl: string;
+  contactTitle: string;
+  contactSubtitle: string;
+  contactPhone: string;
+  contactLineId: string;
+  contactAddressTh: string;
+  contactAddressEn: string;
+  contactMapEmbedUrl: string;
+  contactMapOpenUrl: string;
+  contactCallButtonLabel: string;
+  contactMapButtonLabel: string;
+  contactLineButtonLabel: string;
+  contactHoursWeekdayLabel: string;
+  contactHoursWeekdayTime: string;
+  contactHoursSaturdayLabel: string;
+  contactHoursSaturdayTime: string;
+  contactHoursSundayLabel: string;
+  contactHoursSundayTime: string;
+  updatedAt: string | null;
+};
+
 export function getDefaultWebBannerSettings(): WebBannerSettings {
   return {
     eyebrow: "KITTISAP CUSTOMER SITE",
@@ -245,6 +278,41 @@ export function getDefaultWebBrandGuaranteeSettings(): WebBrandGuaranteeSettings
     align: "center",
     effect: "lift",
     items: [],
+    updatedAt: null,
+  };
+}
+
+export function getDefaultWebStorefrontSettings(): WebStorefrontSettings {
+  return {
+    brandName: "Kittisap",
+    callButtonLabel: "โทรหาเรา",
+    callPhone: "+66843374982",
+    footerTitle: "Kittisap",
+    footerDescription1: "เว็บไซต์ลูกค้าเชื่อมข้อมูลร่วมกับระบบแอดมินและ Supabase",
+    footerDescription2: "รองรับการสั่งซื้อ ชำระเงิน และตรวจสอบคำสั่งซื้ออย่างครบวงจร",
+    footerContactTitle: "Contact",
+    footerCallLabel: "Call",
+    footerLineLabel: "LINE",
+    footerFacebookLabel: "Facebook",
+    lineUrl: "https://line.me",
+    facebookUrl: "https://facebook.com",
+    contactTitle: "ติดต่อเรา",
+    contactSubtitle: "สอบถามข้อมูลสินค้า นัดหมายเข้าชม และติดต่อทีมงานได้ทุกช่องทาง",
+    contactPhone: "0843374982",
+    contactLineId: "@kittisap",
+    contactAddressTh: "กรุงเทพมหานคร ประเทศไทย",
+    contactAddressEn: "Bangkok, Thailand",
+    contactMapEmbedUrl: "https://www.google.com/maps?q=Bangkok&output=embed",
+    contactMapOpenUrl: "https://maps.google.com/?q=Bangkok",
+    contactCallButtonLabel: "โทรทันที",
+    contactMapButtonLabel: "เปิดแผนที่",
+    contactLineButtonLabel: "เปิด LINE",
+    contactHoursWeekdayLabel: "จันทร์ - ศุกร์",
+    contactHoursWeekdayTime: "09:00 - 18:00",
+    contactHoursSaturdayLabel: "เสาร์",
+    contactHoursSaturdayTime: "09:00 - 17:00",
+    contactHoursSundayLabel: "อาทิตย์",
+    contactHoursSundayTime: "10:00 - 16:00",
     updatedAt: null,
   };
 }

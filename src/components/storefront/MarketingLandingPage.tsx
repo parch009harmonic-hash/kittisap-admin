@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { listPublicProducts } from "../../../lib/db/publicProducts";
 import {
   getWebBannerSettings,
+  getWebStorefrontSettings,
   getWebHomepageAppearanceSettings,
   getWebHomepageImageStripSettings,
   getWebMiddleBannerSettings,
@@ -15,6 +16,7 @@ import {
 import type { AppLocale } from "../../../lib/i18n/locale";
 import {
   getDefaultWebBannerSettings,
+  getDefaultWebStorefrontSettings,
   getDefaultWebHomepageAppearanceSettings,
   getDefaultWebHomepageImageStripSettings,
   getDefaultWebMiddleBannerSettings,
@@ -323,6 +325,7 @@ export async function MarketingLandingPage({
   const t = copy(locale);
   const showroomItems = await loadShowroomItems(locale);
   let bannerSettings = getDefaultWebBannerSettings();
+  let storefrontSettings = getDefaultWebStorefrontSettings();
   let homepageAppearance = getDefaultWebHomepageAppearanceSettings();
   let homepageImageStrip = getDefaultWebHomepageImageStripSettings();
   let middleBannerSettings = getDefaultWebMiddleBannerSettings();
@@ -331,6 +334,7 @@ export async function MarketingLandingPage({
   let whyChooseUsSettings = getDefaultWebWhyChooseUsSettings();
   const settingsResults = await Promise.allSettled([
     getWebBannerSettings(),
+    getWebStorefrontSettings(),
     getWebHomepageAppearanceSettings(),
     getWebHomepageImageStripSettings(),
     getWebWhyChooseUsSettings(),
@@ -340,6 +344,7 @@ export async function MarketingLandingPage({
   ]);
   const [
     bannerResult,
+    storefrontResult,
     homepageAppearanceResult,
     homepageImageStripResult,
     whyChooseUsResult,
@@ -348,6 +353,7 @@ export async function MarketingLandingPage({
     newsCardsResult,
   ] = settingsResults;
   if (bannerResult.status === "fulfilled") bannerSettings = bannerResult.value;
+  if (storefrontResult.status === "fulfilled") storefrontSettings = storefrontResult.value;
   if (homepageAppearanceResult.status === "fulfilled") homepageAppearance = homepageAppearanceResult.value;
   if (homepageImageStripResult.status === "fulfilled") homepageImageStrip = homepageImageStripResult.value;
   if (whyChooseUsResult.status === "fulfilled") whyChooseUsSettings = whyChooseUsResult.value;
@@ -448,7 +454,19 @@ export async function MarketingLandingPage({
       >
         <StorefrontRealtimeRefresh />
         {showTopNav ? (
-          <MarketingTopNav locale={locale} useLocalePrefix={useLocalePrefix} brand={t.brand} nav={t.nav} cta={t.cta} />
+          <MarketingTopNav
+            locale={locale}
+            useLocalePrefix={useLocalePrefix}
+            brand={storefrontSettings.brandName || t.brand}
+            nav={t.nav}
+            cta={{
+              ...t.cta,
+              call:
+                storefrontSettings.callButtonLabel ||
+                (locale === "th" ? "โทรหาเรา" : locale === "lo" ? "ໂທຫາພວກເຮົາ" : "Call Us"),
+              phone: storefrontSettings.callPhone || "+66843374982",
+            }}
+          />
         ) : null}
 
       <section id="showroom" className="mx-auto w-full max-w-7xl px-4 py-7">
@@ -724,9 +742,9 @@ export async function MarketingLandingPage({
       >
         <div className="mx-auto grid w-full max-w-7xl gap-4 px-4 md:grid-cols-[1.2fr_1fr_1fr]">
           <div>
-            <p className="text-base font-black text-slate-100">{t.footer.title}</p>
-            <p className="mt-2 text-sm text-slate-300/75">{t.footer.desc1}</p>
-            <p className="text-sm text-slate-300/75">{t.footer.desc2}</p>
+            <p className="text-base font-black text-slate-100">{storefrontSettings.footerTitle || t.footer.title}</p>
+            <p className="mt-2 text-sm text-slate-300/75">{storefrontSettings.footerDescription1 || t.footer.desc1}</p>
+            <p className="text-sm text-slate-300/75">{storefrontSettings.footerDescription2 || t.footer.desc2}</p>
           </div>
 
           <div>
@@ -741,11 +759,17 @@ export async function MarketingLandingPage({
           </div>
 
           <div>
-            <p className="text-base font-black text-slate-100">{t.footer.contact}</p>
+            <p className="text-base font-black text-slate-100">{storefrontSettings.footerContactTitle || t.footer.contact}</p>
             <div className="mt-2 space-y-1 text-sm">
-              <a href="tel:+66843374982" className="block hover:text-amber-200">Call</a>
-              <a href="https://line.me" className="block hover:text-amber-200">LINE</a>
-              <a href="https://facebook.com" className="block hover:text-amber-200">Facebook</a>
+              <a href={`tel:${storefrontSettings.callPhone || "+66843374982"}`} className="block hover:text-amber-200">
+                {storefrontSettings.footerCallLabel || "Call"}
+              </a>
+              <a href={storefrontSettings.lineUrl || "https://line.me"} className="block hover:text-amber-200">
+                {storefrontSettings.footerLineLabel || "LINE"}
+              </a>
+              <a href={storefrontSettings.facebookUrl || "https://facebook.com"} className="block hover:text-amber-200">
+                {storefrontSettings.footerFacebookLabel || "Facebook"}
+              </a>
             </div>
           </div>
         </div>
@@ -757,7 +781,7 @@ export async function MarketingLandingPage({
             color: homepageAppearance.textColor,
           }}
         >
-          © {new Date().getFullYear()} {t.footer.title}
+          © {new Date().getFullYear()} {storefrontSettings.footerTitle || t.footer.title}
           <span className="mx-2">|</span>
           <Link href="/login" className="hover:text-amber-200">{t.footer.admin}</Link>
           <span className="mx-2">|</span>

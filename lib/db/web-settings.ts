@@ -7,6 +7,7 @@ import { assertUiWriteAllowed } from "../maintenance/ui-maintenance-guard";
 import { getSupabaseServiceRoleClient } from "../supabase/service";
 import {
   getDefaultWebBannerSettings,
+  getDefaultWebStorefrontSettings,
   getDefaultWebHomepageAppearanceSettings,
   getDefaultWebHomepageImageStripSettings,
   getDefaultWebMiddleBannerSettings,
@@ -14,6 +15,7 @@ import {
   getDefaultWebNewsCardsSettings,
   getDefaultWebWhyChooseUsSettings,
   WebBrandGuaranteeSettings,
+  WebStorefrontSettings,
   WhyChooseUsIcon,
   WebBannerSettings,
   WebMiddleBannerSettings,
@@ -156,6 +158,38 @@ const WebBrandGuaranteeInputSchema = z.object({
   align: z.enum(["left", "center", "right"]).default("center"),
   effect: z.enum(["none", "lift", "glow", "pulse"]).default("lift"),
   items: z.array(WebBrandGuaranteeItemInputSchema),
+});
+
+const WebStorefrontInputSchema = z.object({
+  brandName: z.string().trim().min(1).max(120),
+  callButtonLabel: z.string().trim().min(1).max(80),
+  callPhone: z.string().trim().min(1).max(40),
+  footerTitle: z.string().trim().min(1).max(120),
+  footerDescription1: z.string().trim().max(240),
+  footerDescription2: z.string().trim().max(240),
+  footerContactTitle: z.string().trim().min(1).max(80),
+  footerCallLabel: z.string().trim().min(1).max(80),
+  footerLineLabel: z.string().trim().min(1).max(80),
+  footerFacebookLabel: z.string().trim().min(1).max(80),
+  lineUrl: z.string().trim().max(500),
+  facebookUrl: z.string().trim().max(500),
+  contactTitle: z.string().trim().min(1).max(120),
+  contactSubtitle: z.string().trim().max(240),
+  contactPhone: z.string().trim().min(1).max(40),
+  contactLineId: z.string().trim().max(80),
+  contactAddressTh: z.string().trim().max(240),
+  contactAddressEn: z.string().trim().max(240),
+  contactMapEmbedUrl: z.string().trim().max(600),
+  contactMapOpenUrl: z.string().trim().max(600),
+  contactCallButtonLabel: z.string().trim().min(1).max(80),
+  contactMapButtonLabel: z.string().trim().min(1).max(80),
+  contactLineButtonLabel: z.string().trim().min(1).max(80),
+  contactHoursWeekdayLabel: z.string().trim().min(1).max(80),
+  contactHoursWeekdayTime: z.string().trim().min(1).max(80),
+  contactHoursSaturdayLabel: z.string().trim().min(1).max(80),
+  contactHoursSaturdayTime: z.string().trim().min(1).max(80),
+  contactHoursSundayLabel: z.string().trim().min(1).max(80),
+  contactHoursSundayTime: z.string().trim().min(1).max(80),
 });
 
 function errorText(error: unknown, fallback: string) {
@@ -361,6 +395,46 @@ function mapBrandGuarantee(row: Record<string, unknown> | null | undefined): Web
     align: String(row.homepage_brand_guarantee_align ?? defaults.align) as WebBrandGuaranteeSettings["align"],
     effect: String(row.homepage_brand_guarantee_effect ?? defaults.effect) as WebBrandGuaranteeSettings["effect"],
     items,
+    updatedAt: row.updated_at ? String(row.updated_at) : null,
+  };
+}
+
+function mapStorefront(row: Record<string, unknown> | null | undefined): WebStorefrontSettings {
+  const defaults = getDefaultWebStorefrontSettings();
+  if (!row) {
+    return defaults;
+  }
+
+  return {
+    brandName: String(row.storefront_brand_name ?? defaults.brandName),
+    callButtonLabel: String(row.storefront_call_button_label ?? defaults.callButtonLabel),
+    callPhone: String(row.storefront_call_phone ?? defaults.callPhone),
+    footerTitle: String(row.storefront_footer_title ?? defaults.footerTitle),
+    footerDescription1: String(row.storefront_footer_description_1 ?? defaults.footerDescription1),
+    footerDescription2: String(row.storefront_footer_description_2 ?? defaults.footerDescription2),
+    footerContactTitle: String(row.storefront_footer_contact_title ?? defaults.footerContactTitle),
+    footerCallLabel: String(row.storefront_footer_call_label ?? defaults.footerCallLabel),
+    footerLineLabel: String(row.storefront_footer_line_label ?? defaults.footerLineLabel),
+    footerFacebookLabel: String(row.storefront_footer_facebook_label ?? defaults.footerFacebookLabel),
+    lineUrl: String(row.storefront_line_url ?? defaults.lineUrl),
+    facebookUrl: String(row.storefront_facebook_url ?? defaults.facebookUrl),
+    contactTitle: String(row.storefront_contact_title ?? defaults.contactTitle),
+    contactSubtitle: String(row.storefront_contact_subtitle ?? defaults.contactSubtitle),
+    contactPhone: String(row.storefront_contact_phone ?? defaults.contactPhone),
+    contactLineId: String(row.storefront_contact_line_id ?? defaults.contactLineId),
+    contactAddressTh: String(row.storefront_contact_address_th ?? defaults.contactAddressTh),
+    contactAddressEn: String(row.storefront_contact_address_en ?? defaults.contactAddressEn),
+    contactMapEmbedUrl: String(row.storefront_contact_map_embed_url ?? defaults.contactMapEmbedUrl),
+    contactMapOpenUrl: String(row.storefront_contact_map_open_url ?? defaults.contactMapOpenUrl),
+    contactCallButtonLabel: String(row.storefront_contact_call_button_label ?? defaults.contactCallButtonLabel),
+    contactMapButtonLabel: String(row.storefront_contact_map_button_label ?? defaults.contactMapButtonLabel),
+    contactLineButtonLabel: String(row.storefront_contact_line_button_label ?? defaults.contactLineButtonLabel),
+    contactHoursWeekdayLabel: String(row.storefront_contact_hours_weekday_label ?? defaults.contactHoursWeekdayLabel),
+    contactHoursWeekdayTime: String(row.storefront_contact_hours_weekday_time ?? defaults.contactHoursWeekdayTime),
+    contactHoursSaturdayLabel: String(row.storefront_contact_hours_saturday_label ?? defaults.contactHoursSaturdayLabel),
+    contactHoursSaturdayTime: String(row.storefront_contact_hours_saturday_time ?? defaults.contactHoursSaturdayTime),
+    contactHoursSundayLabel: String(row.storefront_contact_hours_sunday_label ?? defaults.contactHoursSundayLabel),
+    contactHoursSundayTime: String(row.storefront_contact_hours_sunday_time ?? defaults.contactHoursSundayTime),
     updatedAt: row.updated_at ? String(row.updated_at) : null,
   };
 }
@@ -811,4 +885,87 @@ export async function updateWebBrandGuaranteeSettingsApi(input: unknown) {
   }
 
   return mapBrandGuarantee(data as Record<string, unknown>);
+}
+
+export async function getWebStorefrontSettings() {
+  const supabase = getSupabaseServiceRoleClient();
+  const { data, error } = await supabase.from("web_settings").select("*").eq("id", "default").maybeSingle();
+
+  if (error) {
+    if (isMissingWebSettingsTable(error)) {
+      return getDefaultWebStorefrontSettings();
+    }
+    throw new Error(`Failed to load storefront settings: ${errorText(error, "Unknown error")}`);
+  }
+
+  return mapStorefront(data as Record<string, unknown> | null);
+}
+
+export async function getWebStorefrontSettingsApi() {
+  await requireAdminApi();
+  return getWebStorefrontSettings();
+}
+
+export async function updateWebStorefrontSettingsApi(input: unknown) {
+  await requireAdminApi();
+  const actor = await getAdminActor();
+  if (!actor || actor.role !== "admin") {
+    throw new Error("Not authorized to manage web settings");
+  }
+
+  await assertUiWriteAllowed({
+    path: "/admin/web-settings/storefront",
+    actorRole: actor.role,
+  });
+
+  const parsed = WebStorefrontInputSchema.parse(input);
+  const supabase = getSupabaseServiceRoleClient();
+  const payload = {
+    id: "default",
+    storefront_brand_name: parsed.brandName,
+    storefront_call_button_label: parsed.callButtonLabel,
+    storefront_call_phone: parsed.callPhone,
+    storefront_footer_title: parsed.footerTitle,
+    storefront_footer_description_1: parsed.footerDescription1,
+    storefront_footer_description_2: parsed.footerDescription2,
+    storefront_footer_contact_title: parsed.footerContactTitle,
+    storefront_footer_call_label: parsed.footerCallLabel,
+    storefront_footer_line_label: parsed.footerLineLabel,
+    storefront_footer_facebook_label: parsed.footerFacebookLabel,
+    storefront_line_url: parsed.lineUrl,
+    storefront_facebook_url: parsed.facebookUrl,
+    storefront_contact_title: parsed.contactTitle,
+    storefront_contact_subtitle: parsed.contactSubtitle,
+    storefront_contact_phone: parsed.contactPhone,
+    storefront_contact_line_id: parsed.contactLineId,
+    storefront_contact_address_th: parsed.contactAddressTh,
+    storefront_contact_address_en: parsed.contactAddressEn,
+    storefront_contact_map_embed_url: parsed.contactMapEmbedUrl,
+    storefront_contact_map_open_url: parsed.contactMapOpenUrl,
+    storefront_contact_call_button_label: parsed.contactCallButtonLabel,
+    storefront_contact_map_button_label: parsed.contactMapButtonLabel,
+    storefront_contact_line_button_label: parsed.contactLineButtonLabel,
+    storefront_contact_hours_weekday_label: parsed.contactHoursWeekdayLabel,
+    storefront_contact_hours_weekday_time: parsed.contactHoursWeekdayTime,
+    storefront_contact_hours_saturday_label: parsed.contactHoursSaturdayLabel,
+    storefront_contact_hours_saturday_time: parsed.contactHoursSaturdayTime,
+    storefront_contact_hours_sunday_label: parsed.contactHoursSundayLabel,
+    storefront_contact_hours_sunday_time: parsed.contactHoursSundayTime,
+    updated_by: actor.user.id,
+  };
+
+  const { data, error } = await supabase
+    .from("web_settings")
+    .upsert(payload, { onConflict: "id" })
+    .select("*")
+    .single();
+
+  if (error) {
+    if (isMissingWebSettingsTable(error)) {
+      throw new Error("Missing web_settings table. Run sql/ensure-web-settings.sql first.");
+    }
+    throw new Error(`Failed to update storefront settings: ${errorText(error, "Unknown error")}`);
+  }
+
+  return mapStorefront(data as Record<string, unknown>);
 }

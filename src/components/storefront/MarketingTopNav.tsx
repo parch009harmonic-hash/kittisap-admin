@@ -27,6 +27,15 @@ type MarketingTopNavProps = {
   };
 };
 
+type PublicStorefrontResponse = {
+  ok?: boolean;
+  data?: {
+    brandName?: string;
+    callButtonLabel?: string;
+    callPhone?: string;
+  };
+};
+
 const localeFlagMap: Record<AppLocale, { code: string; flagUrl: string; alt: string }> = {
   th: {
     code: "TH",
@@ -94,6 +103,9 @@ export function MarketingTopNav({ locale, useLocalePrefix, brand, nav, cta }: Ma
   const [customerInitial, setCustomerInitial] = useState("U");
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [cartQty, setCartQty] = useState(0);
+  const [brandOverride, setBrandOverride] = useState<string | null>(null);
+  const [callLabelOverride, setCallLabelOverride] = useState<string | null>(null);
+  const [callPhoneOverride, setCallPhoneOverride] = useState<string | null>(null);
   const localeMenuRef = useRef<HTMLDivElement | null>(null);
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
   const localeMeta = localeFlagMap[locale];
@@ -112,9 +124,10 @@ export function MarketingTopNav({ locale, useLocalePrefix, brand, nav, cta }: Ma
   const cartLabel = locale === "th" ? "ตะกร้า" : locale === "lo" ? "ກະຕ່າ" : "Cart";
   const checkoutLabel = locale === "th" ? "ชำระเงิน" : locale === "lo" ? "ຊຳລະເງິນ" : "Checkout";
   const quickMenuLabel = locale === "th" ? "เมนูลัดลูกค้า" : locale === "lo" ? "ເມນູລັດລູກຄ້າ" : "Customer shortcuts";
-  const callPhone = cta.phone ?? "+66843374982";
+  const callPhone = callPhoneOverride ?? cta.phone ?? "+66843374982";
   const callHref = `tel:${callPhone}`;
-  const callLabel = cta.call ?? (locale === "th" ? "โทรหาเรา" : locale === "lo" ? "ໂທຫາພວກເຮົາ" : "Call Us");
+  const callLabel =
+    callLabelOverride ?? cta.call ?? (locale === "th" ? "โทรหาเรา" : locale === "lo" ? "ໂທຫາພວກເຮົາ" : "Call Us");
   const onLocaleChange = (nextLocale: AppLocale) => {
     if (nextLocale === locale) return;
     setLocaleMenuOpen(false);
@@ -141,6 +154,34 @@ export function MarketingTopNav({ locale, useLocalePrefix, brand, nav, cta }: Ma
     return () => {
       document.removeEventListener("mousedown", onClickOutside);
       document.removeEventListener("keydown", onEscape);
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadStorefrontSettings() {
+      try {
+        const response = await fetch("/api/public/storefront-settings", { cache: "no-store" });
+        const payload = (await response.json().catch(() => null)) as PublicStorefrontResponse | null;
+        if (!active || !response.ok || !payload?.ok || !payload.data) {
+          return;
+        }
+
+        const nextBrand = String(payload.data.brandName ?? "").trim();
+        const nextCallLabel = String(payload.data.callButtonLabel ?? "").trim();
+        const nextCallPhone = String(payload.data.callPhone ?? "").trim();
+        setBrandOverride(nextBrand || null);
+        setCallLabelOverride(nextCallLabel || null);
+        setCallPhoneOverride(nextCallPhone || null);
+      } catch {
+        // no-op fallback to static copy
+      }
+    }
+
+    void loadStorefrontSettings();
+    return () => {
+      active = false;
     };
   }, []);
 
@@ -210,7 +251,7 @@ export function MarketingTopNav({ locale, useLocalePrefix, brand, nav, cta }: Ma
           <span className="relative h-9 w-9 overflow-hidden rounded-xl shadow-[0_12px_28px_rgba(15,23,42,0.22)]">
             <Image src="/icons/pwa-icon-192.png" alt="" fill sizes="36px" className="object-cover" priority />
           </span>
-          <span>{brand}</span>
+          <span>{brandOverride ?? brand}</span>
         </Link>
 
         <nav className="hidden items-center gap-1 md:flex" aria-label="Desktop top navigation">

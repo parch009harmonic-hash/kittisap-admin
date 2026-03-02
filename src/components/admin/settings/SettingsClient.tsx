@@ -8,6 +8,7 @@ import { parseAdminApiError } from "../api-error";
 import { ConfirmModal } from "../ConfirmModal";
 import { Toast } from "../Toast";
 import { PaymentShortcutSettingItem } from "./PaymentShortcutSettingItem";
+import { StorefrontProfileSettingItem } from "./StorefrontProfileSettingItem";
 
 type SettingsText = {
   section: string;
@@ -76,14 +77,17 @@ type SettingsText = {
   apiHealthUnavailable: string;
 };
 
-type SectionId = "display" | "store" | "security" | "notify" | "users";
+type SectionId = "display" | "store" | "security" | "notify" | "users" | "banking";
 type SettingsSection = {
   id: SectionId;
   title: string;
   subtitle: string;
   iconTone: string;
   iconColor: string;
-  items: Array<{ id: "createUser" | "paymentShortcut" | AdminSettingField | "localeSwitch" | "themePreset"; label: string }>;
+  items: Array<{
+    id: "createUser" | "paymentShortcut" | "storefrontProfile" | AdminSettingField | "localeSwitch" | "themePreset";
+    label: string;
+  }>;
 };
 
 type Option = { value: string; label: string };
@@ -317,14 +321,14 @@ export default function SettingsClient({
       {
         id: "store",
         title: text.store,
-        subtitle: locale === "th" ? "ข้อมูลหลักร้านและสกุลเงิน" : "Store profile and currency",
+        subtitle: locale === "th" ? "ข้อมูลร้านที่แสดงบนเว็บไซต์ลูกค้า" : "Storefront profile and contact details",
         iconTone: "bg-emerald-100",
         iconColor: "text-emerald-700",
         items: [
+          { id: "storefrontProfile", label: locale === "th" ? "ข้อมูลร้านค้าบนเว็บไซต์" : "Storefront Profile" },
           { id: "storeName", label: text.storeName },
           { id: "supportPhone", label: text.supportPhone },
           { id: "currency", label: text.currency },
-          { id: "paymentShortcut", label: locale === "th" ? "ข้อมูลร้านค้าและสลิปเงิน" : "Store payment profile" },
         ],
       },
       {
@@ -349,6 +353,14 @@ export default function SettingsClient({
           { id: "pushNotify", label: text.pushNotify },
           { id: "orderNotify", label: text.orderNotify },
         ],
+      },
+      {
+        id: "banking",
+        title: locale === "th" ? "ตั้งบัญชีธนาคารเก็บเงิน" : "Bank Receiving Setup",
+        subtitle: locale === "th" ? "ตั้งค่าบัญชีธนาคารและ QR รับเงิน" : "Configure bank account and payment QR",
+        iconTone: "bg-cyan-100",
+        iconColor: "text-cyan-700",
+        items: [{ id: "paymentShortcut", label: locale === "th" ? "ตั้งบัญชีธนาคารเก็บเงิน" : "Bank Receiving Setup" }],
       },
     ],
     [isDeveloperMode, locale, text],
@@ -434,6 +446,13 @@ export default function SettingsClient({
         />
       ) : item.id === "paymentShortcut" ? (
         <PaymentShortcutSettingItem
+          key={item.id}
+          locale={locale}
+          onSuccess={handleUserSuccess}
+          onError={handleUserError}
+        />
+      ) : item.id === "storefrontProfile" ? (
+        <StorefrontProfileSettingItem
           key={item.id}
           locale={locale}
           onSuccess={handleUserSuccess}
@@ -651,6 +670,16 @@ function SectionGlyph({ id }: { id: SectionId }) {
         <path d="M12 3.5 5 6.5v5.4c0 4.2 2.8 8 7 9.6 4.2-1.6 7-5.4 7-9.6V6.5l-7-3Z" />
         <rect x="9.1" y="10.2" width="5.8" height="4.8" rx="1" />
         <path d="M10 10.2V9a2 2 0 1 1 4 0v1.2" />
+      </svg>
+    );
+  }
+
+  if (id === "banking") {
+    return (
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+        <path d="M3 9 12 4l9 5" />
+        <path d="M5 10v8M9 10v8M15 10v8M19 10v8" />
+        <path d="M3 18h18" />
       </svg>
     );
   }

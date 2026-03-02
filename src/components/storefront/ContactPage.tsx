@@ -1,4 +1,4 @@
-﻿import { CONTACT_INFO } from "../../../data/contact";
+import { getWebStorefrontSettings } from "../../../lib/db/web-settings";
 import type { AppLocale } from "../../../lib/i18n/locale";
 import { StorefrontTopMenu } from "./StorefrontTopMenu";
 
@@ -57,8 +57,20 @@ function formatPhoneHref(phone: string) {
   return `tel:${normalized}`;
 }
 
-export function ContactPage({ locale, useLocalePrefix = false }: ContactPageProps) {
+export async function ContactPage({ locale, useLocalePrefix = false }: ContactPageProps) {
   const t = text(locale);
+  const storefrontSettings = await getWebStorefrontSettings();
+  const contactPhone = storefrontSettings.contactPhone || storefrontSettings.callPhone;
+  const lineId = storefrontSettings.contactLineId;
+  const lineUrl = storefrontSettings.lineUrl || "https://line.me";
+  const mapOpenUrl = storefrontSettings.contactMapOpenUrl || "https://maps.google.com/?q=Bangkok";
+  const mapEmbedUrl = storefrontSettings.contactMapEmbedUrl || "https://www.google.com/maps?q=Bangkok&output=embed";
+  const address = locale === "en" ? storefrontSettings.contactAddressEn : storefrontSettings.contactAddressTh;
+  const businessHours = [
+    { day: storefrontSettings.contactHoursWeekdayLabel, time: storefrontSettings.contactHoursWeekdayTime },
+    { day: storefrontSettings.contactHoursSaturdayLabel, time: storefrontSettings.contactHoursSaturdayTime },
+    { day: storefrontSettings.contactHoursSundayLabel, time: storefrontSettings.contactHoursSundayTime },
+  ];
 
   return (
     <>
@@ -66,8 +78,8 @@ export function ContactPage({ locale, useLocalePrefix = false }: ContactPageProp
       <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,_#5c3f00_0%,_#1a1200_30%,_#090909_68%)] text-amber-50">
         <section className="mx-auto w-full max-w-7xl px-4 py-8 md:px-6 md:py-12">
           <header className="rounded-3xl border border-amber-500/35 bg-black/55 p-6 shadow-[0_20px_80px_rgba(0,0,0,0.45)] backdrop-blur">
-            <h1 className="font-heading text-3xl font-semibold text-amber-300 md:text-4xl">{t.title}</h1>
-            <p className="mt-2 text-sm text-amber-100/80 md:text-base">{t.subtitle}</p>
+            <h1 className="font-heading text-3xl font-semibold text-amber-300 md:text-4xl">{storefrontSettings.contactTitle || t.title}</h1>
+            <p className="mt-2 text-sm text-amber-100/80 md:text-base">{storefrontSettings.contactSubtitle || t.subtitle}</p>
           </header>
 
           <section className="mt-6 grid gap-5 lg:grid-cols-[1.1fr_1fr]">
@@ -75,44 +87,42 @@ export function ContactPage({ locale, useLocalePrefix = false }: ContactPageProp
               <dl className="grid gap-4 text-sm">
                 <div className="rounded-xl border border-amber-500/20 bg-black/35 p-4">
                   <dt className="text-amber-200/80">{t.phone}</dt>
-                  <dd className="mt-1 text-lg font-semibold text-amber-100">{CONTACT_INFO.telephone}</dd>
+                  <dd className="mt-1 text-lg font-semibold text-amber-100">{contactPhone}</dd>
                 </div>
 
                 <div className="rounded-xl border border-amber-500/20 bg-black/35 p-4">
                   <dt className="text-amber-200/80">{t.line}</dt>
-                  <dd className="mt-1 text-lg font-semibold text-amber-100">{CONTACT_INFO.lineId}</dd>
+                  <dd className="mt-1 text-lg font-semibold text-amber-100">{lineId}</dd>
                 </div>
 
                 <div className="rounded-xl border border-amber-500/20 bg-black/35 p-4">
                   <dt className="text-amber-200/80">{t.address}</dt>
-                  <dd className="mt-1 text-base font-medium text-amber-100">
-                    {locale === "en" ? CONTACT_INFO.addressEn : CONTACT_INFO.addressTh}
-                  </dd>
+                  <dd className="mt-1 text-base font-medium text-amber-100">{address}</dd>
                 </div>
               </dl>
 
               <div className="mt-4 grid gap-3 sm:grid-cols-3">
                 <a
-                  href={formatPhoneHref(CONTACT_INFO.telephone)}
+                  href={formatPhoneHref(contactPhone)}
                   className="inline-flex items-center justify-center rounded-xl border border-amber-400/60 bg-amber-400/20 px-4 py-2 text-sm font-semibold text-amber-100 hover:bg-amber-300/30"
                 >
-                  {t.callNow}
+                  {storefrontSettings.contactCallButtonLabel || t.callNow}
                 </a>
                 <a
-                  href={CONTACT_INFO.mapOpenUrl}
+                  href={mapOpenUrl}
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex items-center justify-center rounded-xl border border-amber-500/35 bg-black/45 px-4 py-2 text-sm font-semibold text-amber-100 hover:bg-black/60"
                 >
-                  {t.openMap}
+                  {storefrontSettings.contactMapButtonLabel || t.openMap}
                 </a>
                 <a
-                  href={CONTACT_INFO.lineUrl}
+                  href={lineUrl}
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex items-center justify-center rounded-xl border border-amber-500/35 bg-black/45 px-4 py-2 text-sm font-semibold text-amber-100 hover:bg-black/60"
                 >
-                  {t.openLine}
+                  {storefrontSettings.contactLineButtonLabel || t.openLine}
                 </a>
               </div>
             </article>
@@ -120,19 +130,17 @@ export function ContactPage({ locale, useLocalePrefix = false }: ContactPageProp
             <article className="rounded-2xl border border-amber-500/25 bg-black/45 p-5">
               <h2 className="text-lg font-semibold text-amber-300">{t.hours}</h2>
               <ul className="mt-3 space-y-2 text-sm text-amber-100/85">
-                {CONTACT_INFO.hours.map((row) => (
-                  <li key={row.dayEn} className="flex items-center justify-between gap-3 rounded-lg border border-amber-500/15 bg-black/30 px-3 py-2">
-                    <span>{locale === "en" ? row.dayEn : row.dayTh}</span>
-                    <span className="font-semibold text-amber-200">
-                      {row.open} - {row.close}
-                    </span>
+                {businessHours.map((row) => (
+                  <li key={`${row.day}-${row.time}`} className="flex items-center justify-between gap-3 rounded-lg border border-amber-500/15 bg-black/30 px-3 py-2">
+                    <span>{row.day}</span>
+                    <span className="font-semibold text-amber-200">{row.time}</span>
                   </li>
                 ))}
               </ul>
 
               <div className="mt-4 overflow-hidden rounded-xl border border-amber-500/20">
                 <iframe
-                  src={CONTACT_INFO.mapEmbedUrl}
+                  src={mapEmbedUrl}
                   title={t.map}
                   className="h-64 w-full"
                   loading="lazy"

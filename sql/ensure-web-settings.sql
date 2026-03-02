@@ -126,6 +126,64 @@ alter table public.web_settings
   alter column banner_auto_height set default true;
 alter table public.web_settings
   add column if not exists banner_title_font_scale_thai_percent integer not null default 92;
+alter table public.web_settings
+  add column if not exists storefront_brand_name text not null default 'Kittisap';
+alter table public.web_settings
+  add column if not exists storefront_call_button_label text not null default 'โทรหาเรา';
+alter table public.web_settings
+  add column if not exists storefront_call_phone text not null default '+66843374982';
+alter table public.web_settings
+  add column if not exists storefront_footer_title text not null default 'Kittisap';
+alter table public.web_settings
+  add column if not exists storefront_footer_description_1 text not null default 'เว็บไซต์ลูกค้าเชื่อมข้อมูลร่วมกับระบบแอดมินและ Supabase';
+alter table public.web_settings
+  add column if not exists storefront_footer_description_2 text not null default 'รองรับการสั่งซื้อ ชำระเงิน และตรวจสอบคำสั่งซื้ออย่างครบวงจร';
+alter table public.web_settings
+  add column if not exists storefront_footer_contact_title text not null default 'Contact';
+alter table public.web_settings
+  add column if not exists storefront_footer_call_label text not null default 'Call';
+alter table public.web_settings
+  add column if not exists storefront_footer_line_label text not null default 'LINE';
+alter table public.web_settings
+  add column if not exists storefront_footer_facebook_label text not null default 'Facebook';
+alter table public.web_settings
+  add column if not exists storefront_line_url text not null default 'https://line.me';
+alter table public.web_settings
+  add column if not exists storefront_facebook_url text not null default 'https://facebook.com';
+alter table public.web_settings
+  add column if not exists storefront_contact_title text not null default 'ติดต่อเรา';
+alter table public.web_settings
+  add column if not exists storefront_contact_subtitle text not null default 'สอบถามข้อมูลสินค้า นัดหมายเข้าชม และติดต่อทีมงานได้ทุกช่องทาง';
+alter table public.web_settings
+  add column if not exists storefront_contact_phone text not null default '0843374982';
+alter table public.web_settings
+  add column if not exists storefront_contact_line_id text not null default '@kittisap';
+alter table public.web_settings
+  add column if not exists storefront_contact_address_th text not null default 'กรุงเทพมหานคร ประเทศไทย';
+alter table public.web_settings
+  add column if not exists storefront_contact_address_en text not null default 'Bangkok, Thailand';
+alter table public.web_settings
+  add column if not exists storefront_contact_map_embed_url text not null default 'https://www.google.com/maps?q=Bangkok&output=embed';
+alter table public.web_settings
+  add column if not exists storefront_contact_map_open_url text not null default 'https://maps.google.com/?q=Bangkok';
+alter table public.web_settings
+  add column if not exists storefront_contact_call_button_label text not null default 'โทรทันที';
+alter table public.web_settings
+  add column if not exists storefront_contact_map_button_label text not null default 'เปิดแผนที่';
+alter table public.web_settings
+  add column if not exists storefront_contact_line_button_label text not null default 'เปิด LINE';
+alter table public.web_settings
+  add column if not exists storefront_contact_hours_weekday_label text not null default 'จันทร์ - ศุกร์';
+alter table public.web_settings
+  add column if not exists storefront_contact_hours_weekday_time text not null default '09:00 - 18:00';
+alter table public.web_settings
+  add column if not exists storefront_contact_hours_saturday_label text not null default 'เสาร์';
+alter table public.web_settings
+  add column if not exists storefront_contact_hours_saturday_time text not null default '09:00 - 17:00';
+alter table public.web_settings
+  add column if not exists storefront_contact_hours_sunday_label text not null default 'อาทิตย์';
+alter table public.web_settings
+  add column if not exists storefront_contact_hours_sunday_time text not null default '10:00 - 16:00';
 
 update public.web_settings
 set banner_auto_height = true
