@@ -324,12 +324,7 @@ export default function SettingsClient({
         subtitle: locale === "th" ? "ข้อมูลร้านที่แสดงบนเว็บไซต์ลูกค้า" : "Storefront profile and contact details",
         iconTone: "bg-emerald-100",
         iconColor: "text-emerald-700",
-        items: [
-          { id: "storefrontProfile", label: locale === "th" ? "ข้อมูลร้านค้าบนเว็บไซต์" : "Storefront Profile" },
-          { id: "storeName", label: text.storeName },
-          { id: "supportPhone", label: text.supportPhone },
-          { id: "currency", label: text.currency },
-        ],
+        items: [{ id: "storefrontProfile", label: locale === "th" ? "ข้อมูลร้านค้าบนเว็บไซต์" : "Storefront Profile" }],
       },
       {
         id: "security",

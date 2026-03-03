@@ -10,17 +10,25 @@ type StorefrontPayload = {
   data?: WebStorefrontSettings;
 };
 
+type FieldDef = {
+  key: keyof WebStorefrontSettings;
+  label: string;
+  type?: "text" | "tel" | "url" | "textarea";
+};
+
 async function fetchJson<T>(input: RequestInfo | URL, init?: RequestInit) {
   const response = await fetch(input, { ...init, cache: "no-store" });
   const payload = (await response.json().catch(() => null)) as T | null;
   return { response, payload };
 }
 
-type FieldDef = { key: keyof WebStorefrontSettings; label: string; type?: "text" | "tel" | "url" | "textarea" };
-
 function toTelHref(value: string) {
   const normalized = value.replace(/[^0-9+]/g, "");
   return normalized ? `tel:${normalized}` : "#";
+}
+
+function isMissingWebSettingsError(message: string) {
+  return message.toLowerCase().includes("missing web_settings table");
 }
 
 export function StorefrontProfileSettingItem({
@@ -35,13 +43,14 @@ export function StorefrontProfileSettingItem({
   const [draft, setDraft] = useState<WebStorefrontSettings>(getDefaultWebStorefrontSettings());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [migrationRequired, setMigrationRequired] = useState(false);
 
   const text = useMemo(
     () =>
       locale === "th"
         ? {
             title: "ข้อมูลร้านค้าที่แสดงบนหน้าเว็บไซต์",
-            subtitle: "แก้ไขเมนูบน ปุ่มโทรหาเรา ข้อมูลหน้า Contact และ Footer ให้เชื่อมกันทั้งระบบ",
+            subtitle: "แก้ไขเมนูบน ปุ่มโทรหาเรา หน้า Contact และ Footer ให้เชื่อมกันทั้งระบบ",
             loadFailed: "โหลดข้อมูลร้านค้าไม่สำเร็จ",
             saveFailed: "บันทึกข้อมูลร้านค้าไม่สำเร็จ",
             saved: "บันทึกข้อมูลร้านค้าเรียบร้อย",
@@ -52,6 +61,8 @@ export function StorefrontProfileSettingItem({
             footer: "ส่วนท้ายเว็บไซต์",
             contact: "หน้า ติดต่อเรา",
             previewPhone: "ทดสอบโทร:",
+            migrationTitle: "ยังไม่พร้อมบันทึก: ขาดตาราง web_settings",
+            migrationBody: "กรุณารันไฟล์ sql/ensure-web-settings.sql ใน Supabase SQL Editor ก่อน แล้วรีเฟรชหน้า",
           }
         : {
             title: "Storefront profile settings",
@@ -66,15 +77,18 @@ export function StorefrontProfileSettingItem({
             footer: "Footer",
             contact: "Contact page",
             previewPhone: "Call preview:",
+            migrationTitle: "Cannot save yet: missing web_settings table",
+            migrationBody: "Run sql/ensure-web-settings.sql in Supabase SQL Editor, then refresh this page.",
           },
     [locale],
   );
 
   const topFields: FieldDef[] = [
-    { key: "brandName", label: locale === "th" ? "ชื่อแบรนด์ (โลโก้ด้านซ้าย)" : "Brand name" },
+    { key: "brandName", label: locale === "th" ? "ชื่อแบรนด์ (ซ้ายบน)" : "Brand name" },
     { key: "callButtonLabel", label: locale === "th" ? "ข้อความปุ่มโทรหาเรา" : "Call button label" },
-    { key: "callPhone", label: locale === "th" ? "เบอร์โทรปุ่มโทรหาเรา" : "Call phone number", type: "tel" },
+    { key: "callPhone", label: locale === "th" ? "เบอร์โทรปุ่มโทรหาเรา" : "Call phone", type: "tel" },
   ];
+
   const footerFields: FieldDef[] = [
     { key: "footerTitle", label: locale === "th" ? "หัวข้อ Footer" : "Footer title" },
     { key: "footerDescription1", label: locale === "th" ? "คำอธิบายบรรทัดที่ 1" : "Footer description line 1", type: "textarea" },
@@ -86,19 +100,20 @@ export function StorefrontProfileSettingItem({
     { key: "lineUrl", label: locale === "th" ? "ลิงก์ LINE" : "LINE URL", type: "url" },
     { key: "facebookUrl", label: locale === "th" ? "ลิงก์ Facebook" : "Facebook URL", type: "url" },
   ];
+
   const contactFields: FieldDef[] = [
-    { key: "contactTitle", label: locale === "th" ? "หัวข้อหน้า Contact" : "Contact page title" },
+    { key: "contactTitle", label: locale === "th" ? "หัวข้อหน้า Contact" : "Contact title" },
     { key: "contactSubtitle", label: locale === "th" ? "คำอธิบายหน้า Contact" : "Contact subtitle", type: "textarea" },
     { key: "contactPhone", label: locale === "th" ? "เบอร์โทรติดต่อ" : "Contact phone", type: "tel" },
     { key: "contactLineId", label: locale === "th" ? "LINE ID" : "LINE ID" },
     { key: "contactAddressTh", label: locale === "th" ? "ที่อยู่ (ไทย/ลาว)" : "Address (TH/LO)", type: "textarea" },
     { key: "contactAddressEn", label: locale === "th" ? "ที่อยู่ (อังกฤษ)" : "Address (EN)", type: "textarea" },
-    { key: "contactMapEmbedUrl", label: locale === "th" ? "ลิงก์แผนที่แบบ Embed" : "Map embed URL", type: "url" },
-    { key: "contactMapOpenUrl", label: locale === "th" ? "ลิงก์เปิด Google Maps" : "Open map URL", type: "url" },
-    { key: "contactCallButtonLabel", label: locale === "th" ? "ข้อความปุ่มโทรทันที" : "Call now button label" },
-    { key: "contactMapButtonLabel", label: locale === "th" ? "ข้อความปุ่มเปิดแผนที่" : "Open map button label" },
-    { key: "contactLineButtonLabel", label: locale === "th" ? "ข้อความปุ่มเปิด LINE" : "Open LINE button label" },
-    { key: "contactHoursWeekdayLabel", label: locale === "th" ? "ชื่อวันทำการ (จันทร์-ศุกร์)" : "Weekday label" },
+    { key: "contactMapEmbedUrl", label: locale === "th" ? "ลิงก์แผนที่ Embed" : "Map embed URL", type: "url" },
+    { key: "contactMapOpenUrl", label: locale === "th" ? "ลิงก์เปิด Google Maps" : "Map open URL", type: "url" },
+    { key: "contactCallButtonLabel", label: locale === "th" ? "ข้อความปุ่มโทรทันที" : "Call button label" },
+    { key: "contactMapButtonLabel", label: locale === "th" ? "ข้อความปุ่มเปิดแผนที่" : "Map button label" },
+    { key: "contactLineButtonLabel", label: locale === "th" ? "ข้อความปุ่มเปิด LINE" : "LINE button label" },
+    { key: "contactHoursWeekdayLabel", label: locale === "th" ? "ชื่อวัน (จันทร์-ศุกร์)" : "Weekday label" },
     { key: "contactHoursWeekdayTime", label: locale === "th" ? "เวลา (จันทร์-ศุกร์)" : "Weekday time" },
     { key: "contactHoursSaturdayLabel", label: locale === "th" ? "ชื่อวัน (เสาร์)" : "Saturday label" },
     { key: "contactHoursSaturdayTime", label: locale === "th" ? "เวลา (เสาร์)" : "Saturday time" },
@@ -113,9 +128,16 @@ export function StorefrontProfileSettingItem({
       try {
         const { response, payload } = await fetchJson<StorefrontPayload>("/api/admin/web-settings/storefront");
         if (!active) return;
+
         if (!response.ok || !payload?.ok || !payload.data) {
-          throw new Error(payload?.error ?? text.loadFailed);
+          const message = payload?.error ?? text.loadFailed;
+          if (isMissingWebSettingsError(message)) {
+            setMigrationRequired(true);
+          }
+          throw new Error(message);
         }
+
+        setMigrationRequired(false);
         setDraft(payload.data);
       } catch (error) {
         onError(error instanceof Error ? error.message : text.loadFailed);
@@ -134,6 +156,11 @@ export function StorefrontProfileSettingItem({
   }
 
   async function save() {
+    if (migrationRequired) {
+      onError(text.migrationBody);
+      return;
+    }
+
     setSaving(true);
     try {
       const { response, payload } = await fetchJson<StorefrontPayload>("/api/admin/web-settings/storefront", {
@@ -142,7 +169,11 @@ export function StorefrontProfileSettingItem({
         body: JSON.stringify(draft),
       });
       if (!response.ok || !payload?.ok) {
-        throw new Error(payload?.error ?? text.saveFailed);
+        const message = payload?.error ?? text.saveFailed;
+        if (isMissingWebSettingsError(message)) {
+          setMigrationRequired(true);
+        }
+        throw new Error(message);
       }
       if (payload.data) {
         setDraft(payload.data);
@@ -209,6 +240,16 @@ export function StorefrontProfileSettingItem({
           <p className="text-xs text-slate-500">{text.subtitle}</p>
         </div>
 
+        {migrationRequired ? (
+          <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2">
+            <p className="text-sm font-semibold text-rose-800">{text.migrationTitle}</p>
+            <p className="mt-1 text-xs text-rose-700">{text.migrationBody}</p>
+            <code className="mt-2 block rounded-lg bg-white px-2 py-1 text-[11px] text-slate-700">
+              sql/ensure-web-settings.sql
+            </code>
+          </div>
+        ) : null}
+
         {renderGroup(text.topbar, topFields)}
         {renderGroup(text.footer, footerFields)}
         {renderGroup(text.contact, contactFields)}
@@ -217,12 +258,15 @@ export function StorefrontProfileSettingItem({
           <button
             type="button"
             onClick={() => void save()}
-            disabled={saving}
+            disabled={saving || migrationRequired}
             className="btn-primary rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-60"
           >
             {saving ? text.saving : text.save}
           </button>
-          <a href={toTelHref(draft.callPhone)} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700">
+          <a
+            href={toTelHref(draft.callPhone)}
+            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700"
+          >
             {text.previewPhone} {draft.callPhone}
           </a>
         </div>
