@@ -23,6 +23,8 @@ const ProductRowSchema = ProductInputSchema.extend({
 
 const PRODUCT_SELECT_COLUMNS =
   "id,sku,slug,title_th,title_en,title_lo,description_th,description_en,description_lo,price,compare_at_price,stock,status,is_featured,created_at";
+const ORDER_ARCHIVE_PRODUCT_SKU = "__ORDER_ITEM_ARCHIVE__";
+const ORDER_ARCHIVE_PRODUCT_SLUG = "order-item-archive";
 
 function buildSku() {
   const now = new Date();
@@ -149,6 +151,112 @@ async function adminWriteClient() {
   return getSupabaseServiceRoleClient();
 }
 
+async function ensureOrderArchiveProductId(supabase: Awaited<ReturnType<typeof adminWriteClient>>) {
+  const { data: existingBySku, error: existingBySkuError } = await supabase
+    .from("products")
+    .select("id")
+    .eq("sku", ORDER_ARCHIVE_PRODUCT_SKU)
+    .maybeSingle();
+
+  if (existingBySkuError) {
+    throw new Error(
+      `Failed to find order archive product: ${errorText(existingBySkuError, "Unknown error")}`
+    );
+  }
+  if (existingBySku?.id) {
+    return String(existingBySku.id);
+  }
+
+  const { data: existingBySlug, error: existingBySlugError } = await supabase
+    .from("products")
+    .select("id,sku")
+    .eq("slug", ORDER_ARCHIVE_PRODUCT_SLUG)
+    .maybeSingle();
+
+  if (existingBySlugError) {
+    throw new Error(
+      `Failed to find order archive product by slug: ${errorText(existingBySlugError, "Unknown error")}`
+    );
+  }
+  if (existingBySlug?.id) {
+    const archiveId = String(existingBySlug.id);
+    if (existingBySlug.sku !== ORDER_ARCHIVE_PRODUCT_SKU) {
+      const { error: fixSkuError } = await supabase
+        .from("products")
+        .update({ sku: ORDER_ARCHIVE_PRODUCT_SKU })
+        .eq("id", archiveId);
+
+      if (fixSkuError) {
+        throw new Error(
+          `Failed to update order archive SKU: ${errorText(fixSkuError, "Unknown error")}`
+        );
+      }
+    }
+    return archiveId;
+  }
+
+  const payload = {
+    sku: ORDER_ARCHIVE_PRODUCT_SKU,
+    slug: ORDER_ARCHIVE_PRODUCT_SLUG,
+    title_th: "สินค้าอ้างอิงคำสั่งซื้อ (ระบบ)",
+    title_en: "System order archive product",
+    title_lo: "",
+    description_th: "สินค้า placeholder สำหรับเก็บประวัติคำสั่งซื้อย้อนหลัง",
+    description_en: "Internal placeholder product used for preserving historical orders.",
+    description_lo: "",
+    price: 0,
+    compare_at_price: null,
+    stock: 0,
+    status: "inactive",
+    is_featured: false,
+  };
+
+  let { data: created, error: createError } = await supabase
+    .from("products")
+    .insert(payload)
+    .select("id")
+    .single();
+
+  if (createError && isMissingFeaturedColumnError(createError)) {
+    const fallbackCreate = await supabase
+      .from("products")
+      .insert({
+        ...payload,
+        is_featured: undefined,
+      })
+      .select("id")
+      .single();
+    created = fallbackCreate.data;
+    createError = fallbackCreate.error;
+  }
+
+  if (createError) {
+    const message = errorText(createError, "Unknown error");
+    const isDuplicate = message.toLowerCase().includes("duplicate key");
+    if (isDuplicate) {
+      const retry = await supabase
+        .from("products")
+        .select("id")
+        .eq("sku", ORDER_ARCHIVE_PRODUCT_SKU)
+        .maybeSingle();
+      if (retry.error) {
+        throw new Error(
+          `Failed to read order archive product after duplicate insert: ${errorText(retry.error, "Unknown error")}`
+        );
+      }
+      if (retry.data?.id) {
+        return String(retry.data.id);
+      }
+    }
+    throw new Error(`Failed to create order archive product: ${message}`);
+  }
+
+  if (!created?.id) {
+    throw new Error("Failed to create order archive product: missing id");
+  }
+  return String(created.id);
+}
+
 export async function listProducts(input: {
   q?: string;
   status?: ProductStatus;
@@ -166,6 +274,7 @@ export async function listProducts(input: {
   let query = supabase
     .from("products")
     .select(PRODUCT_SELECT_COLUMNS, { count: "planned" })
+    .neq("slug", ORDER_ARCHIVE_PRODUCT_SLUG)
     .order("created_at", { ascending: false })
     .range(from, to);
 
@@ -187,6 +296,7 @@ export async function listProducts(input: {
     let fallbackQuery = supabase
       .from("products")
       .select("*", { count: "planned" })
+      .neq("slug", ORDER_ARCHIVE_PRODUCT_SLUG)
       .order("created_at", { ascending: false })
       .range(from, to);
 
@@ -331,6 +441,29 @@ export async function deleteProduct(id: string) {
   }
 
   if (isDeleteRestrictedByOrderItems(error)) {
+    const orderArchiveProductId = await ensureOrderArchiveProductId(supabase);
+    const { error: remapError } = await supabase
+      .from("order_items")
+      .update({ product_id: orderArchiveProductId })
+      .eq("product_id", id);
+
+    if (remapError) {
+      throw new Error(
+        `Failed to remap historical order items before delete: ${errorText(remapError, "Unknown error")}`
+      );
+    }
+
+    const retryDelete = await supabase.from("products").delete().eq("id", id);
+    if (!retryDelete.error) {
+      return { mode: "deleted" as const };
+    }
+
+    if (!isDeleteRestrictedByOrderItems(retryDelete.error)) {
+      throw new Error(
+        `Failed to delete product after order-item remap: ${errorText(retryDelete.error, "Unknown error")}`
+      );
+    }
+
     let { error: archiveError } = await supabase
       .from("products")
       .update({ status: "inactive", stock: 0, is_featured: false })

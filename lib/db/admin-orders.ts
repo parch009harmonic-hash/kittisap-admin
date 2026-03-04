@@ -13,6 +13,7 @@ export type AdminOrderRow = {
   status: string;
   payment_status: string;
   latest_pending_slip_id: string | null;
+  can_delete: boolean;
 };
 
 export type AdminOrderItemRow = {
@@ -34,6 +35,16 @@ export type AdminPaymentSlipRow = {
   reviewed_at: string | null;
   note: string | null;
 };
+
+const HISTORY_ORDER_STATUSES = new Set(["paid", "processing", "shipped", "completed"]);
+const HISTORY_PAYMENT_STATUSES = new Set(["paid"]);
+
+export function shouldKeepOrderForHistory(status: string, paymentStatus: string) {
+  return (
+    HISTORY_ORDER_STATUSES.has(status.trim().toLowerCase()) ||
+    HISTORY_PAYMENT_STATUSES.has(paymentStatus.trim().toLowerCase())
+  );
+}
 
 export async function listAdminOrders(input?: {
   q?: string;
@@ -98,6 +109,8 @@ export async function listAdminOrders(input?: {
     const profile = (row.customer_profiles ?? null) as Record<string, unknown> | null;
     const customerName = String(row.customer_name_snapshot ?? profile?.full_name ?? "-");
     const customerPhone = String(row.customer_phone_snapshot ?? profile?.phone ?? "-");
+    const status = String(row.status ?? "pending_payment");
+    const paymentStatus = String(row.payment_status ?? "unpaid");
 
     return {
       id: orderId,
@@ -106,9 +119,10 @@ export async function listAdminOrders(input?: {
       customer_phone: customerPhone,
       created_at: String(row.created_at ?? ""),
       grand_total: Number(row.grand_total ?? 0),
-      status: String(row.status ?? "pending_payment"),
-      payment_status: String(row.payment_status ?? "unpaid"),
+      status,
+      payment_status: paymentStatus,
       latest_pending_slip_id: pendingSlipByOrder.get(orderId) ?? null,
+      can_delete: !shouldKeepOrderForHistory(status, paymentStatus),
     } satisfies AdminOrderRow;
   });
 }
@@ -265,5 +279,43 @@ export async function reviewAdminOrderSlip(input: {
     status: nextOrderStatus,
     payment_status: nextPaymentStatus,
     slip_status: nextSlipStatus,
+  };
+}
+
+export async function deleteAdminOrder(orderNo: string) {
+  await requireAdminApi();
+  const normalized = orderNo.trim();
+  if (!normalized) {
+    throw new Error("Order number is required");
+  }
+
+  const supabase = getSupabaseServiceRoleClient();
+  const { data: orderRow, error: orderError } = await supabase
+    .from("orders")
+    .select("id,order_no,status,payment_status")
+    .eq("order_no", normalized)
+    .maybeSingle();
+
+  if (orderError) {
+    throw new Error(orderError.message);
+  }
+  if (!orderRow) {
+    throw new Error("Order not found");
+  }
+
+  const status = String((orderRow as Record<string, unknown>).status ?? "pending_payment");
+  const paymentStatus = String((orderRow as Record<string, unknown>).payment_status ?? "unpaid");
+  if (shouldKeepOrderForHistory(status, paymentStatus)) {
+    throw new Error("Order already purchased and must be kept for history");
+  }
+
+  const { error: deleteError } = await supabase.from("orders").delete().eq("id", String(orderRow.id));
+  if (deleteError) {
+    throw new Error(deleteError.message);
+  }
+
+  return {
+    order_no: String((orderRow as Record<string, unknown>).order_no ?? normalized),
+    deleted: true as const,
   };
 }

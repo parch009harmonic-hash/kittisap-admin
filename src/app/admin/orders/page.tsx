@@ -147,7 +147,12 @@ export default async function AdminOrdersPage({ searchParams }: AdminOrdersPageP
                       >
                         {text.view}
                       </Link>
-                      <AdminOrderReviewActions orderNo={order.order_no} slipId={order.latest_pending_slip_id} locale={locale} />
+                      <AdminOrderReviewActions
+                        orderNo={order.order_no}
+                        slipId={order.latest_pending_slip_id}
+                        canDelete={order.can_delete}
+                        locale={locale}
+                      />
                     </div>
                   </td>
                 </tr>

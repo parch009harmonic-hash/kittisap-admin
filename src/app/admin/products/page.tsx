@@ -18,6 +18,19 @@ type ProductsPageProps = {
   }>;
 };
 
+function isNextRedirectError(error: unknown) {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+  if ("digest" in error && String((error as { digest?: unknown }).digest).includes("NEXT_REDIRECT")) {
+    return true;
+  }
+  if (error instanceof Error && error.message.includes("NEXT_REDIRECT")) {
+    return true;
+  }
+  return false;
+}
+
 export default async function AdminProductsPage({ searchParams }: ProductsPageProps) {
   const locale = await getAdminLocale();
   const params = await searchParams;
@@ -50,6 +63,9 @@ export default async function AdminProductsPage({ searchParams }: ProductsPagePr
         nextPath = "/admin/products?notice=archived";
       }
     } catch (error) {
+      if (isNextRedirectError(error)) {
+        throw error;
+      }
       const message = error instanceof Error ? error.message : "Delete product failed";
       nextPath = `/admin/products?error=${encodeURIComponent(message.slice(0, 180))}`;
     }
