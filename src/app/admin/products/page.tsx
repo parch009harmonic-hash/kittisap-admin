@@ -42,17 +42,19 @@ export default async function AdminProductsPage({ searchParams }: ProductsPagePr
       redirect("/admin/products?error=Missing%20product%20id");
     }
 
+    let nextPath = "/admin/products?notice=deleted";
     try {
       const outcome = await deleteProduct(id);
       revalidatePath("/admin/products");
       if (outcome.mode === "archived") {
-        redirect("/admin/products?notice=archived");
+        nextPath = "/admin/products?notice=archived";
       }
-      redirect("/admin/products?notice=deleted");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Delete product failed";
-      redirect(`/admin/products?error=${encodeURIComponent(message.slice(0, 180))}`);
+      nextPath = `/admin/products?error=${encodeURIComponent(message.slice(0, 180))}`;
     }
+
+    redirect(nextPath);
   }
 
   return (

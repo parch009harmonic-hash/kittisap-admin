@@ -362,34 +362,12 @@ export function StorefrontProductQuickViewModal({
                 ) : null}
               </div>
 
-              {galleryImages.length > 1 ? (
-                <div className={`border-t px-3 py-3 ${theme.thumbRail}`}>
-                  <div className="flex gap-2 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-                    {galleryImages.map((image, imageIndex) => {
-                      const isActive = imageIndex === safeActiveIndex;
-                      return (
-                        <button
-                          key={image.key}
-                          type="button"
-                          onClick={() => setActiveImageIndex(imageIndex)}
-                          className={`relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border transition ${
-                            isActive ? theme.thumbActive : theme.thumbIdle
-                          }`}
-                          aria-label={`View image ${imageIndex + 1}`}
-                        >
-                          <Image src={image.url} alt={item.title} fill sizes="64px" className="object-cover" loading="lazy" />
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : null}
             </div>
 
             <div className={`min-w-0 p-5 md:p-7 ${theme.infoPane}`}>
               <p className={`text-xs uppercase ${theme.eyebrow} ${theme.eyebrowText}`}>{eyebrow}</p>
 
-              <div className="mt-3 flex flex-wrap items-center gap-1.5">
+              <div className="hidden mt-3 flex-wrap items-center gap-1.5">
                 <span className={`border px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] ${theme.chipOn}`}>
                   {theme.vibe}
                 </span>
