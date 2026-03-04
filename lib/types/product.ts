@@ -21,6 +21,7 @@ export type Product = ProductInput & {
   created_at: string | null;
   updated_at: string | null;
   is_featured: boolean;
+  sort_order: number | null;
   cover_url?: string | null;
   primary_image: ProductImage | null;
   images?: ProductImage[];

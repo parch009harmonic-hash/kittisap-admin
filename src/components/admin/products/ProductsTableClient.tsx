@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { emitStorefrontUpdateSignal } from "../../../../lib/storefront-sync";
 import { AdminLocale } from "../../../../lib/i18n/admin";
@@ -22,6 +22,25 @@ function statusClass(status: string) {
   return "bg-slate-100 text-slate-700";
 }
 
+function moveIdByOffset(ids: string[], id: string, offset: number) {
+  const index = ids.indexOf(id);
+  if (index < 0) return ids;
+  const nextIndex = index + offset;
+  if (nextIndex < 0 || nextIndex >= ids.length) return ids;
+  const next = [...ids];
+  const [item] = next.splice(index, 1);
+  next.splice(nextIndex, 0, item);
+  return next;
+}
+
+function sameOrder(a: string[], b: string[]) {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i += 1) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
 export function ProductsTableClient({ products, onDelete, locale }: ProductsTableClientProps) {
   const router = useRouter();
   const formsRef = useRef<Map<string, HTMLFormElement>>(new Map());
@@ -29,6 +48,11 @@ export function ProductsTableClient({ products, onDelete, locale }: ProductsTabl
   const [mobileLayout, setMobileLayout] = useState(false);
   const [featuredById, setFeaturedById] = useState<Record<string, boolean>>({});
   const [pendingFeaturedById, setPendingFeaturedById] = useState<Record<string, boolean>>({});
+  const [orderedProducts, setOrderedProducts] = useState<Product[]>(products);
+  const [sortModalOpen, setSortModalOpen] = useState(false);
+  const [sortDraftIds, setSortDraftIds] = useState<string[]>([]);
+  const [sortError, setSortError] = useState<string>("");
+  const [savingSort, setSavingSort] = useState(false);
 
   useEffect(() => {
     const media = window.matchMedia("(max-width: 767px)");
@@ -56,6 +80,11 @@ export function ProductsTableClient({ products, onDelete, locale }: ProductsTabl
       next[product.id] = Boolean(product.is_featured);
     }
     setFeaturedById(next);
+  }, [products]);
+
+  useEffect(() => {
+    setOrderedProducts(products);
+    setSortDraftIds(products.map((item) => item.id));
   }, [products]);
 
   function handleToggleFeatured(product: Product) {
@@ -91,7 +120,86 @@ export function ProductsTableClient({ products, onDelete, locale }: ProductsTabl
     })();
   }
 
-  if (products.length === 0) {
+  const productById = useMemo(
+    () =>
+      new Map(
+        orderedProducts.map((item) => [item.id, item] as const),
+      ),
+    [orderedProducts],
+  );
+
+  const sortDraftProducts = useMemo(
+    () => sortDraftIds.map((id) => productById.get(id)).filter((item): item is Product => Boolean(item)),
+    [sortDraftIds, productById],
+  );
+
+  async function persistSortOrder(nextIds: string[], options?: { closeModalOnSuccess?: boolean }) {
+    const currentIds = orderedProducts.map((item) => item.id);
+    if (sameOrder(nextIds, currentIds) || savingSort) {
+      if (options?.closeModalOnSuccess) {
+        setSortModalOpen(false);
+      }
+      return;
+    }
+
+    const nextOrdered = nextIds
+      .map((id) => productById.get(id))
+      .filter((item): item is Product => Boolean(item));
+    if (nextOrdered.length !== orderedProducts.length) {
+      return;
+    }
+
+    const fallbackProducts = orderedProducts;
+    const fallbackIds = currentIds;
+    setOrderedProducts(nextOrdered);
+    setSortDraftIds(nextIds);
+    setSortError("");
+    setSavingSort(true);
+
+    try {
+      const response = await fetch(`/api/admin/products/reorder?t=${Date.now()}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+        cache: "no-store",
+        body: JSON.stringify({ orderedIds: nextIds }),
+      });
+      const data = (await response.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+      if (!response.ok || !data?.ok) {
+        throw new Error(data?.error || "Failed to reorder products");
+      }
+
+      emitStorefrontUpdateSignal();
+      router.refresh();
+      if (options?.closeModalOnSuccess) {
+        setSortModalOpen(false);
+      }
+    } catch (error) {
+      setOrderedProducts(fallbackProducts);
+      setSortDraftIds(fallbackIds);
+      setSortError(error instanceof Error ? error.message : "Failed to reorder products");
+    } finally {
+      setSavingSort(false);
+    }
+  }
+
+  function openSortModal() {
+    setSortDraftIds(orderedProducts.map((item) => item.id));
+    setSortError("");
+    setSortModalOpen(true);
+  }
+
+  function moveSortDraft(productId: string, offset: number) {
+    if (savingSort) return;
+    setSortDraftIds((prev) => moveIdByOffset(prev, productId, offset));
+  }
+
+  function moveTableRow(productId: string, offset: number) {
+    if (savingSort) return;
+    const nextIds = moveIdByOffset(orderedProducts.map((item) => item.id), productId, offset);
+    void persistSortOrder(nextIds);
+  }
+
+  if (orderedProducts.length === 0) {
     return (
       <div className="sst-card-soft rounded-2xl border border-dashed border-slate-200 px-6 py-12 text-center text-slate-600">
         {locale === "th" ? "ยังไม่พบสินค้า" : "No products found."}
@@ -99,9 +207,9 @@ export function ProductsTableClient({ products, onDelete, locale }: ProductsTabl
     );
   }
 
-  const target = products.find((item) => item.id === confirmId) || null;
-  const sourceItems = products.filter((item) => item.status === "active");
-  const mobileItems = sourceItems.length > 0 ? sourceItems : products;
+  const target = orderedProducts.find((item) => item.id === confirmId) || null;
+  const sourceItems = orderedProducts.filter((item) => item.status === "active");
+  const mobileItems = sourceItems.length > 0 ? sourceItems : orderedProducts;
   const hotItems = mobileItems.slice(0, 6);
   const recommendedItems = mobileItems.slice(6, 12);
 
@@ -117,14 +225,24 @@ export function ProductsTableClient({ products, onDelete, locale }: ProductsTabl
 
       {!mobileLayout ? (
         <div>
+          <div className="mb-3 flex justify-end">
+            <button
+              type="button"
+              onClick={openSortModal}
+              className="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-100"
+            >
+              <span className="inline-flex h-4 w-4 items-center justify-center rounded border border-indigo-300 bg-white text-[10px]">↕</span>
+              <span>{locale === "th" ? "จัดเรียงสินค้า" : "Sort Products"}</span>
+            </button>
+          </div>
           <AdminTable
             columns={
               locale === "th"
-                ? ["ภาพ", "SKU", "ชื่อสินค้า", "ราคา", "สต็อก", "สถานะ", "สินค้าแนะนำ", "จัดการ"]
-                : ["Cover", "SKU", "Title TH", "Price", "Stock", "Status", "Featured", "Actions"]
+                ? ["ภาพ", "ลำดับ", "SKU", "ชื่อสินค้า", "ราคา", "สต็อก", "สถานะ", "สินค้าแนะนำ", "จัดการ"]
+                : ["Cover", "Order", "SKU", "Title TH", "Price", "Stock", "Status", "Featured", "Actions"]
             }
           >
-            {products.map((product) => (
+            {orderedProducts.map((product, index) => (
               <tr key={product.id} className="border-t border-slate-200 text-slate-600 hover:bg-slate-50/70">
                 <td className="px-5 py-3">
                   {product.cover_url ? (
@@ -142,6 +260,33 @@ export function ProductsTableClient({ products, onDelete, locale }: ProductsTabl
                       N/A
                     </div>
                   )}
+                </td>
+                <td className="px-5 py-3">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex min-w-[42px] items-center justify-center rounded-md border border-indigo-200 bg-indigo-50 px-2 py-1 text-xs font-semibold text-indigo-700">
+                      #{index + 1}
+                    </span>
+                    <div className="flex flex-col gap-1">
+                      <button
+                        type="button"
+                        onClick={() => moveTableRow(product.id, -1)}
+                        disabled={savingSort || index === 0}
+                        className="inline-flex h-5 w-5 items-center justify-center rounded border border-slate-300 bg-white text-[10px] text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                        aria-label={locale === "th" ? "เลื่อนขึ้น" : "Move up"}
+                      >
+                        ▲
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveTableRow(product.id, 1)}
+                        disabled={savingSort || index === orderedProducts.length - 1}
+                        className="inline-flex h-5 w-5 items-center justify-center rounded border border-slate-300 bg-white text-[10px] text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                        aria-label={locale === "th" ? "เลื่อนลง" : "Move down"}
+                      >
+                        ▼
+                      </button>
+                    </div>
+                  </div>
                 </td>
                 <td className="px-5 py-3">{product.sku || "-"}</td>
                 <td className="px-5 py-3 font-semibold text-slate-900">
@@ -217,6 +362,62 @@ export function ProductsTableClient({ products, onDelete, locale }: ProductsTabl
           </AdminTable>
         </div>
       ) : null}
+
+      <ConfirmModal
+        open={sortModalOpen}
+        title={locale === "th" ? "จัดเรียงลำดับสินค้า" : "Sort Product Order"}
+        message={
+          locale === "th"
+            ? "เลื่อนขึ้น/ลงเพื่อจัดลำดับการแสดงสินค้า แล้วกดบันทึก"
+            : "Move products up or down, then save to apply."
+        }
+        confirmText={locale === "th" ? "บันทึกลำดับ" : "Save order"}
+        cancelText={locale === "th" ? "ปิด" : "Close"}
+        confirmDisabled={savingSort}
+        onCancel={() => {
+          if (savingSort) return;
+          setSortModalOpen(false);
+          setSortDraftIds(orderedProducts.map((item) => item.id));
+          setSortError("");
+        }}
+        onConfirm={() => {
+          void persistSortOrder(sortDraftIds, { closeModalOnSuccess: true });
+        }}
+      >
+        <div className="space-y-3">
+          <div className="max-h-[48vh] space-y-2 overflow-y-auto pr-1">
+            {sortDraftProducts.map((product, index) => (
+              <div key={product.id} className="flex items-center gap-2 rounded-xl border border-slate-700/60 bg-slate-900/65 px-3 py-2">
+                <span className="inline-flex min-w-[32px] items-center justify-center rounded-md border border-cyan-300/40 bg-cyan-500/15 px-1.5 py-0.5 text-[11px] font-semibold text-cyan-100">
+                  {index + 1}
+                </span>
+                <p className="line-clamp-1 flex-1 text-xs font-medium text-slate-100">{product.title_th}</p>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => moveSortDraft(product.id, -1)}
+                    disabled={savingSort || index === 0}
+                    className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-slate-600 bg-slate-800/70 text-xs text-slate-100 transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    ▲
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveSortDraft(product.id, 1)}
+                    disabled={savingSort || index === sortDraftProducts.length - 1}
+                    className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-slate-600 bg-slate-800/70 text-xs text-slate-100 transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    ▼
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+          {sortError ? (
+            <p className="rounded-lg border border-rose-400/40 bg-rose-950/40 px-3 py-2 text-xs text-rose-100">{sortError}</p>
+          ) : null}
+        </div>
+      </ConfirmModal>
 
       <ConfirmModal
         open={Boolean(confirmId)}

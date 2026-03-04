@@ -19,10 +19,11 @@ const ProductRowSchema = ProductInputSchema.extend({
   created_at: z.string().nullable().optional(),
   updated_at: z.string().nullable().optional(),
   is_featured: z.boolean().optional(),
+  sort_order: z.coerce.number().int().nullable().optional(),
 });
 
 const PRODUCT_SELECT_COLUMNS =
-  "id,sku,slug,title_th,title_en,title_lo,description_th,description_en,description_lo,price,compare_at_price,stock,status,is_featured,created_at";
+  "id,sku,slug,title_th,title_en,title_lo,description_th,description_en,description_lo,price,compare_at_price,stock,status,is_featured,sort_order,created_at";
 const ORDER_ARCHIVE_PRODUCT_SKU = "__ORDER_ITEM_ARCHIVE__";
 const ORDER_ARCHIVE_PRODUCT_SLUG = "order-item-archive";
 
@@ -70,6 +71,11 @@ function isMissingColumnError(error: unknown) {
 function isMissingFeaturedColumnError(error: unknown) {
   const message = errorText(error, "").toLowerCase();
   return message.includes("is_featured") && message.includes("column");
+}
+
+function isMissingSortOrderColumnError(error: unknown) {
+  const message = errorText(error, "").toLowerCase();
+  return message.includes("sort_order") && message.includes("column");
 }
 
 function isDeleteRestrictedByOrderItems(error: unknown) {
@@ -127,6 +133,7 @@ function mapProduct(row: Record<string, unknown>, images: ProductImage[] = []): 
     created_at: parsed.created_at ?? null,
     updated_at: parsed.updated_at ?? null,
     is_featured: parsed.is_featured ?? false,
+    sort_order: parsed.sort_order ?? null,
     primary_image: primary,
     cover_url: primary?.url ?? null,
     images: sorted,
@@ -275,6 +282,7 @@ export async function listProducts(input: {
     .from("products")
     .select(PRODUCT_SELECT_COLUMNS, { count: "planned" })
     .neq("slug", ORDER_ARCHIVE_PRODUCT_SLUG)
+    .order("sort_order", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: false })
     .range(from, to);
 
@@ -392,13 +400,38 @@ export async function getProductById(id: string) {
   return mapProduct(productRow as Record<string, unknown>, images);
 }
 
+async function getNextProductSortOrder(supabase: Awaited<ReturnType<typeof adminWriteClient>>) {
+  const { data, error } = await supabase
+    .from("products")
+    .select("sort_order")
+    .order("sort_order", { ascending: false, nullsFirst: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    if (isMissingSortOrderColumnError(error)) {
+      return null;
+    }
+    throw new Error(`Failed to calculate next product sort order: ${errorText(error, "Unknown error")}`);
+  }
+
+  const maxSortOrder =
+    data && typeof (data as { sort_order?: unknown }).sort_order === "number"
+      ? Number((data as { sort_order: number }).sort_order)
+      : null;
+
+  return maxSortOrder === null ? 1 : maxSortOrder + 1;
+}
+
 export async function createProduct(data: unknown) {
   const supabase = await adminWriteClient();
   const parsed = ProductInputSchema.parse(data);
   const normalizedSku = parsed.sku?.trim();
+  const nextSortOrder = await getNextProductSortOrder(supabase);
   const payload = {
     ...parsed,
     sku: normalizedSku || (await generateUniqueSku(supabase)),
+    ...(nextSortOrder === null ? {} : { sort_order: nextSortOrder }),
   };
 
   const { data: row, error } = await supabase.from("products").insert(payload).select("id").single();
@@ -499,6 +532,27 @@ export async function setProductFeatured(id: string, isFeatured: boolean) {
     }
     throw new Error(`Failed to update featured product: ${message}`);
   }
+  return { applied: true as const };
+}
+
+export async function setProductDisplayOrder(orderedIds: string[]) {
+  const supabase = await adminWriteClient();
+  const ids = Array.from(new Set(orderedIds.map((id) => String(id).trim()).filter(Boolean)));
+  if (ids.length === 0) {
+    return { applied: true as const };
+  }
+
+  for (let index = 0; index < ids.length; index += 1) {
+    const id = ids[index];
+    const { error } = await supabase.from("products").update({ sort_order: index + 1 }).eq("id", id);
+    if (error) {
+      if (isMissingSortOrderColumnError(error)) {
+        return { applied: false as const, reason: "missing_sort_order_column" as const };
+      }
+      throw new Error(`Failed to update product sort order: ${errorText(error, "Unknown error")}`);
+    }
+  }
+
   return { applied: true as const };
 }
 

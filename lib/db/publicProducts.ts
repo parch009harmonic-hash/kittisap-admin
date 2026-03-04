@@ -20,6 +20,7 @@ const PublicProductRowSchema = z.object({
   stock: z.coerce.number().int(),
   status: z.enum(["active", "inactive"]),
   is_featured: z.boolean().optional(),
+  sort_order: z.coerce.number().int().nullable().optional(),
   created_at: z.string().nullable().optional(),
 });
 
@@ -63,6 +64,11 @@ function asErrorMessage(error: unknown, fallback: string) {
   return fallback;
 }
 
+function isMissingSortOrderColumn(error: unknown) {
+  const message = asErrorMessage(error, "").toLowerCase();
+  return message.includes("sort_order") && message.includes("column");
+}
+
 export async function listPublicProducts(input?: {
   q?: string;
   category?: string;
@@ -92,10 +98,11 @@ export async function listPublicProducts(input?: {
   let query = supabase
     .from("products")
     .select(
-      "id,sku,slug,title_th,title_en,title_lo,description_th,description_en,description_lo,price,stock,status,is_featured,created_at",
+      "id,sku,slug,title_th,title_en,title_lo,description_th,description_en,description_lo,price,stock,status,is_featured,sort_order,created_at",
       includeTotal ? { count: "planned" } : undefined,
     )
     .eq("status", "active")
+    .order("sort_order", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: false })
     .range(from, to);
 
@@ -107,9 +114,33 @@ export async function listPublicProducts(input?: {
   }
 
   const queryResult = await query;
-  const data = queryResult.data as unknown[] | null;
-  const error = queryResult.error;
-  const count = includeTotal ? queryResult.count : null;
+  let data = queryResult.data as unknown[] | null;
+  let error = queryResult.error;
+  let count = includeTotal ? queryResult.count : null;
+
+  if (error && isMissingSortOrderColumn(error)) {
+    let fallbackQuery = supabase
+      .from("products")
+      .select(
+        "id,sku,slug,title_th,title_en,title_lo,description_th,description_en,description_lo,price,stock,status,is_featured,created_at",
+        includeTotal ? { count: "planned" } : undefined,
+      )
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .range(from, to);
+
+    if (q) {
+      fallbackQuery = fallbackQuery.or(`slug.ilike.%${q}%,sku.ilike.%${q}%,title_th.ilike.%${q}%,title_en.ilike.%${q}%`);
+    }
+    if (featuredOnly) {
+      fallbackQuery = fallbackQuery.eq("is_featured", true);
+    }
+
+    const fallback = await fallbackQuery;
+    data = fallback.data as unknown[] | null;
+    error = fallback.error;
+    count = includeTotal ? fallback.count : null;
+  }
 
   if (error) {
     throw new PublicProductsError("PRODUCTS_FETCH_FAILED", asErrorMessage(error, "Failed to fetch products"));
@@ -171,7 +202,7 @@ export async function getPublicProductBySlug(slug: string): Promise<PublicProduc
   const { data: productRow, error: productError } = await supabase
     .from("products")
     .select(
-      "id,sku,slug,title_th,title_en,title_lo,description_th,description_en,description_lo,price,stock,status,is_featured,created_at",
+      "id,sku,slug,title_th,title_en,title_lo,description_th,description_en,description_lo,price,stock,status,is_featured,sort_order,created_at",
     )
     .eq("slug", normalizedSlug)
     .eq("status", "active")
@@ -209,12 +240,22 @@ export async function listPublicPricingProducts(): Promise<PublicPricingProduct[
   const supabase = getSupabaseServiceRoleClient();
   const result = await supabase
     .from("products")
-    .select("id,sku,slug,title_th,title_en,title_lo,price,stock,status,is_featured,created_at")
+    .select("id,sku,slug,title_th,title_en,title_lo,price,stock,status,is_featured,sort_order,created_at")
     .eq("status", "active")
+    .order("sort_order", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: false });
 
-  const data: unknown[] | null = result.data as unknown[] | null;
-  const error = result.error;
+  let data: unknown[] | null = result.data as unknown[] | null;
+  let error = result.error;
+  if (error && isMissingSortOrderColumn(error)) {
+    const fallback = await supabase
+      .from("products")
+      .select("id,sku,slug,title_th,title_en,title_lo,price,stock,status,is_featured,created_at")
+      .eq("status", "active")
+      .order("created_at", { ascending: false });
+    data = fallback.data as unknown[] | null;
+    error = fallback.error;
+  }
 
   if (error) {
     throw new PublicProductsError("PRODUCTS_FETCH_FAILED", asErrorMessage(error, "Failed to fetch pricing products"));
