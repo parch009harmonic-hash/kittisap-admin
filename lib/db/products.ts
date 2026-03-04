@@ -73,14 +73,12 @@ function isMissingFeaturedColumnError(error: unknown) {
   return message.includes("is_featured") && message.includes("column");
 }
 
-function isMissingSortOrderColumnError(error: unknown) {
-  const message = errorText(error, "").toLowerCase();
-  return message.includes("sort_order") && message.includes("column");
-}
-
 function isSortOrderQueryError(error: unknown) {
   const message = errorText(error, "").toLowerCase();
-  return message.includes("sort_order") || message.includes("failed to parse order");
+  return (
+    message.includes("sort_order") &&
+    (message.includes("column") || message.includes("schema cache") || message.includes("failed to parse order"))
+  );
 }
 
 function isDeleteRestrictedByOrderItems(error: unknown) {
@@ -378,7 +376,7 @@ export async function getProductById(id: string) {
     .eq("id", id)
     .maybeSingle();
 
-  if (productError && isMissingColumnError(productError)) {
+  if (productError && (isMissingColumnError(productError) || isSortOrderQueryError(productError))) {
     const fallback = await supabase.from("products").select("*").eq("id", id).maybeSingle();
     productRow = fallback.data;
     productError = fallback.error;
@@ -415,7 +413,7 @@ async function getNextProductSortOrder(supabase: Awaited<ReturnType<typeof admin
     .maybeSingle();
 
   if (error) {
-    if (isMissingSortOrderColumnError(error)) {
+    if (isSortOrderQueryError(error)) {
       return null;
     }
     throw new Error(`Failed to calculate next product sort order: ${errorText(error, "Unknown error")}`);
@@ -552,7 +550,7 @@ export async function setProductDisplayOrder(orderedIds: string[]) {
     const id = ids[index];
     const { error } = await supabase.from("products").update({ sort_order: index + 1 }).eq("id", id);
     if (error) {
-      if (isMissingSortOrderColumnError(error)) {
+      if (isSortOrderQueryError(error)) {
         return { applied: false as const, reason: "missing_sort_order_column" as const };
       }
       throw new Error(`Failed to update product sort order: ${errorText(error, "Unknown error")}`);
