@@ -46,6 +46,16 @@ export async function POST(request: NextRequest) {
 
     const payload = ToggleFeaturedPayloadSchema.parse(await request.json());
     const result = await setProductFeatured(payload.id, payload.isFeatured);
+    if (!result.applied) {
+      return NextResponse.json(
+        {
+          ok: false,
+          code: "MISSING_FEATURED_COLUMN",
+          error: "Database schema is missing products.is_featured. Please run migration first.",
+        },
+        { status: 409 },
+      );
+    }
 
     revalidatePublicProductPaths();
 

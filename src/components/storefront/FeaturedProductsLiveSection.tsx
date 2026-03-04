@@ -26,6 +26,9 @@ type FeaturedProductsLiveSectionProps = {
   initialItems: ShowroomItem[];
   locale: AppLocale;
   useLocalePrefix: boolean;
+  sectionTitle: string;
+  sectionSubtitle?: string;
+  liveTagLabel: string;
 };
 
 type ApiFeaturedItem = {
@@ -73,6 +76,9 @@ export function FeaturedProductsLiveSection({
   initialItems,
   locale,
   useLocalePrefix,
+  sectionTitle,
+  sectionSubtitle,
+  liveTagLabel,
 }: FeaturedProductsLiveSectionProps) {
   const [items, setItems] = useState<ShowroomItem[]>(initialItems);
   const loadingRef = useRef(false);
@@ -122,6 +128,7 @@ export function FeaturedProductsLiveSection({
       window.setTimeout(() => void refreshFeatured(), 650);
     };
 
+    refreshBurst();
     lastSeenUpdateRef.current = readSignal();
 
     let channel: BroadcastChannel | null = null;
@@ -185,5 +192,22 @@ export function FeaturedProductsLiveSection({
     };
   }, [refreshFeatured]);
 
-  return <FeaturedProductsShowcase items={items} locale={locale} useLocalePrefix={useLocalePrefix} />;
+  if (items.length === 0) {
+    return null;
+  }
+
+  return (
+    <section id="updates" className="mx-auto w-full max-w-7xl px-4 py-12">
+      <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="text-2xl font-black tracking-tight text-slate-100 md:text-3xl">{sectionTitle}</h2>
+          {sectionSubtitle ? <p className="mt-1 text-sm text-slate-300/70">{sectionSubtitle}</p> : null}
+        </div>
+        <span className="rounded-full border border-slate-400/20 bg-white/5 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-200/85">
+          {liveTagLabel}
+        </span>
+      </div>
+      <FeaturedProductsShowcase items={items} locale={locale} useLocalePrefix={useLocalePrefix} />
+    </section>
+  );
 }
