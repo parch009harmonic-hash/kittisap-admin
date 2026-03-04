@@ -205,75 +205,77 @@ export async function ProductsCatalogPage({ locale, searchParams = {}, useLocale
       <StorefrontRealtimeRefresh />
       <StorefrontTopMenu locale={locale} useLocalePrefix={useLocalePrefix} />
       <main className="min-h-screen bg-[#f4f6fb] text-slate-900">
-        <section className="mx-auto w-full max-w-7xl px-3 py-4 md:px-4 md:py-8">
-          <header className="mb-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:mb-4 md:p-5">
-            <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-              <div>
-                <h1 className="text-2xl font-extrabold tracking-tight md:text-3xl">{text.title}</h1>
-                <p className="mt-1 text-sm text-slate-600">{text.subtitle}</p>
-              </div>
-
-              <form className="w-full xl:w-auto">
-                <div className="flex flex-wrap items-center gap-2">
-                  <input
-                    type="text"
-                    name="q"
-                    defaultValue={q}
-                    placeholder={text.searchPlaceholder}
-                    className="h-10 w-full min-w-[280px] rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-amber-500 xl:w-[360px]"
-                  />
-
-                  <select
-                    name="sort"
-                    defaultValue={sort}
-                    className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-amber-500"
-                  >
-                    <option value="newest">{text.sort}: {text.sortNewest}</option>
-                    <option value="price_asc">{text.sortPriceAsc}</option>
-                    <option value="price_desc">{text.sortPriceDesc}</option>
-                    <option value="stock_desc">{text.sortStockDesc}</option>
-                  </select>
-
-                  <select
-                    name="status"
-                    defaultValue={status}
-                    className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-amber-500"
-                  >
-                    <option value="all">{text.status}: {text.all}</option>
-                    <option value="in_stock">{text.inStock}</option>
-                    <option value="out_of_stock">{text.outOfStock}</option>
-                  </select>
-
-                  <select
-                    name="category"
-                    defaultValue={category || "all"}
-                    className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-amber-500"
-                  >
-                    <option value="all">{text.category}: {text.all}</option>
-                    {categoryOptions.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
-
-                  <button
-                    type="submit"
-                    className="app-press h-10 rounded-lg bg-amber-500 px-4 text-sm font-bold text-zinc-900 transition hover:bg-amber-400"
-                  >
-                    {text.filter}
-                  </button>
-
-                  <Link
-                    href={buildProductsHref(locale, {}, useLocalePrefix)}
-                    className="app-press inline-flex h-10 items-center justify-center rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-                  >
-                    {text.clear}
-                  </Link>
+        <section className="mx-auto w-full max-w-7xl px-3 pb-4 pt-1 md:px-4 md:pb-8 md:pt-2">
+          <div className="sticky top-16 z-30 -mx-1 bg-[#f4f6fb]/95 px-1 pb-2 pt-1 backdrop-blur supports-[backdrop-filter]:bg-[#f4f6fb]/85">
+            <header className="mb-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:mb-3 md:p-5">
+              <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                <div>
+                  <h1 className="text-2xl font-extrabold tracking-tight md:text-3xl">{text.title}</h1>
+                  <p className="mt-1 text-sm text-slate-600">{text.subtitle}</p>
                 </div>
-              </form>
-            </div>
-          </header>
+
+                <form className="w-full xl:w-auto">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <input
+                      type="text"
+                      name="q"
+                      defaultValue={q}
+                      placeholder={text.searchPlaceholder}
+                      className="h-10 w-full min-w-[280px] rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-amber-500 xl:w-[360px]"
+                    />
+
+                    <select
+                      name="sort"
+                      defaultValue={sort}
+                      className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-amber-500"
+                    >
+                      <option value="newest">{text.sort}: {text.sortNewest}</option>
+                      <option value="price_asc">{text.sortPriceAsc}</option>
+                      <option value="price_desc">{text.sortPriceDesc}</option>
+                      <option value="stock_desc">{text.sortStockDesc}</option>
+                    </select>
+
+                    <select
+                      name="status"
+                      defaultValue={status}
+                      className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-amber-500"
+                    >
+                      <option value="all">{text.status}: {text.all}</option>
+                      <option value="in_stock">{text.inStock}</option>
+                      <option value="out_of_stock">{text.outOfStock}</option>
+                    </select>
+
+                    <select
+                      name="category"
+                      defaultValue={category || "all"}
+                      className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-amber-500"
+                    >
+                      <option value="all">{text.category}: {text.all}</option>
+                      {categoryOptions.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+
+                    <button
+                      type="submit"
+                      className="app-press h-10 rounded-lg bg-amber-500 px-4 text-sm font-bold text-zinc-900 transition hover:bg-amber-400"
+                    >
+                      {text.filter}
+                    </button>
+
+                    <Link
+                      href={buildProductsHref(locale, {}, useLocalePrefix)}
+                      className="app-press inline-flex h-10 items-center justify-center rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                    >
+                      {text.clear}
+                    </Link>
+                  </div>
+                </form>
+              </div>
+            </header>
+          </div>
 
           {items.length === 0 ? (
             <section className="rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm">
