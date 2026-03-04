@@ -102,7 +102,7 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
 
     revalidatePath("/admin/products");
     revalidatePath(`/admin/products/${id}/edit`);
-    redirect("/admin/products");
+    redirect("/admin/products?notice=updated&sync=1");
   }
 
   async function persistUploadedImagesAction(urls: string[]) {

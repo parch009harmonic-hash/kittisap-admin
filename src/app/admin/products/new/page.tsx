@@ -70,7 +70,7 @@ export default function NewProductPage() {
     }
 
     revalidatePath("/admin/products");
-    redirect("/admin/products");
+    redirect("/admin/products?notice=created&sync=1");
   }
 
   return (

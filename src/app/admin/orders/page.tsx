@@ -13,6 +13,11 @@ function statusClass(status: string) {
   return "bg-zinc-100 text-zinc-700";
 }
 
+function retentionBadgeClass(canDelete: boolean) {
+  if (canDelete) return "bg-emerald-100 text-emerald-700 border-emerald-200";
+  return "bg-slate-100 text-slate-700 border-slate-200";
+}
+
 type AdminOrdersPageProps = {
   searchParams: Promise<{ q?: string; status?: string; deleteMode?: string }>;
 };
@@ -61,6 +66,9 @@ export default async function AdminOrdersPage({ searchParams }: AdminOrdersPageP
     total: locale === "th" ? "ยอดรวม" : "Total",
     status: locale === "th" ? "สถานะ" : "Status",
     paymentStatus: locale === "th" ? "ชำระเงิน" : "Payment",
+    retention: locale === "th" ? "นโยบายเก็บข้อมูล" : "Retention",
+    canDeleteBadge: locale === "th" ? "ลบได้" : "Deletable",
+    historyBadge: locale === "th" ? "เก็บย้อนหลัง" : "Keep history",
     actions: locale === "th" ? "จัดการ" : "Actions",
     view: locale === "th" ? "ดู" : "View",
     noOrdersTitle: locale === "th" ? "ยังไม่มีคำสั่งซื้อ" : "No orders yet",
@@ -132,6 +140,7 @@ export default async function AdminOrdersPage({ searchParams }: AdminOrdersPageP
                 <th className="px-5 py-3 font-medium">{text.total}</th>
                 <th className="px-5 py-3 font-medium">{text.status}</th>
                 <th className="px-5 py-3 font-medium">{text.paymentStatus}</th>
+                <th className="px-5 py-3 font-medium">{text.retention}</th>
                 <th className="px-5 py-3 font-medium">{text.actions}</th>
               </tr>
             </thead>
@@ -151,6 +160,13 @@ export default async function AdminOrdersPage({ searchParams }: AdminOrdersPageP
                     </span>
                   </td>
                   <td className="px-5 py-3">{order.payment_status}</td>
+                  <td className="px-5 py-3">
+                    <span
+                      className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${retentionBadgeClass(order.can_delete)}`}
+                    >
+                      {order.can_delete ? text.canDeleteBadge : text.historyBadge}
+                    </span>
+                  </td>
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-2">
                       <Link

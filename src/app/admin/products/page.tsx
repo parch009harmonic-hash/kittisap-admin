@@ -16,6 +16,7 @@ type ProductsPageProps = {
     page?: string;
     notice?: string;
     error?: string;
+    sync?: string;
   }>;
 };
 
@@ -44,6 +45,7 @@ export default async function AdminProductsPage({ searchParams }: ProductsPagePr
   const page = Math.max(1, Number(params.page ?? "1") || 1);
   const notice = params.notice?.trim() || "";
   const errorMessage = params.error?.trim() || "";
+  const shouldSyncStorefront = params.sync === "1";
 
   const result = await listProducts({ q, status, featuredOnly, page, pageSize: 12 });
   const products = result.items;
@@ -73,7 +75,19 @@ export default async function AdminProductsPage({ searchParams }: ProductsPagePr
   };
 
   const successMessage =
-    notice === "deleted" ? t.successDeleted : notice === "archived" ? t.archived : undefined;
+    notice === "created"
+      ? locale === "th"
+        ? "เพิ่มสินค้าสำเร็จ"
+        : "Product created successfully."
+      : notice === "updated"
+        ? locale === "th"
+          ? "อัปเดตสินค้าสำเร็จ"
+          : "Product updated successfully."
+        : notice === "deleted"
+          ? t.successDeleted
+          : notice === "archived"
+            ? t.archived
+            : undefined;
   const deleteErrorMessage = errorMessage ? `${t.deleteError}: ${errorMessage}` : undefined;
 
   async function deleteAction(formData: FormData) {
@@ -84,12 +98,12 @@ export default async function AdminProductsPage({ searchParams }: ProductsPagePr
       redirect("/admin/products?error=Missing%20product%20id");
     }
 
-    let nextPath = "/admin/products?notice=deleted";
+    let nextPath = "/admin/products?notice=deleted&sync=1";
     try {
       const outcome = await deleteProduct(id);
       revalidatePath("/admin/products");
       if (outcome.mode === "archived") {
-        nextPath = "/admin/products?notice=archived";
+        nextPath = "/admin/products?notice=archived&sync=1";
       }
     } catch (error) {
       if (isNextRedirectError(error)) {
@@ -129,6 +143,7 @@ export default async function AdminProductsPage({ searchParams }: ProductsPagePr
         key={`${notice}:${errorMessage}`}
         successMessage={successMessage}
         errorMessage={deleteErrorMessage}
+        syncStorefront={shouldSyncStorefront}
       />
 
       <form className="product-page-filter sst-card-soft grid grid-cols-1 gap-3 rounded-2xl p-4 md:grid-cols-[1fr_220px_auto]">

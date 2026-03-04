@@ -3,6 +3,12 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 
+import {
+  FEATURED_UPDATED_KEY,
+  STOREFRONT_SYNC_CHANNEL,
+  STOREFRONT_UPDATED_KEY,
+} from "../../../lib/storefront-sync";
+
 export function StorefrontRealtimeRefresh() {
   const router = useRouter();
   const lastRefreshAtRef = useRef(0);
@@ -25,7 +31,9 @@ export function StorefrontRealtimeRefresh() {
 
     const readSignal = () => {
       try {
-        return window.localStorage.getItem("kittisap_featured_updated_at");
+        const featured = window.localStorage.getItem(FEATURED_UPDATED_KEY) ?? "";
+        const storefront = window.localStorage.getItem(STOREFRONT_UPDATED_KEY) ?? "";
+        return `${featured}|${storefront}`;
       } catch {
         return null;
       }
@@ -35,9 +43,9 @@ export function StorefrontRealtimeRefresh() {
 
     let channel: BroadcastChannel | null = null;
     try {
-      channel = new BroadcastChannel("kittisap-sync");
+      channel = new BroadcastChannel(STOREFRONT_SYNC_CHANNEL);
       channel.onmessage = (event) => {
-        if (event.data?.type === "featured-products-updated") {
+        if (event.data?.type === "featured-products-updated" || event.data?.type === "storefront-updated") {
           refreshBurst();
         }
       };
@@ -46,7 +54,7 @@ export function StorefrontRealtimeRefresh() {
     }
 
     const onStorage = (event: StorageEvent) => {
-      if (event.key === "kittisap_featured_updated_at") {
+      if (event.key === FEATURED_UPDATED_KEY || event.key === STOREFRONT_UPDATED_KEY) {
         refreshBurst();
       }
     };

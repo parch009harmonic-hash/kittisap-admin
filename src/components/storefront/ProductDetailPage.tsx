@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import type { PublicProductDetail } from "../../../lib/db/publicProducts";
 import type { AppLocale } from "../../../lib/i18n/locale";
 import { AddToCartButton } from "./AddToCartButton";
+import { StorefrontRealtimeRefresh } from "./StorefrontRealtimeRefresh";
 
 const ProductGallerySlider = dynamic(
   () => import("./ProductGallerySlider").then((mod) => mod.ProductGallerySlider),
@@ -79,6 +80,7 @@ export function ProductDetailPage({ locale, product }: ProductDetailPageProps) {
 
   return (
     <main className="min-h-screen bg-[#f4f6fb] text-slate-900">
+      <StorefrontRealtimeRefresh />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }} />
       <section className="mx-auto w-full max-w-7xl px-3 py-4 pb-28 md:px-4 md:py-8 md:pb-10">
         <Link

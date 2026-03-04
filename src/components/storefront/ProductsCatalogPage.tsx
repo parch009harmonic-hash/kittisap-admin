@@ -3,6 +3,7 @@
 import { listPublicProducts } from "../../../lib/db/publicProducts";
 import type { AppLocale } from "../../../lib/i18n/locale";
 import { ProductsCatalogInteractiveGrid } from "./ProductsCatalogInteractiveGrid";
+import { StorefrontRealtimeRefresh } from "./StorefrontRealtimeRefresh";
 import { StorefrontTopMenu } from "./StorefrontTopMenu";
 
 type ProductsCatalogPageProps = {
@@ -201,6 +202,7 @@ export async function ProductsCatalogPage({ locale, searchParams = {}, useLocale
 
   return (
     <>
+      <StorefrontRealtimeRefresh />
       <StorefrontTopMenu locale={locale} useLocalePrefix={useLocalePrefix} />
       <main className="min-h-screen bg-[#f4f6fb] text-slate-900">
         <section className="mx-auto w-full max-w-7xl px-3 py-4 md:px-4 md:py-8">

@@ -3,6 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { AppLocale } from "../../../lib/i18n/locale";
+import {
+  FEATURED_UPDATED_KEY,
+  STOREFRONT_SYNC_CHANNEL,
+  STOREFRONT_UPDATED_KEY,
+} from "../../../lib/storefront-sync";
 import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 import { FeaturedProductsShowcase } from "./FeaturedProductsShowcase";
 
@@ -103,7 +108,9 @@ export function FeaturedProductsLiveSection({
   useEffect(() => {
     const readSignal = () => {
       try {
-        return window.localStorage.getItem("kittisap_featured_updated_at");
+        const featured = window.localStorage.getItem(FEATURED_UPDATED_KEY) ?? "";
+        const storefront = window.localStorage.getItem(STOREFRONT_UPDATED_KEY) ?? "";
+        return `${featured}|${storefront}`;
       } catch {
         return null;
       }
@@ -119,9 +126,9 @@ export function FeaturedProductsLiveSection({
 
     let channel: BroadcastChannel | null = null;
     try {
-      channel = new BroadcastChannel("kittisap-sync");
+      channel = new BroadcastChannel(STOREFRONT_SYNC_CHANNEL);
       channel.onmessage = (event) => {
-        if (event.data?.type === "featured-products-updated") {
+        if (event.data?.type === "featured-products-updated" || event.data?.type === "storefront-updated") {
           refreshBurst();
         }
       };
@@ -130,7 +137,7 @@ export function FeaturedProductsLiveSection({
     }
 
     const onStorage = (event: StorageEvent) => {
-      if (event.key === "kittisap_featured_updated_at") {
+      if (event.key === FEATURED_UPDATED_KEY || event.key === STOREFRONT_UPDATED_KEY) {
         refreshBurst();
       }
     };

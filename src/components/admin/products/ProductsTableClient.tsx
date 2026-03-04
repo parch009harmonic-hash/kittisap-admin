@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
+import { emitStorefrontUpdateSignal } from "../../../../lib/storefront-sync";
 import { AdminLocale } from "../../../../lib/i18n/admin";
 import { Product } from "../../../../lib/types/product";
 import { ConfirmModal } from "../ConfirmModal";
@@ -79,17 +80,7 @@ export function ProductsTableClient({ products, onDelete, locale }: ProductsTabl
           throw new Error(data?.error || "Failed to update featured state");
         }
 
-        if (typeof window !== "undefined") {
-          const ts = Date.now().toString();
-          window.localStorage.setItem("kittisap_featured_updated_at", ts);
-          try {
-            const channel = new BroadcastChannel("kittisap-sync");
-            channel.postMessage({ type: "featured-products-updated", ts: Number(ts) });
-            channel.close();
-          } catch {
-            // BroadcastChannel is not available in some browsers.
-          }
-        }
+        emitStorefrontUpdateSignal({ featured: true });
 
         router.refresh();
       } catch {
