@@ -47,7 +47,21 @@ export default async function AdminProductsPage({ searchParams }: ProductsPagePr
   const errorMessage = params.error?.trim() || "";
   const shouldSyncStorefront = params.sync === "1";
 
-  const result = await listProducts({ q, status, featuredOnly, page, pageSize: 12 });
+  let loadErrorMessage = "";
+  let result = {
+    items: [],
+    total: 0,
+    page,
+    pageSize: 12,
+    totalPages: 1,
+  } as Awaited<ReturnType<typeof listProducts>>;
+
+  try {
+    result = await listProducts({ q, status, featuredOnly, page, pageSize: 12 });
+  } catch (error) {
+    loadErrorMessage = error instanceof Error ? error.message : "Failed to load products";
+  }
+
   const products = result.items;
 
   const t = {
@@ -89,6 +103,8 @@ export default async function AdminProductsPage({ searchParams }: ProductsPagePr
             ? t.archived
             : undefined;
   const deleteErrorMessage = errorMessage ? `${t.deleteError}: ${errorMessage}` : undefined;
+  const pageLoadError = loadErrorMessage ? `Failed to load products: ${loadErrorMessage}` : undefined;
+  const toastErrorMessage = deleteErrorMessage ?? pageLoadError;
 
   async function deleteAction(formData: FormData) {
     "use server";
@@ -142,9 +158,13 @@ export default async function AdminProductsPage({ searchParams }: ProductsPagePr
       <ProductsPageToast
         key={`${notice}:${errorMessage}`}
         successMessage={successMessage}
-        errorMessage={deleteErrorMessage}
+        errorMessage={toastErrorMessage}
         syncStorefront={shouldSyncStorefront}
       />
+
+      {pageLoadError ? (
+        <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{pageLoadError}</p>
+      ) : null}
 
       <form className="product-page-filter sst-card-soft grid grid-cols-1 gap-3 rounded-2xl p-4 md:grid-cols-[1fr_220px_auto]">
         <input type="search" name="q" defaultValue={q ?? ""} placeholder={t.searchPlaceholder} className="input-base" />
