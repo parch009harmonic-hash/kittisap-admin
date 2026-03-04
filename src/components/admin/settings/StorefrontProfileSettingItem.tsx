@@ -108,7 +108,11 @@ export function StorefrontProfileSettingItem({
     { key: "contactLineId", label: locale === "th" ? "LINE ID" : "LINE ID" },
     { key: "contactAddressTh", label: locale === "th" ? "ที่อยู่ (ไทย/ลาว)" : "Address (TH/LO)", type: "textarea" },
     { key: "contactAddressEn", label: locale === "th" ? "ที่อยู่ (อังกฤษ)" : "Address (EN)", type: "textarea" },
-    { key: "contactMapEmbedUrl", label: locale === "th" ? "ลิงก์แผนที่ Embed" : "Map embed URL", type: "url" },
+    {
+      key: "contactMapEmbedUrl",
+      label: locale === "th" ? "ลิงก์แผนที่ Embed (วางลิงก์ Google Maps ได้)" : "Map embed URL (Google Maps link works)",
+      type: "url",
+    },
     { key: "contactMapOpenUrl", label: locale === "th" ? "ลิงก์เปิด Google Maps" : "Map open URL", type: "url" },
     { key: "contactCallButtonLabel", label: locale === "th" ? "ข้อความปุ่มโทรทันที" : "Call button label" },
     { key: "contactMapButtonLabel", label: locale === "th" ? "ข้อความปุ่มเปิดแผนที่" : "Map button label" },

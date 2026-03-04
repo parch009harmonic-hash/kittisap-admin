@@ -57,15 +57,93 @@ function formatPhoneHref(phone: string) {
   return `tel:${normalized}`;
 }
 
+function extractIframeSrc(raw: string) {
+  const match = raw.match(/src=["']([^"']+)["']/i);
+  return match?.[1]?.trim() ?? "";
+}
+
+function decodeMapSegment(segment: string) {
+  return decodeURIComponent(segment).replace(/\+/g, " ").trim();
+}
+
+function extractMapQuery(url: URL) {
+  const q = url.searchParams.get("q") || url.searchParams.get("query");
+  if (q?.trim()) {
+    return q.trim();
+  }
+
+  const placeMatch = url.pathname.match(/\/place\/([^/]+)/i);
+  if (placeMatch?.[1]) {
+    return decodeMapSegment(placeMatch[1]);
+  }
+
+  const coordsMatch = url.pathname.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+  if (coordsMatch?.[1] && coordsMatch?.[2]) {
+    return `${coordsMatch[1]},${coordsMatch[2]}`;
+  }
+
+  return "";
+}
+
+function toEmbeddedMapUrl(queryOrUrl: string, fallbackQuery: string) {
+  const trimmed = queryOrUrl.trim();
+  if (!trimmed) {
+    return `https://www.google.com/maps?q=${encodeURIComponent(fallbackQuery)}&output=embed`;
+  }
+
+  if (trimmed.includes("output=embed")) {
+    return trimmed;
+  }
+
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      throw new Error("Invalid map protocol");
+    }
+    const query = extractMapQuery(parsed) || trimmed;
+    return `https://www.google.com/maps?q=${encodeURIComponent(query)}&output=embed`;
+  } catch {
+    return `https://www.google.com/maps?q=${encodeURIComponent(trimmed)}&output=embed`;
+  }
+}
+
+function toOpenMapUrl(rawOpen: string, rawEmbed: string, fallbackQuery: string) {
+  const fromOpen = rawOpen.trim();
+  if (fromOpen) {
+    try {
+      const parsed = new URL(fromOpen);
+      if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+        return parsed.toString();
+      }
+    } catch {
+      // Ignore invalid URL and use fallback below.
+    }
+  }
+
+  const embeddedSource = extractIframeSrc(rawEmbed) || rawEmbed;
+  const embeddedAsQuery = toEmbeddedMapUrl(embeddedSource, fallbackQuery);
+  const parsed = new URL(embeddedAsQuery);
+  const query = parsed.searchParams.get("q") || fallbackQuery;
+  return `https://maps.google.com/?q=${encodeURIComponent(query)}`;
+}
+
 export async function ContactPage({ locale, useLocalePrefix = false }: ContactPageProps) {
   const t = text(locale);
   const storefrontSettings = await getWebStorefrontSettings();
   const contactPhone = storefrontSettings.contactPhone || storefrontSettings.callPhone;
   const lineId = storefrontSettings.contactLineId;
   const lineUrl = storefrontSettings.lineUrl || "https://line.me";
-  const mapOpenUrl = storefrontSettings.contactMapOpenUrl || "https://maps.google.com/?q=Bangkok";
-  const mapEmbedUrl = storefrontSettings.contactMapEmbedUrl || "https://www.google.com/maps?q=Bangkok&output=embed";
   const address = locale === "en" ? storefrontSettings.contactAddressEn : storefrontSettings.contactAddressTh;
+  const fallbackMapQuery = address?.trim() || "Bangkok";
+  const mapEmbedUrl = toEmbeddedMapUrl(
+    extractIframeSrc(storefrontSettings.contactMapEmbedUrl) || storefrontSettings.contactMapEmbedUrl,
+    fallbackMapQuery,
+  );
+  const mapOpenUrl = toOpenMapUrl(
+    storefrontSettings.contactMapOpenUrl,
+    storefrontSettings.contactMapEmbedUrl,
+    fallbackMapQuery,
+  );
   const businessHours = [
     { day: storefrontSettings.contactHoursWeekdayLabel, time: storefrontSettings.contactHoursWeekdayTime },
     { day: storefrontSettings.contactHoursSaturdayLabel, time: storefrontSettings.contactHoursSaturdayTime },
@@ -144,6 +222,7 @@ export async function ContactPage({ locale, useLocalePrefix = false }: ContactPa
                   title={t.map}
                   className="h-64 w-full"
                   loading="lazy"
+                  allowFullScreen
                   referrerPolicy="no-referrer-when-downgrade"
                 />
               </div>

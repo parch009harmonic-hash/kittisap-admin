@@ -663,13 +663,13 @@ function RoleBadge({ locale, role }: { locale: AdminLocale; role: "admin" | "sta
     role === "admin" ? TEXT.roleAdmin[locale] : role === "developer" ? TEXT.roleDeveloper[locale] : TEXT.roleStaff[locale];
 
   return (
-    <div className="inline-flex items-center gap-2 rounded-full border border-blue-200/70 bg-white/90 px-3 py-1.5 text-xs shadow-sm backdrop-blur">
-      <span className="font-semibold text-slate-500">{TEXT.currentRole[locale]}:</span>
-      <span className="font-bold text-blue-700">{roleText}</span>
+    <div className="inline-flex max-w-full items-center gap-2 overflow-hidden rounded-full border border-blue-200/70 bg-white/90 px-3 py-1.5 text-xs shadow-sm backdrop-blur">
+      <span className="truncate font-semibold text-slate-500">{TEXT.currentRole[locale]}:</span>
+      <span className="truncate font-bold text-blue-700">{roleText}</span>
       {role === "developer" ? (
         <Link
           href="/admin/developer"
-          className="ml-1 rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 font-semibold text-blue-700 transition hover:border-blue-300 hover:bg-blue-100"
+          className="ml-1 shrink-0 rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 font-semibold text-blue-700 transition hover:border-blue-300 hover:bg-blue-100"
         >
           {TEXT.openDeveloper[locale]}
         </Link>

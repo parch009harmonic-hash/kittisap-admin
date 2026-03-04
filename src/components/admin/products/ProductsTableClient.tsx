@@ -261,15 +261,15 @@ export function ProductsTableClient({ products, locale }: ProductsTableClientPro
       ) : null}
 
       {!mobileLayout ? (
-        <div>
-          <div className="mb-3 flex justify-end">
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white/95 shadow-sm">
+          <div className="flex items-center justify-end border-b border-slate-200 bg-slate-50/80 px-3 py-2">
             <button
               type="button"
               onClick={openSortModal}
               className="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-100"
             >
               <span className="inline-flex h-4 w-4 items-center justify-center rounded border border-indigo-300 bg-white text-[10px]">↕</span>
-              <span>{locale === "th" ? "จัดเรียงสินค้า" : "Sort Products"}</span>
+              <span className="max-w-[148px] truncate">{locale === "th" ? "จัดเรียงสินค้า" : "Sort Products"}</span>
             </button>
           </div>
           <AdminTable
