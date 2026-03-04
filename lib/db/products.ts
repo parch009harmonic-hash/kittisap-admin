@@ -70,6 +70,14 @@ function isMissingFeaturedColumnError(error: unknown) {
   return message.includes("is_featured") && message.includes("column");
 }
 
+function isDeleteRestrictedByOrderItems(error: unknown) {
+  const message = errorText(error, "").toLowerCase();
+  return (
+    message.includes("violates foreign key constraint") &&
+    (message.includes("order_items") || message.includes("order_items_product_id_fkey"))
+  );
+}
+
 function mapImage(row: Record<string, unknown>): ProductImage {
   const parsed = ProductImageRowSchema.parse({
     ...row,
@@ -318,9 +326,34 @@ export async function updateProduct(id: string, data: unknown) {
 export async function deleteProduct(id: string) {
   const supabase = await adminWriteClient();
   const { error } = await supabase.from("products").delete().eq("id", id);
-  if (error) {
-    throw new Error(`Failed to delete product: ${errorText(error, "Unknown error")}`);
+  if (!error) {
+    return { mode: "deleted" as const };
   }
+
+  if (isDeleteRestrictedByOrderItems(error)) {
+    let { error: archiveError } = await supabase
+      .from("products")
+      .update({ status: "inactive", stock: 0, is_featured: false })
+      .eq("id", id);
+
+    if (archiveError && isMissingFeaturedColumnError(archiveError)) {
+      const fallbackArchive = await supabase
+        .from("products")
+        .update({ status: "inactive", stock: 0 })
+        .eq("id", id);
+      archiveError = fallbackArchive.error;
+    }
+
+    if (archiveError) {
+      throw new Error(
+        `Failed to archive product after delete restriction: ${errorText(archiveError, "Unknown error")}`
+      );
+    }
+
+    return { mode: "archived" as const };
+  }
+
+  throw new Error(`Failed to delete product: ${errorText(error, "Unknown error")}`);
 }
 
 export async function setProductFeatured(id: string, isFeatured: boolean) {

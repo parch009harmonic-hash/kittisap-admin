@@ -27,7 +27,6 @@ import {
 } from "../../../lib/types/web-settings";
 import { ActivitiesNewsGrid } from "./ActivitiesNewsGrid";
 import { FeaturedProductsLiveSection } from "./FeaturedProductsLiveSection";
-import { FeaturedProductsShowcase } from "./FeaturedProductsShowcase";
 import { MiddleBannerStrip } from "./MiddleBannerStrip";
 import { MarketingTopNav } from "./MarketingTopNav";
 import { NewsletterSubscribeSection } from "./NewsletterSubscribeSection";
@@ -286,6 +285,7 @@ type ShowroomItem = {
   stock: number;
   coverUrl: string | null;
   description: string | null;
+  images: Array<{ id: string; url: string }>;
 };
 
 async function loadShowroomItems(locale: AppLocale): Promise<ShowroomItem[]> {
@@ -304,12 +304,13 @@ async function loadShowroomItems(locale: AppLocale): Promise<ShowroomItem[]> {
       price: item.price,
       stock: item.stock,
       coverUrl: item.cover_url,
-        description:
-          locale === "en"
-            ? item.description_en?.trim() || item.description_th?.trim() || null
-            : locale === "lo"
-              ? item.description_lo?.trim() || item.description_en?.trim() || item.description_th?.trim() || null
-              : item.description_th?.trim() || item.description_en?.trim() || null,
+      description:
+        locale === "en"
+          ? item.description_en?.trim() || item.description_th?.trim() || null
+          : locale === "lo"
+            ? item.description_lo?.trim() || item.description_en?.trim() || item.description_th?.trim() || null
+            : item.description_th?.trim() || item.description_en?.trim() || null,
+      images: item.images,
     }));
   } catch {
     return [];

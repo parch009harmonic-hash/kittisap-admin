@@ -14,6 +14,7 @@ type ShowroomItem = {
   stock: number;
   coverUrl: string | null;
   description: string | null;
+  images: Array<{ id: string; url: string }>;
 };
 
 type FeaturedProductsLiveSectionProps = {
@@ -34,6 +35,7 @@ type ApiFeaturedItem = {
   price: number;
   stock: number;
   cover_url?: string | null;
+  images?: Array<{ id: string; url: string }>;
 };
 
 function toShowroomItem(item: ApiFeaturedItem, locale: AppLocale): ShowroomItem {
@@ -58,6 +60,7 @@ function toShowroomItem(item: ApiFeaturedItem, locale: AppLocale): ShowroomItem 
     stock: Number(item.stock ?? 0),
     coverUrl: item.cover_url ?? null,
     description,
+    images: Array.isArray(item.images) ? item.images : [],
   };
 }
 
@@ -70,7 +73,7 @@ export function FeaturedProductsLiveSection({
   const loadingRef = useRef(false);
   const lastSeenUpdateRef = useRef<string | null>(null);
   const signatureRef = useRef(
-    initialItems.map((item) => `${item.id}:${item.stock}:${item.price}`).join("|"),
+    initialItems.map((item) => `${item.id}:${item.stock}:${item.price}:${item.images.length}`).join("|"),
   );
 
   const refreshFeatured = useCallback(async () => {
@@ -87,7 +90,7 @@ export function FeaturedProductsLiveSection({
         | null;
       if (!response.ok || !payload?.ok) return;
       const nextItems = (payload.data?.items ?? []).map((item) => toShowroomItem(item, locale)).slice(0, 4);
-      const nextSignature = nextItems.map((item) => `${item.id}:${item.stock}:${item.price}`).join("|");
+      const nextSignature = nextItems.map((item) => `${item.id}:${item.stock}:${item.price}:${item.images.length}`).join("|");
       if (nextSignature !== signatureRef.current) {
         signatureRef.current = nextSignature;
         setItems(nextItems);

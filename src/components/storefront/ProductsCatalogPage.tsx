@@ -298,6 +298,7 @@ export async function ProductsCatalogPage({ locale, searchParams = {}, useLocale
                 price: item.price,
                 stock: item.stock,
                 coverUrl: item.cover_url,
+                images: item.images,
               }))}
               locale={locale}
               useLocalePrefix={useLocalePrefix}

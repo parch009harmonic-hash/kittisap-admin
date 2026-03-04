@@ -33,6 +33,10 @@ const ProductImageRowSchema = z.object({
 
 export type PublicProduct = z.infer<typeof PublicProductRowSchema> & {
   cover_url: string | null;
+  images: Array<{
+    id: string;
+    url: string;
+  }>;
 };
 
 export type PublicProductDetail = z.infer<typeof PublicProductRowSchema> & {
@@ -114,29 +118,37 @@ export async function listPublicProducts(input?: {
   const rows = (data ?? []).map((row) => PublicProductRowSchema.parse(row));
   const productIds = rows.map((row) => row.id);
 
-  let coverByProductId = new Map<string, string>();
+  const imagesByProductId = new Map<string, Array<z.infer<typeof ProductImageRowSchema>>>();
   if (productIds.length > 0) {
     const { data: imageRows, error: imageError } = await supabase
       .from("product_images")
       .select("id,product_id,url,sort,is_primary")
       .in("product_id", productIds)
-      .eq("is_primary", true);
+      .order("product_id", { ascending: true })
+      .order("sort", { ascending: true });
 
     if (imageError) {
       throw new PublicProductsError("PRODUCT_IMAGES_FETCH_FAILED", asErrorMessage(imageError, "Failed to fetch images"));
     }
 
-    coverByProductId = new Map(
-      (imageRows ?? []).map((row) => {
-        const parsed = ProductImageRowSchema.parse(row);
-        return [parsed.product_id, parsed.url];
-      }),
-    );
+    for (const row of imageRows ?? []) {
+      const parsed = ProductImageRowSchema.parse(row);
+      const current = imagesByProductId.get(parsed.product_id) ?? [];
+      current.push(parsed);
+      imagesByProductId.set(parsed.product_id, current);
+    }
   }
 
   const items = rows.map((row) => ({
     ...row,
-    cover_url: coverByProductId.get(row.id) ?? null,
+    cover_url:
+      (imagesByProductId.get(row.id) ?? []).find((image) => image.is_primary)?.url ??
+      imagesByProductId.get(row.id)?.[0]?.url ??
+      null,
+    images: (imagesByProductId.get(row.id) ?? []).map((image) => ({
+      id: image.id,
+      url: image.url,
+    })),
   }));
 
   const total = count ?? items.length;
