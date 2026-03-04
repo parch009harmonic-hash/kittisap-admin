@@ -14,7 +14,7 @@ function statusClass(status: string) {
 }
 
 type AdminOrdersPageProps = {
-  searchParams: Promise<{ q?: string; status?: string }>;
+  searchParams: Promise<{ q?: string; status?: string; deleteMode?: string }>;
 };
 
 export default async function AdminOrdersPage({ searchParams }: AdminOrdersPageProps) {
@@ -22,12 +22,16 @@ export default async function AdminOrdersPage({ searchParams }: AdminOrdersPageP
   const params = await searchParams;
   const q = typeof params.q === "string" ? params.q : "";
   const status = typeof params.status === "string" ? params.status : "";
+  const deleteMode =
+    params.deleteMode === "deletable" || params.deleteMode === "history"
+      ? params.deleteMode
+      : "all";
 
   let orders = [] as Awaited<ReturnType<typeof listAdminOrders>>;
   let loadError: string | null = null;
 
   try {
-    orders = await listAdminOrders({ q, status, limit: 200 });
+    orders = await listAdminOrders({ q, status, limit: 200, deletionFilter: deleteMode });
   } catch (error) {
     loadError = error instanceof Error ? error.message : "Failed to load orders";
   }
@@ -47,6 +51,9 @@ export default async function AdminOrdersPage({ searchParams }: AdminOrdersPageP
     pendingReview: locale === "th" ? "รอตรวจสอบสลิป" : "Pending Review",
     paid: locale === "th" ? "ชำระแล้ว" : "Paid",
     processing: locale === "th" ? "กำลังจัดเตรียม" : "Processing",
+    allDeleteModes: locale === "th" ? "ทุกสถานะการเก็บข้อมูล" : "All retention modes",
+    deletableOnly: locale === "th" ? "ลบได้" : "Deletable",
+    historyOnly: locale === "th" ? "เก็บย้อนหลัง" : "History only",
     filter: locale === "th" ? "กรอง" : "Filter",
     orderId: locale === "th" ? "เลขที่คำสั่งซื้อ" : "Order ID",
     customer: locale === "th" ? "ลูกค้า" : "Customer",
@@ -80,7 +87,7 @@ export default async function AdminOrdersPage({ searchParams }: AdminOrdersPageP
         </div>
       </header>
 
-      <form className="sst-card-soft grid grid-cols-1 gap-3 rounded-2xl p-4 md:grid-cols-[1fr_220px_auto]">
+      <form className="sst-card-soft grid grid-cols-1 gap-3 rounded-2xl p-4 md:grid-cols-[1fr_220px_220px_auto]">
         <input name="q" defaultValue={q} type="search" placeholder={text.searchPlaceholder} className="input-base" />
         <select name="status" className="input-base" defaultValue={status}>
           <option value="">{text.allStatus}</option>
@@ -88,6 +95,11 @@ export default async function AdminOrdersPage({ searchParams }: AdminOrdersPageP
           <option value="pending_review">{text.pendingReview}</option>
           <option value="paid">{text.paid}</option>
           <option value="processing">{text.processing}</option>
+        </select>
+        <select name="deleteMode" className="input-base" defaultValue={deleteMode}>
+          <option value="all">{text.allDeleteModes}</option>
+          <option value="deletable">{text.deletableOnly}</option>
+          <option value="history">{text.historyOnly}</option>
         </select>
         <button
           type="submit"

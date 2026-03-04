@@ -205,7 +205,7 @@ async function ensureOrderArchiveProductId(supabase: Awaited<ReturnType<typeof a
     description_en: "Internal placeholder product used for preserving historical orders.",
     description_lo: "",
     price: 0,
-    compare_at_price: null,
+    compare_at_price: 0,
     stock: 0,
     status: "inactive",
     is_featured: false,

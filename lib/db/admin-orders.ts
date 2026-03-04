@@ -50,6 +50,7 @@ export async function listAdminOrders(input?: {
   q?: string;
   status?: string;
   limit?: number;
+  deletionFilter?: "all" | "deletable" | "history";
 }) {
   await requireAdminApi();
 
@@ -104,7 +105,7 @@ export async function listAdminOrders(input?: {
     }
   }
 
-  return rows.map((row) => {
+  const mappedOrders = rows.map((row) => {
     const orderId = String(row.id ?? "");
     const profile = (row.customer_profiles ?? null) as Record<string, unknown> | null;
     const customerName = String(row.customer_name_snapshot ?? profile?.full_name ?? "-");
@@ -125,6 +126,16 @@ export async function listAdminOrders(input?: {
       can_delete: !shouldKeepOrderForHistory(status, paymentStatus),
     } satisfies AdminOrderRow;
   });
+
+  const deletionFilter = input?.deletionFilter ?? "all";
+  if (deletionFilter === "deletable") {
+    return mappedOrders.filter((order) => order.can_delete);
+  }
+  if (deletionFilter === "history") {
+    return mappedOrders.filter((order) => !order.can_delete);
+  }
+
+  return mappedOrders;
 }
 
 export async function getAdminOrderDetail(orderNo: string) {
