@@ -69,6 +69,11 @@ function isMissingSortOrderColumn(error: unknown) {
   return message.includes("sort_order") && message.includes("column");
 }
 
+function isSortOrderQueryError(error: unknown) {
+  const message = asErrorMessage(error, "").toLowerCase();
+  return isMissingSortOrderColumn(error) || message.includes("failed to parse order");
+}
+
 export async function listPublicProducts(input?: {
   q?: string;
   category?: string;
@@ -102,7 +107,7 @@ export async function listPublicProducts(input?: {
       includeTotal ? { count: "planned" } : undefined,
     )
     .eq("status", "active")
-    .order("sort_order", { ascending: true, nullsFirst: false })
+    .order("sort_order", { ascending: true })
     .order("created_at", { ascending: false })
     .range(from, to);
 
@@ -118,7 +123,7 @@ export async function listPublicProducts(input?: {
   let error = queryResult.error;
   let count = includeTotal ? queryResult.count : null;
 
-  if (error && isMissingSortOrderColumn(error)) {
+  if (error && isSortOrderQueryError(error)) {
     let fallbackQuery = supabase
       .from("products")
       .select(
@@ -242,12 +247,12 @@ export async function listPublicPricingProducts(): Promise<PublicPricingProduct[
     .from("products")
     .select("id,sku,slug,title_th,title_en,title_lo,price,stock,status,is_featured,sort_order,created_at")
     .eq("status", "active")
-    .order("sort_order", { ascending: true, nullsFirst: false })
+    .order("sort_order", { ascending: true })
     .order("created_at", { ascending: false });
 
   let data: unknown[] | null = result.data as unknown[] | null;
   let error = result.error;
-  if (error && isMissingSortOrderColumn(error)) {
+  if (error && isSortOrderQueryError(error)) {
     const fallback = await supabase
       .from("products")
       .select("id,sku,slug,title_th,title_en,title_lo,price,stock,status,is_featured,created_at")

@@ -78,6 +78,11 @@ function isMissingSortOrderColumnError(error: unknown) {
   return message.includes("sort_order") && message.includes("column");
 }
 
+function isSortOrderQueryError(error: unknown) {
+  const message = errorText(error, "").toLowerCase();
+  return message.includes("sort_order") || message.includes("failed to parse order");
+}
+
 function isDeleteRestrictedByOrderItems(error: unknown) {
   const message = errorText(error, "").toLowerCase();
   return (
@@ -282,7 +287,7 @@ export async function listProducts(input: {
     .from("products")
     .select(PRODUCT_SELECT_COLUMNS, { count: "planned" })
     .neq("slug", ORDER_ARCHIVE_PRODUCT_SLUG)
-    .order("sort_order", { ascending: true, nullsFirst: false })
+    .order("sort_order", { ascending: true })
     .order("created_at", { ascending: false })
     .range(from, to);
 
@@ -300,7 +305,7 @@ export async function listProducts(input: {
 
   let { data, error, count } = await query;
   const missingFeaturedColumn = Boolean(error && isMissingFeaturedColumnError(error));
-  if (error && isMissingColumnError(error)) {
+  if (error && (isMissingColumnError(error) || isSortOrderQueryError(error))) {
     let fallbackQuery = supabase
       .from("products")
       .select("*", { count: "planned" })
@@ -404,7 +409,8 @@ async function getNextProductSortOrder(supabase: Awaited<ReturnType<typeof admin
   const { data, error } = await supabase
     .from("products")
     .select("sort_order")
-    .order("sort_order", { ascending: false, nullsFirst: false })
+    .not("sort_order", "is", null)
+    .order("sort_order", { ascending: false })
     .limit(1)
     .maybeSingle();
 
