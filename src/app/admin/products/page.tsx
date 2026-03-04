@@ -104,13 +104,21 @@ export default async function AdminProductsPage({ searchParams }: ProductsPagePr
         <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{pageLoadError}</p>
       ) : null}
 
-      <header className="product-page-hero product-page-topbar sst-card-soft rounded-3xl p-5">
-        <h1 className="font-heading text-3xl text-slate-900 md:text-4xl">{t.title}</h1>
-        <p className="mt-1 text-sm text-slate-600">{t.subtitle}</p>
-      </header>
-
       <section className="sticky top-0 z-30 -mx-1 bg-[#edf4fb]/95 px-1 pb-3 pt-1 backdrop-blur supports-[backdrop-filter]:bg-[#edf4fb]/85">
         <div className="space-y-3 rounded-2xl border border-slate-200/80 bg-white/90 p-3 shadow-sm">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h1 className="font-heading text-2xl text-slate-900 md:text-3xl">{t.title}</h1>
+              <p className="mt-0.5 text-xs text-slate-600 md:text-sm">{t.subtitle}</p>
+            </div>
+            <Link
+              href="/admin/products/new"
+              className="product-page-add-btn btn-primary inline-flex h-10 items-center justify-center gap-2 rounded-full px-4 text-sm font-semibold text-white md:px-5"
+            >
+              {t.addProduct}
+            </Link>
+          </div>
+
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="product-page-summary flex flex-wrap gap-2 text-xs">
               <span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 font-semibold text-blue-700">
@@ -120,12 +128,6 @@ export default async function AdminProductsPage({ searchParams }: ProductsPagePr
                 {t.page} {result.page}/{result.totalPages}
               </span>
             </div>
-            <Link
-              href="/admin/products/new"
-              className="product-page-add-btn btn-primary inline-flex h-10 items-center justify-center gap-2 rounded-full px-4 text-sm font-semibold text-white md:px-5"
-            >
-              {t.addProduct}
-            </Link>
           </div>
 
           <form className="product-page-filter grid grid-cols-1 gap-3 rounded-xl border border-slate-200/80 bg-white p-3 md:grid-cols-[1fr_220px_auto]">
