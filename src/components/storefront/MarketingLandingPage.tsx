@@ -240,18 +240,6 @@ function Frame({ children, showOuterFrame }: { children: ReactNode; showOuterFra
   );
 }
 
-function PlaceholderCard({ title, meta, href }: { title: string; meta: string; href: string }) {
-  return (
-    <Link href={href} className="tap-ripple app-press overflow-hidden rounded-2xl border border-slate-400/20 bg-gradient-to-b from-slate-900/90 to-slate-950/80 shadow-[0_14px_50px_rgba(0,0,0,0.28)] transition hover:-translate-y-0.5 hover:border-amber-400/40">
-      <div className="aspect-[16/10] bg-[linear-gradient(135deg,rgba(245,158,11,0.22),rgba(59,130,246,0.12)),radial-gradient(800px_300px_at_20%_20%,rgba(255,255,255,0.08),transparent_45%)]" />
-      <div className="p-4">
-        <p className="text-sm font-extrabold tracking-tight text-slate-100">{title}</p>
-        <p className="mt-1 text-xs text-slate-300/70">{meta}</p>
-      </div>
-    </Link>
-  );
-}
-
 function WhyChooseUsIconSvg({ icon }: { icon: WhyChooseUsIcon }) {
   if (icon === "shield") {
     return <path d="M12 3l7 3v5c0 4.7-2.9 8.8-7 10-4.1-1.2-7-5.3-7-10V6l7-3zm0 5v7m-3-4h6" />;
@@ -291,7 +279,10 @@ type ShowroomItem = {
 async function loadShowroomItems(locale: AppLocale): Promise<ShowroomItem[]> {
   try {
     const featuredSource = await listPublicProducts({ featuredOnly: true, page: 1, pageSize: 4 });
-    const source = featuredSource.items.length > 0 ? featuredSource : await listPublicProducts({ page: 1, pageSize: 4 });
+    if (featuredSource.items.length === 0) {
+      return [];
+    }
+    const source = featuredSource;
     return source.items.map((item) => ({
       id: item.id,
       slug: item.slug,
@@ -601,25 +592,19 @@ export async function MarketingLandingPage({
         </section>
       ) : null}
 
-      <section id="updates" className="mx-auto w-full max-w-7xl px-4 py-12">
-        <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h2 className="text-2xl font-black tracking-tight text-slate-100 md:text-3xl">{t.sections.updates}</h2>
-            {t.sections.updatesSub ? <p className="mt-1 text-sm text-slate-300/70">{t.sections.updatesSub}</p> : null}
+      {showroomItems.length > 0 ? (
+        <section id="updates" className="mx-auto w-full max-w-7xl px-4 py-12">
+          <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 className="text-2xl font-black tracking-tight text-slate-100 md:text-3xl">{t.sections.updates}</h2>
+              {t.sections.updatesSub ? <p className="mt-1 text-sm text-slate-300/70">{t.sections.updatesSub}</p> : null}
+            </div>
+            <span className="rounded-full border border-slate-400/20 bg-white/5 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-200/85">{t.tags.latest}</span>
           </div>
-          <span className="rounded-full border border-slate-400/20 bg-white/5 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-200/85">{t.tags.latest}</span>
-        </div>
 
-        {showroomItems.length > 0 ? (
           <FeaturedProductsLiveSection initialItems={showroomItems} locale={locale} useLocalePrefix={useLocalePrefix} />
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {[1, 2, 3, 4].map((item) => (
-              <PlaceholderCard key={item} title={t.card.model} meta={t.card.meta} href={productsPath} />
-            ))}
-          </div>
-        )}
-      </section>
+        </section>
+      ) : null}
 
       <MiddleBannerStrip
         items={middleBannerSettings.items}

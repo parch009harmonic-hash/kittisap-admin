@@ -118,8 +118,8 @@ export function FeaturedProductsLiveSection({
 
     const refreshBurst = () => {
       void refreshFeatured();
-      window.setTimeout(() => void refreshFeatured(), 450);
-      window.setTimeout(() => void refreshFeatured(), 1200);
+      window.setTimeout(() => void refreshFeatured(), 220);
+      window.setTimeout(() => void refreshFeatured(), 650);
     };
 
     lastSeenUpdateRef.current = readSignal();
@@ -152,6 +152,13 @@ export function FeaturedProductsLiveSection({
           refreshBurst();
         },
       )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "product_images" },
+        () => {
+          refreshBurst();
+        },
+      )
       .subscribe();
 
     const signalPollId = window.setInterval(() => {
@@ -160,13 +167,13 @@ export function FeaturedProductsLiveSection({
       if (!current || current === lastSeenUpdateRef.current) return;
       lastSeenUpdateRef.current = current;
       refreshBurst();
-    }, 2500);
+    }, 1000);
 
     // Fallback when realtime events are blocked/delayed.
     const serverPollId = window.setInterval(() => {
       if (document.visibilityState !== "visible") return;
       void refreshFeatured();
-    }, 15000);
+    }, 7000);
 
     window.addEventListener("storage", onStorage);
     return () => {

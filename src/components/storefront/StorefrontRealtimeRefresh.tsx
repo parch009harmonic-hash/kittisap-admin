@@ -8,6 +8,7 @@ import {
   STOREFRONT_SYNC_CHANNEL,
   STOREFRONT_UPDATED_KEY,
 } from "../../../lib/storefront-sync";
+import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 
 export function StorefrontRealtimeRefresh() {
   const router = useRouter();
@@ -17,7 +18,7 @@ export function StorefrontRealtimeRefresh() {
   useEffect(() => {
     const refresh = () => {
       const now = Date.now();
-      if (now - lastRefreshAtRef.current < 2500) {
+      if (now - lastRefreshAtRef.current < 900) {
         return;
       }
       lastRefreshAtRef.current = now;
@@ -26,7 +27,8 @@ export function StorefrontRealtimeRefresh() {
 
     const refreshBurst = () => {
       refresh();
-      window.setTimeout(refresh, 1400);
+      window.setTimeout(refresh, 320);
+      window.setTimeout(refresh, 920);
     };
 
     const readSignal = () => {
@@ -59,6 +61,13 @@ export function StorefrontRealtimeRefresh() {
       }
     };
 
+    const supabase = getSupabaseBrowserClient();
+    const realtimeChannel = supabase
+      .channel("storefront-live-refresh")
+      .on("postgres_changes", { event: "*", schema: "public", table: "products" }, () => refreshBurst())
+      .on("postgres_changes", { event: "*", schema: "public", table: "product_images" }, () => refreshBurst())
+      .subscribe();
+
     // Fallback for browser modes where storage/broadcast events are delayed.
     const pollId = window.setInterval(() => {
       if (document.visibilityState !== "visible") return;
@@ -66,12 +75,13 @@ export function StorefrontRealtimeRefresh() {
       if (!current || current === lastSeenUpdateRef.current) return;
       lastSeenUpdateRef.current = current;
       refreshBurst();
-    }, 3000);
+    }, 1200);
 
     window.addEventListener("storage", onStorage);
     return () => {
       window.clearInterval(pollId);
       window.removeEventListener("storage", onStorage);
+      void supabase.removeChannel(realtimeChannel);
       if (channel) {
         channel.close();
       }
