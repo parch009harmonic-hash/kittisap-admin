@@ -1,8 +1,6 @@
-import { revalidatePath } from "next/cache";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 
-import { deleteProduct, listProducts } from "../../../../lib/db/products";
+import { listProducts } from "../../../../lib/db/products";
 import { getAdminLocale } from "../../../../lib/i18n/admin";
 import { ProductStatus } from "../../../../lib/types/product";
 import { ProductsPageToast } from "../../../components/admin/products/ProductsPageToast";
@@ -19,19 +17,6 @@ type ProductsPageProps = {
     sync?: string;
   }>;
 };
-
-function isNextRedirectError(error: unknown) {
-  if (!error || typeof error !== "object") {
-    return false;
-  }
-  if ("digest" in error && String((error as { digest?: unknown }).digest).includes("NEXT_REDIRECT")) {
-    return true;
-  }
-  if (error instanceof Error && error.message.includes("NEXT_REDIRECT")) {
-    return true;
-  }
-  return false;
-}
 
 export default async function AdminProductsPage({ searchParams }: ProductsPageProps) {
   const locale = await getAdminLocale();
@@ -105,32 +90,6 @@ export default async function AdminProductsPage({ searchParams }: ProductsPagePr
   const deleteErrorMessage = errorMessage ? `${t.deleteError}: ${errorMessage}` : undefined;
   const pageLoadError = loadErrorMessage ? `Failed to load products: ${loadErrorMessage}` : undefined;
   const toastErrorMessage = deleteErrorMessage ?? pageLoadError;
-
-  async function deleteAction(formData: FormData) {
-    "use server";
-
-    const id = String(formData.get("id") ?? "");
-    if (!id) {
-      redirect("/admin/products?error=Missing%20product%20id");
-    }
-
-    let nextPath = "/admin/products?notice=deleted&sync=1";
-    try {
-      const outcome = await deleteProduct(id);
-      revalidatePath("/admin/products");
-      if (outcome.mode === "archived") {
-        nextPath = "/admin/products?notice=archived&sync=1";
-      }
-    } catch (error) {
-      if (isNextRedirectError(error)) {
-        throw error;
-      }
-      const message = error instanceof Error ? error.message : "Delete product failed";
-      nextPath = `/admin/products?error=${encodeURIComponent(message.slice(0, 180))}`;
-    }
-
-    redirect(nextPath);
-  }
 
   return (
     <div className="product-page space-y-6">
@@ -232,7 +191,7 @@ export default async function AdminProductsPage({ searchParams }: ProductsPagePr
         </Link>
       </nav>
 
-      <ProductsTableClient products={products} onDelete={deleteAction} locale={locale} />
+      <ProductsTableClient products={products} locale={locale} />
 
       <div className="product-page-pagination sst-card-soft flex flex-col gap-3 rounded-2xl p-3 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between sm:border-0 sm:p-0 sm:shadow-none">
         <p>

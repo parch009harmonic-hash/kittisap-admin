@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { emitStorefrontUpdateSignal } from "../../../../lib/storefront-sync";
 import { AdminLocale } from "../../../../lib/i18n/admin";
@@ -13,7 +13,6 @@ import { AdminTable } from "../AdminTable";
 
 type ProductsTableClientProps = {
   products: Product[];
-  onDelete: (formData: FormData) => Promise<void>;
   locale: AdminLocale;
 };
 
@@ -41,14 +40,15 @@ function sameOrder(a: string[], b: string[]) {
   return true;
 }
 
-export function ProductsTableClient({ products, onDelete, locale }: ProductsTableClientProps) {
+export function ProductsTableClient({ products, locale }: ProductsTableClientProps) {
   const router = useRouter();
-  const formsRef = useRef<Map<string, HTMLFormElement>>(new Map());
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [mobileLayout, setMobileLayout] = useState(false);
   const [featuredById, setFeaturedById] = useState<Record<string, boolean>>({});
   const [pendingFeaturedById, setPendingFeaturedById] = useState<Record<string, boolean>>({});
   const [orderedProducts, setOrderedProducts] = useState<Product[]>(products);
+  const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string>("");
   const [sortModalOpen, setSortModalOpen] = useState(false);
   const [sortDraftIds, setSortDraftIds] = useState<string[]>([]);
   const [sortError, setSortError] = useState<string>("");
@@ -199,6 +199,39 @@ export function ProductsTableClient({ products, onDelete, locale }: ProductsTabl
     void persistSortOrder(nextIds);
   }
 
+  async function handleDelete(productId: string) {
+    if (deletingProductId) {
+      return;
+    }
+
+    setDeleteError("");
+    setDeletingProductId(productId);
+    try {
+      const response = await fetch(`/api/admin/products/${productId}`, {
+        method: "DELETE",
+        headers: { "Cache-Control": "no-store" },
+        cache: "no-store",
+      });
+      const data = (await response.json().catch(() => null)) as
+        | { ok?: boolean; mode?: "deleted" | "archived"; error?: string }
+        | null;
+
+      if (!response.ok || !data?.ok || !data.mode) {
+        throw new Error(data?.error || "Delete product failed");
+      }
+
+      emitStorefrontUpdateSignal({ featured: true });
+      router.replace(`/admin/products?notice=${data.mode}&sync=1`);
+      router.refresh();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Delete product failed";
+      setDeleteError(message);
+    } finally {
+      setDeletingProductId(null);
+      setConfirmId(null);
+    }
+  }
+
   if (orderedProducts.length === 0) {
     return (
       <div className="sst-card-soft rounded-2xl border border-dashed border-slate-200 px-6 py-12 text-center text-slate-600">
@@ -221,6 +254,10 @@ export function ProductsTableClient({ products, onDelete, locale }: ProductsTabl
 
           {recommendedItems.length > 0 ? <MobileProductSection products={recommendedItems} locale={locale} /> : null}
         </div>
+      ) : null}
+
+      {deleteError ? (
+        <p className="mb-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">{deleteError}</p>
       ) : null}
 
       {!mobileLayout ? (
@@ -339,22 +376,17 @@ export function ProductsTableClient({ products, onDelete, locale }: ProductsTabl
                     >
                       {locale === "th" ? "แก้ไข" : "Edit"}
                     </Link>
-                    <form
-                      action={onDelete}
-                      ref={(node) => {
-                        if (node) formsRef.current.set(product.id, node);
-                        else formsRef.current.delete(product.id);
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDeleteError("");
+                        setConfirmId(product.id);
                       }}
+                      disabled={Boolean(deletingProductId)}
+                      className="rounded-md border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs text-rose-700 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      <input type="hidden" name="id" value={product.id} />
-                      <button
-                        type="button"
-                        onClick={() => setConfirmId(product.id)}
-                        className="rounded-md border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs text-rose-700 hover:bg-rose-100"
-                      >
-                        {locale === "th" ? "ลบ" : "Delete"}
-                      </button>
-                    </form>
+                      {locale === "th" ? "ลบ" : "Delete"}
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -433,11 +465,11 @@ export function ProductsTableClient({ products, onDelete, locale }: ProductsTabl
         }
         confirmText={locale === "th" ? "ลบ" : "Delete"}
         cancelText={locale === "th" ? "ยกเลิก" : "Cancel"}
+        confirmDisabled={Boolean(deletingProductId)}
         onCancel={() => setConfirmId(null)}
         onConfirm={() => {
           if (!confirmId) return;
-          formsRef.current.get(confirmId)?.requestSubmit();
-          setConfirmId(null);
+          void handleDelete(confirmId);
         }}
       />
     </>

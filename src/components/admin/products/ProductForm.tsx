@@ -15,7 +15,11 @@ type ProductFormProps = {
   productId?: string;
   initialProduct?: Partial<Product>;
   initialImages?: ProductImage[];
-  submitAction: (formData: FormData) => Promise<void>;
+  submitAction: (formData: FormData) => Promise<{
+    ok: boolean;
+    error?: string;
+    redirectTo?: string;
+  }>;
   persistUploadedImages?: (urls: string[]) => Promise<ProductImage[]>;
   persistSetPrimary?: (imageId: string) => Promise<void>;
   persistRemoveImage?: (imageId: string) => Promise<void>;
@@ -474,21 +478,20 @@ export function ProductForm({
 
     startTransition(async () => {
       try {
-        await submitAction(formData);
+        const result = await submitAction(formData);
+        if (!result?.ok) {
+          const message = result?.error || "Save failed";
+          setError(message);
+          setToast({ type: "error", message });
+          return;
+        }
+        if (result.redirectTo) {
+          router.push(result.redirectTo);
+          router.refresh();
+          return;
+        }
+        setToast({ type: "success", message: "Saved successfully" });
       } catch (submitError) {
-        if (
-          submitError &&
-          typeof submitError === "object" &&
-          "digest" in submitError &&
-          String((submitError as { digest?: unknown }).digest).includes("NEXT_REDIRECT")
-        ) {
-          throw submitError;
-        }
-
-        if (submitError instanceof Error && submitError.message.includes("NEXT_REDIRECT")) {
-          throw submitError;
-        }
-
         const message = submitError instanceof Error ? submitError.message : "Save failed";
         setError(message);
         setToast({ type: "error", message });

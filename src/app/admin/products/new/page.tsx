@@ -1,5 +1,4 @@
 ﻿import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 
 import {
   addProductImages,
@@ -47,30 +46,35 @@ export default function NewProductPage() {
   async function createAction(formData: FormData) {
     "use server";
 
-    const payload = toProductPayload(formData);
-    const productId = await createProduct(payload);
-    const images = parseImages(formData);
+    try {
+      const payload = toProductPayload(formData);
+      const productId = await createProduct(payload);
+      const images = parseImages(formData);
 
-    if (images.length > 0) {
-      const inserted = await addProductImages(productId, images.map((image) => image.url));
+      if (images.length > 0) {
+        const inserted = await addProductImages(productId, images.map((image) => image.url));
 
-      const orderedIds = inserted.sort((a, b) => a.sort - b.sort).map((image) => image.id);
-      if (orderedIds.length > 0) {
-        await updateImageSort(productId, orderedIds);
-      }
+        const orderedIds = inserted.sort((a, b) => a.sort - b.sort).map((image) => image.id);
+        if (orderedIds.length > 0) {
+          await updateImageSort(productId, orderedIds);
+        }
 
-      const wantedPrimary = images.find((image) => image.is_primary);
-      if (wantedPrimary) {
-        const primaryIndex = images.findIndex((image) => image.is_primary);
-        const primary = inserted[primaryIndex];
-        if (primary?.id) {
-          await setPrimaryImage(productId, primary.id);
+        const wantedPrimary = images.find((image) => image.is_primary);
+        if (wantedPrimary) {
+          const primaryIndex = images.findIndex((image) => image.is_primary);
+          const primary = inserted[primaryIndex];
+          if (primary?.id) {
+            await setPrimaryImage(productId, primary.id);
+          }
         }
       }
-    }
 
-    revalidatePath("/admin/products");
-    redirect("/admin/products?notice=created&sync=1");
+      revalidatePath("/admin/products");
+      return { ok: true as const, redirectTo: "/admin/products?notice=created&sync=1" };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Create product failed";
+      return { ok: false as const, error: message };
+    }
   }
 
   return (

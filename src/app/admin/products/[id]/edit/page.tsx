@@ -1,5 +1,5 @@
 ﻿import { revalidatePath } from "next/cache";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 
 import {
   addProductImages,
@@ -60,49 +60,54 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
   async function updateAction(formData: FormData) {
     "use server";
 
-    const payload = toProductPayload(formData);
-    await updateProduct(id, payload);
+    try {
+      const payload = toProductPayload(formData);
+      await updateProduct(id, payload);
 
-    const incoming = parseImages(formData);
-    const latest = await getProductById(id);
-    const currentImages = latest?.images ?? [];
+      const incoming = parseImages(formData);
+      const latest = await getProductById(id);
+      const currentImages = latest?.images ?? [];
 
-    const incomingExistingIds = new Set(
-      incoming.map((image) => image.id).filter(Boolean) as string[]
-    );
+      const incomingExistingIds = new Set(
+        incoming.map((image) => image.id).filter(Boolean) as string[]
+      );
 
-    const removedIds = currentImages
-      .filter((image) => !incomingExistingIds.has(image.id))
-      .map((image) => image.id);
-    for (const imageId of removedIds) {
-      await removeImage(imageId);
+      const removedIds = currentImages
+        .filter((image) => !incomingExistingIds.has(image.id))
+        .map((image) => image.id);
+      for (const imageId of removedIds) {
+        await removeImage(imageId);
+      }
+
+      const newImages = incoming.filter((image) => !image.id);
+      let insertedMap = new Map<string, string>();
+      if (newImages.length > 0) {
+        const inserted = await addProductImages(id, newImages.map((image) => image.url));
+        insertedMap = new Map(inserted.map((image) => [image.url, image.id]));
+      }
+
+      const finalIds = incoming
+        .map((image) => image.id || insertedMap.get(image.url))
+        .filter(Boolean) as string[];
+      if (finalIds.length > 0) {
+        await updateImageSort(id, finalIds);
+      }
+
+      const desiredPrimary = incoming.find((image) => image.is_primary);
+      const primaryId = desiredPrimary
+        ? desiredPrimary.id || insertedMap.get(desiredPrimary.url)
+        : finalIds[0];
+      if (primaryId) {
+        await setPrimaryImage(id, primaryId);
+      }
+
+      revalidatePath("/admin/products");
+      revalidatePath(`/admin/products/${id}/edit`);
+      return { ok: true as const, redirectTo: "/admin/products?notice=updated&sync=1" };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Update product failed";
+      return { ok: false as const, error: message };
     }
-
-    const newImages = incoming.filter((image) => !image.id);
-    let insertedMap = new Map<string, string>();
-    if (newImages.length > 0) {
-      const inserted = await addProductImages(id, newImages.map((image) => image.url));
-      insertedMap = new Map(inserted.map((image) => [image.url, image.id]));
-    }
-
-    const finalIds = incoming
-      .map((image) => image.id || insertedMap.get(image.url))
-      .filter(Boolean) as string[];
-    if (finalIds.length > 0) {
-      await updateImageSort(id, finalIds);
-    }
-
-    const desiredPrimary = incoming.find((image) => image.is_primary);
-    const primaryId = desiredPrimary
-      ? desiredPrimary.id || insertedMap.get(desiredPrimary.url)
-      : finalIds[0];
-    if (primaryId) {
-      await setPrimaryImage(id, primaryId);
-    }
-
-    revalidatePath("/admin/products");
-    revalidatePath(`/admin/products/${id}/edit`);
-    redirect("/admin/products?notice=updated&sync=1");
   }
 
   async function persistUploadedImagesAction(urls: string[]) {
