@@ -73,6 +73,14 @@ function isMissingFeaturedColumnError(error: unknown) {
   return message.includes("is_featured") && message.includes("column");
 }
 
+function isDuplicateSlugError(error: unknown) {
+  const message = errorText(error, "").toLowerCase();
+  return (
+    message.includes("duplicate key") &&
+    (message.includes("products_slug_key") || message.includes("(slug)") || message.includes(" slug "))
+  );
+}
+
 function isSortOrderQueryError(error: unknown) {
   const message = errorText(error, "").toLowerCase();
   return (
@@ -427,22 +435,49 @@ async function getNextProductSortOrder(supabase: Awaited<ReturnType<typeof admin
   return maxSortOrder === null ? 1 : maxSortOrder + 1;
 }
 
+function normalizedSlugBase(slug: string) {
+  const trimmed = slug.trim().toLowerCase();
+  const cleaned = trimmed.replace(/-+/g, "-").replace(/^-+|-+$/g, "");
+  return cleaned || `product-${Date.now()}`;
+}
+
+function slugCandidate(base: string, attempt: number) {
+  if (attempt <= 1) {
+    return base;
+  }
+  return `${base}-${attempt}`;
+}
+
 export async function createProduct(data: unknown) {
   const supabase = await adminWriteClient();
   const parsed = ProductInputSchema.parse(data);
   const normalizedSku = parsed.sku?.trim();
   const nextSortOrder = await getNextProductSortOrder(supabase);
-  const payload = {
-    ...parsed,
-    sku: normalizedSku || (await generateUniqueSku(supabase)),
-    ...(nextSortOrder === null ? {} : { sort_order: nextSortOrder }),
-  };
+  const baseSlug = normalizedSlugBase(parsed.slug);
+  const finalSku = normalizedSku || (await generateUniqueSku(supabase));
+  const maxSlugAttempts = 40;
 
-  const { data: row, error } = await supabase.from("products").insert(payload).select("id").single();
-  if (error || !row?.id) {
+  for (let attempt = 1; attempt <= maxSlugAttempts; attempt += 1) {
+    const payload = {
+      ...parsed,
+      sku: finalSku,
+      slug: slugCandidate(baseSlug, attempt),
+      ...(nextSortOrder === null ? {} : { sort_order: nextSortOrder }),
+    };
+
+    const { data: row, error } = await supabase.from("products").insert(payload).select("id").single();
+    if (!error && row?.id) {
+      return String(row.id);
+    }
+
+    if (error && isDuplicateSlugError(error) && attempt < maxSlugAttempts) {
+      continue;
+    }
+
     throw new Error(`Failed to create product: ${errorText(error, "Unknown error")}`);
   }
-  return String(row.id);
+
+  throw new Error("Failed to create product: could not generate a unique slug");
 }
 
 export async function updateProduct(id: string, data: unknown) {
