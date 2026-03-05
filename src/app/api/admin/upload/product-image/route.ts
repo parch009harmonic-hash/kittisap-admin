@@ -7,7 +7,7 @@ import { getSupabaseServiceRoleClient } from "../../../../../../lib/supabase/ser
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 const MAX_CONTENT_LENGTH_BYTES = MAX_FILE_SIZE_BYTES + 512 * 1024;
-const UPLOAD_LIMIT = 20;
+const UPLOAD_LIMIT = 80;
 const UPLOAD_WINDOW_MS = 60 * 1000;
 
 export const runtime = "nodejs";

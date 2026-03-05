@@ -4,7 +4,6 @@ import {
   addProductImages,
   createProduct,
   setPrimaryImage,
-  updateImageSort,
 } from "../../../../../lib/db/products";
 import { ProductInputSchema } from "../../../../../lib/validators/product";
 import { ProductForm } from "../../../../components/admin/products/ProductForm";
@@ -53,11 +52,6 @@ export default function NewProductPage() {
 
       if (images.length > 0) {
         const inserted = await addProductImages(productId, images.map((image) => image.url));
-
-        const orderedIds = inserted.sort((a, b) => a.sort - b.sort).map((image) => image.id);
-        if (orderedIds.length > 0) {
-          await updateImageSort(productId, orderedIds);
-        }
 
         const wantedPrimary = images.find((image) => image.is_primary);
         if (wantedPrimary) {

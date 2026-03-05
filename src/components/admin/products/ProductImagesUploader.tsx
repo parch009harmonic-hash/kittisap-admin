@@ -11,6 +11,7 @@ type ProductImagesUploaderProps = {
 };
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+const UPLOAD_CONCURRENCY = 4;
 
 async function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit, timeoutMs = 20000) {
   let lastError: unknown;
@@ -66,39 +67,54 @@ export function ProductImagesUploader({ productId, onUploaded, onUploadingChange
     setIsUploading(true);
     onUploadingChange?.(true);
     try {
-      const uploaded: Array<{ url: string }> = [];
-
-      for (const file of Array.from(files)) {
+      const selectedFiles = Array.from(files);
+      for (const file of selectedFiles) {
         if (!file.type.startsWith("image/")) {
           throw new Error("รองรับเฉพาะไฟล์รูปภาพ / Only image files are allowed.");
         }
         if (file.size > MAX_FILE_SIZE_BYTES) {
           throw new Error("รูปภาพต้องไม่เกิน 5MB / Image size must be 5MB or smaller.");
         }
-
-        const formData = new FormData();
-        formData.set("file", file);
-        if (productId) {
-          formData.set("productId", productId);
-        }
-
-        const response = await fetchWithTimeout("/api/admin/upload/product-image", {
-          method: "POST",
-          body: formData,
-        });
-
-        const result = (await response.json()) as { code?: string; error?: string; url?: string };
-        if (!response.ok) {
-          if (result.code === UI_MAINTENANCE_LOCKED) {
-            throw new Error(result.error || getUiMaintenanceLockedMessageDual());
-          }
-          throw new Error(result.error || "Upload failed");
-        }
-
-        uploaded.push({ url: String(result.url) });
       }
 
-      await onUploaded(uploaded);
+      const uploaded = new Array<{ url: string }>(selectedFiles.length);
+      let cursor = 0;
+
+      async function worker() {
+        while (true) {
+          const index = cursor;
+          cursor += 1;
+          if (index >= selectedFiles.length) {
+            return;
+          }
+          const file = selectedFiles[index];
+
+          const formData = new FormData();
+          formData.set("file", file);
+          if (productId) {
+            formData.set("productId", productId);
+          }
+
+          const response = await fetchWithTimeout("/api/admin/upload/product-image", {
+            method: "POST",
+            body: formData,
+          });
+
+          const result = (await response.json()) as { code?: string; error?: string; url?: string };
+          if (!response.ok) {
+            if (result.code === UI_MAINTENANCE_LOCKED) {
+              throw new Error(result.error || getUiMaintenanceLockedMessageDual());
+            }
+            throw new Error(result.error || "Upload failed");
+          }
+
+          uploaded[index] = { url: String(result.url) };
+        }
+      }
+
+      const workers = Array.from({ length: Math.min(UPLOAD_CONCURRENCY, selectedFiles.length) }, () => worker());
+      await Promise.all(workers);
+      await onUploaded(uploaded.filter((item): item is { url: string } => Boolean(item?.url)));
     } catch (uploadError) {
       setError(toErrorMessage(uploadError));
     } finally {

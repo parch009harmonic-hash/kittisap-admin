@@ -443,6 +443,10 @@ export function ProductForm({
     event.preventDefault();
     setError(null);
     setToast(null);
+    manualTranslateControllerRef.current?.abort("SUBMIT");
+    autoTranslateControllerRef.current?.abort("SUBMIT");
+    setAutoTranslating(false);
+    setTranslating(false);
 
     const parsed = ProductInputSchema.safeParse({
       ...form,
