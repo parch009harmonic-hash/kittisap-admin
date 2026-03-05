@@ -52,6 +52,7 @@ export default function HomepagePopupSettingsClient({
             showOnEveryVisit: "แสดงทุกครั้งที่เข้าหน้าแรก",
             delayMs: "หน่วงเวลาก่อนแสดง (ms)",
             backdropOpacityPercent: "ความทึบพื้นหลัง (%)",
+            panelOpacityPercent: "ความทึบตัว Popup (%)",
             preview: "ตัวอย่าง Popup",
             previewEmpty: "เพิ่มรูปภาพเพื่อดูตัวอย่าง",
             save: "บันทึกการตั้งค่า",
@@ -85,6 +86,7 @@ export default function HomepagePopupSettingsClient({
             showOnEveryVisit: "Show every time homepage opens",
             delayMs: "Show delay (ms)",
             backdropOpacityPercent: "Backdrop opacity (%)",
+            panelOpacityPercent: "Popup panel opacity (%)",
             preview: "Popup Preview",
             previewEmpty: "Upload image to preview popup",
             save: "Save Settings",
@@ -196,7 +198,10 @@ export default function HomepagePopupSettingsClient({
               />
               <div className="relative mx-auto flex min-h-[248px] max-w-[320px] items-center justify-center">
                 {values.imageUrl ? (
-                  <div className="relative w-full overflow-hidden rounded-2xl border border-white/20 bg-white shadow-2xl">
+                  <div
+                    className="relative w-full overflow-hidden rounded-2xl border border-white/20 shadow-2xl"
+                    style={{ backgroundColor: `rgba(255, 255, 255, ${values.panelOpacityPercent / 100})` }}
+                  >
                     <div className="absolute right-2 top-2 z-10 grid h-8 w-8 place-items-center rounded-full bg-white/95 text-lg font-bold text-slate-700 shadow">
                       ×
                     </div>
@@ -315,6 +320,18 @@ export default function HomepagePopupSettingsClient({
                   max={95}
                   value={values.backdropOpacityPercent}
                   onChange={(event) => setField("backdropOpacityPercent", Number(event.target.value || 72))}
+                  className="input-base"
+                />
+              </label>
+
+              <label className="space-y-1 text-sm font-medium text-slate-700">
+                <span>{text.panelOpacityPercent}</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={values.panelOpacityPercent}
+                  onChange={(event) => setField("panelOpacityPercent", Number(event.target.value || 100))}
                   className="input-base"
                 />
               </label>

@@ -108,6 +108,7 @@ const WebHomepagePopupInputSchema = z.object({
   showOnEveryVisit: z.boolean().default(true),
   delayMs: z.coerce.number().int().min(0).max(10000),
   backdropOpacityPercent: z.coerce.number().int().min(10).max(95),
+  panelOpacityPercent: z.coerce.number().int().min(0).max(100),
 });
 
 const WhyChooseUsIconSchema = z.enum([
@@ -347,6 +348,7 @@ function mapHomepagePopup(row: Record<string, unknown> | null | undefined): WebH
     backdropOpacityPercent: Number(
       row.homepage_popup_backdrop_opacity_percent ?? defaults.backdropOpacityPercent,
     ),
+    panelOpacityPercent: Number(row.homepage_popup_panel_opacity_percent ?? defaults.panelOpacityPercent),
     updatedAt: row.updated_at ? String(row.updated_at) : null,
   };
 }
@@ -743,6 +745,7 @@ export async function updateWebHomepagePopupSettingsApi(input: unknown) {
     homepage_popup_show_on_every_visit: parsed.showOnEveryVisit,
     homepage_popup_delay_ms: parsed.delayMs,
     homepage_popup_backdrop_opacity_percent: parsed.backdropOpacityPercent,
+    homepage_popup_panel_opacity_percent: parsed.panelOpacityPercent,
     updated_by: actor.user.id,
   };
 

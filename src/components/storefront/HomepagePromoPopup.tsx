@@ -81,7 +81,10 @@ export function HomepagePromoPopup({ locale, settings }: HomepagePromoPopupProps
         aria-label={closeLabel}
       />
 
-      <div className="relative w-full max-w-[420px] rounded-[30px] border border-white/25 bg-white p-3 shadow-[0_40px_80px_rgba(2,6,23,0.6)]">
+      <div
+        className="relative w-full max-w-[420px] rounded-[30px] border border-white/25 p-3 shadow-[0_40px_80px_rgba(2,6,23,0.6)]"
+        style={{ backgroundColor: `rgba(255, 255, 255, ${Math.min(Math.max(settings.panelOpacityPercent, 0), 100) / 100})` }}
+      >
         <button
           type="button"
           onClick={closePopup}

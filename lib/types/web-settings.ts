@@ -64,6 +64,7 @@ export type WebHomepagePopupSettings = {
   showOnEveryVisit: boolean;
   delayMs: number;
   backdropOpacityPercent: number;
+  panelOpacityPercent: number;
   updatedAt: string | null;
 };
 
@@ -239,6 +240,7 @@ export function getDefaultWebHomepagePopupSettings(): WebHomepagePopupSettings {
     showOnEveryVisit: true,
     delayMs: 0,
     backdropOpacityPercent: 72,
+    panelOpacityPercent: 100,
     updatedAt: null,
   };
 }
