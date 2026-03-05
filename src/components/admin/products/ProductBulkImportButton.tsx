@@ -339,6 +339,12 @@ export function ProductBulkImportButton({ locale }: ProductBulkImportButtonProps
             unreadableHint: "แนะนำเลือกจากตัวอย่างข้อมูลของแต่ละคอลัมน์",
             fieldMapped: "จับคู่แล้ว",
             sourceType: "ประเภทไฟล์",
+            fieldCol: "ฟิลด์สินค้า",
+            requiredCol: "จำเป็น",
+            mappingCol: "คอลัมน์ต้นทาง",
+            sampleCol: "ตัวอย่าง",
+            confidenceCol: "ความมั่นใจ",
+            mobileScrollHint: "เลื่อนตารางซ้าย-ขวาได้",
           }
         : {
             trigger: "Bulk Import",
@@ -389,6 +395,12 @@ export function ProductBulkImportButton({ locale }: ProductBulkImportButtonProps
             unreadableHint: "Use sample values to identify the right column.",
             fieldMapped: "Mapped",
             sourceType: "Source type",
+            fieldCol: "Product Field",
+            requiredCol: "Required",
+            mappingCol: "Source Column",
+            sampleCol: "Sample",
+            confidenceCol: "Confidence",
+            mobileScrollHint: "Table supports horizontal scroll",
           },
     [locale],
   );
@@ -569,13 +581,13 @@ export function ProductBulkImportButton({ locale }: ProductBulkImportButtonProps
 
       {open ? (
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-6xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
+          <div className="flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
             <div className="border-b border-slate-200 bg-slate-50 px-5 py-4">
               <h3 className="text-lg font-semibold text-slate-900">{t.title}</h3>
               <p className="mt-1 text-sm text-slate-600">{t.subtitle}</p>
             </div>
 
-            <div className="space-y-4 p-5">
+            <div className="flex-1 space-y-4 overflow-y-auto p-5">
               <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
                 <label className="mb-2 block text-sm font-semibold text-slate-700">{t.chooseFile}</label>
                 <input
@@ -713,53 +725,66 @@ export function ProductBulkImportButton({ locale }: ProductBulkImportButtonProps
                     {preview.headers.length === 0 ? (
                       <p className="text-xs text-slate-500">{t.missingHeader}</p>
                     ) : (
-                      <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-                        {IMPORT_FIELDS.map((field) => {
-                          const selectedOption = headerOptions.find((item) => item.value === mapping[field]);
-                          const isRequiredField = REQUIRED_IMPORT_FIELDS.includes(field);
-                          return (
-                            <label
-                              key={field}
-                              className={`rounded-xl border bg-slate-50/70 px-3 py-2 text-xs text-slate-700 ${
-                                isRequiredField ? "border-amber-300" : "border-slate-200"
-                              }`}
-                            >
-                              <span className="flex items-center gap-2 font-semibold text-slate-900">
-                                {fieldLabel(field, locale)}
-                                {isRequiredField ? (
-                                  <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
-                                    {t.required}
-                                  </span>
-                                ) : null}
-                              </span>
-                              <select
-                                value={mapping[field]}
-                                onChange={(event) => {
-                                  const value = event.target.value;
-                                  setMapping((prev) => ({ ...prev, [field]: value }));
-                                }}
-                                className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700"
-                              >
-                                <option value="">{t.none}</option>
-                                {headerOptions.map((option) => (
-                                  <option key={`${field}-${option.value}`} value={option.value}>
-                                    {`${option.displayLabel} | ${t.example}: ${option.sampleLabel}`}
-                                  </option>
-                                ))}
-                              </select>
-                              <span className="mt-1 block text-[11px] text-slate-500">
-                                {t.confidence}: {confidenceByField.get(field) ?? 0}
-                              </span>
-                              {selectedOption ? (
-                                <span className="mt-1 block text-[11px] text-slate-500">
-                                  {t.example}: {selectedOption.sampleLabel}
-                                </span>
-                              ) : null}
-                            </label>
-                          );
-                        })}
+                      <div className="overflow-x-auto rounded-xl border border-slate-200">
+                        <table className="min-w-[840px] w-full border-collapse text-xs">
+                          <thead className="bg-slate-50 text-slate-700">
+                            <tr>
+                              <th className="w-[22%] border-b border-slate-200 px-3 py-2 text-left">{t.fieldCol}</th>
+                              <th className="w-[10%] border-b border-slate-200 px-3 py-2 text-left">{t.requiredCol}</th>
+                              <th className="w-[34%] border-b border-slate-200 px-3 py-2 text-left">{t.mappingCol}</th>
+                              <th className="w-[22%] border-b border-slate-200 px-3 py-2 text-left">{t.sampleCol}</th>
+                              <th className="w-[12%] border-b border-slate-200 px-3 py-2 text-left">{t.confidenceCol}</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {IMPORT_FIELDS.map((field) => {
+                              const selectedOption = headerOptions.find((item) => item.value === mapping[field]);
+                              const isRequiredField = REQUIRED_IMPORT_FIELDS.includes(field);
+                              return (
+                                <tr key={field} className="border-b border-slate-100 text-slate-700">
+                                  <td className="px-3 py-2.5 align-top font-semibold text-slate-900">{fieldLabel(field, locale)}</td>
+                                  <td className="px-3 py-2.5 align-top">
+                                    {isRequiredField ? (
+                                      <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                                        {t.required}
+                                      </span>
+                                    ) : (
+                                      <span className="text-slate-400">-</span>
+                                    )}
+                                  </td>
+                                  <td className="px-3 py-2.5 align-top">
+                                    <select
+                                      value={mapping[field]}
+                                      onChange={(event) => {
+                                        const value = event.target.value;
+                                        setMapping((prev) => ({ ...prev, [field]: value }));
+                                      }}
+                                      className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-700"
+                                    >
+                                      <option value="">{t.none}</option>
+                                      {headerOptions.map((option) => (
+                                        <option key={`${field}-${option.value}`} value={option.value}>
+                                          {option.displayLabel}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </td>
+                                  <td className="px-3 py-2.5 align-top text-slate-600">
+                                    {selectedOption ? selectedOption.sampleLabel : <span className="text-slate-400">-</span>}
+                                  </td>
+                                  <td className="px-3 py-2.5 align-top">
+                                    <span className="inline-flex min-w-10 items-center justify-center rounded-md bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-700">
+                                      {confidenceByField.get(field) ?? 0}
+                                    </span>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
                       </div>
                     )}
+                    <p className="mt-2 text-[11px] text-slate-500">{t.mobileScrollHint}</p>
                   </section>
 
                   <section className="rounded-2xl border border-slate-200 bg-white p-4">
