@@ -50,6 +50,8 @@ function text(mode: Mode, locale: AppLocale) {
       resendConfirm: isThai ? "ส่งอีเมลยืนยันใหม่" : isLao ? "ສົ່ງອີເມວຢືນຢັນອີກຄັ້ງ" : "Resend confirmation email",
       resendConfirmSuccess: isThai ? "ส่งอีเมลยืนยันใหม่แล้ว กรุณาตรวจสอบกล่องจดหมาย" : isLao ? "ສົ່ງອີເມວຢືນຢັນແລ້ວ ກະລຸນາກວດກ່ອງຂໍ້ຄວາມ" : "Confirmation email sent. Please check your inbox.",
       resendConfirmNeedEmail: isThai ? "กรุณากรอกอีเมลก่อนส่งอีเมลยืนยัน" : isLao ? "ກະລຸນາກອກອີເມວກ່ອນສົ່ງ" : "Please enter your email first.",
+      errorPopupTitle: isThai ? "เกิดข้อผิดพลาดในการเข้าสู่ระบบ" : isLao ? "ເກີດຂໍ້ຜິດພາດໃນການເຂົ້າລະບົບ" : "Sign-in error",
+      errorPopupClose: isThai ? "ปิด" : isLao ? "ປິດ" : "Close",
     };
   }
 
@@ -78,6 +80,8 @@ function text(mode: Mode, locale: AppLocale) {
     resendConfirm: isThai ? "ส่งอีเมลยืนยันใหม่" : isLao ? "ສົ່ງອີເມວຢືນຢັນອີກຄັ້ງ" : "Resend confirmation email",
     resendConfirmSuccess: isThai ? "ส่งอีเมลยืนยันใหม่แล้ว กรุณาตรวจสอบกล่องจดหมาย" : isLao ? "ສົ່ງອີເມວຢືນຢັນແລ້ວ ກະລຸນາກວດກ່ອງຂໍ້ຄວາມ" : "Confirmation email sent. Please check your inbox.",
     resendConfirmNeedEmail: isThai ? "กรุณากรอกอีเมลก่อนส่งอีเมลยืนยัน" : isLao ? "ກະລຸນາກອກອີເມວກ່ອນສົ່ງ" : "Please enter your email first.",
+    errorPopupTitle: isThai ? "เกิดข้อผิดพลาดในการเข้าสู่ระบบ" : isLao ? "ເກີດຂໍ້ຜິດພາດໃນການເຂົ້າລະບົບ" : "Sign-in error",
+    errorPopupClose: isThai ? "ปิด" : isLao ? "ປິດ" : "Close",
   };
 }
 
@@ -118,9 +122,12 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
   const [pendingConfirmEmail, setPendingConfirmEmail] = useState<string | null>(null);
   const [showGooglePendingModal, setShowGooglePendingModal] = useState(false);
   const [googlePendingClosing, setGooglePendingClosing] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorModalClosing, setErrorModalClosing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const googlePendingCloseTimer = useRef<NodeJS.Timeout | null>(null);
+  const errorModalCloseTimer = useRef<NodeJS.Timeout | null>(null);
 
   function isEmailNotConfirmedError(input: string) {
     return input.toLowerCase().includes("email not confirmed");
@@ -158,8 +165,29 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
       if (googlePendingCloseTimer.current) {
         clearTimeout(googlePendingCloseTimer.current);
       }
+      if (errorModalCloseTimer.current) {
+        clearTimeout(errorModalCloseTimer.current);
+      }
     };
   }, []);
+
+  useEffect(() => {
+    if (!error) {
+      setShowErrorModal(false);
+      setErrorModalClosing(false);
+      if (errorModalCloseTimer.current) {
+        clearTimeout(errorModalCloseTimer.current);
+        errorModalCloseTimer.current = null;
+      }
+      return;
+    }
+    if (errorModalCloseTimer.current) {
+      clearTimeout(errorModalCloseTimer.current);
+      errorModalCloseTimer.current = null;
+    }
+    setErrorModalClosing(false);
+    setShowErrorModal(true);
+  }, [error]);
 
   function openGooglePendingModal() {
     if (googlePendingCloseTimer.current) {
@@ -176,6 +204,15 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
       setShowGooglePendingModal(false);
       setGooglePendingClosing(false);
       googlePendingCloseTimer.current = null;
+    }, 220);
+  }
+
+  function closeErrorModal() {
+    setErrorModalClosing(true);
+    errorModalCloseTimer.current = setTimeout(() => {
+      setShowErrorModal(false);
+      setErrorModalClosing(false);
+      errorModalCloseTimer.current = null;
     }, 220);
   }
 
@@ -462,6 +499,55 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
                 {t.googlePendingClose}
               </button>
             </div>
+          </div>
+        </div>
+      ) : null}
+
+      {showErrorModal && error ? (
+        <div
+          className={`fixed inset-0 z-[140] flex items-center justify-center px-4 transition-opacity duration-200 ${errorModalClosing ? "bg-black/0 opacity-0" : "bg-black/65 opacity-100"}`}
+          onClick={closeErrorModal}
+          role="alertdialog"
+          aria-modal="true"
+          aria-live="assertive"
+        >
+          <div
+            className={`w-full max-w-md overflow-hidden rounded-2xl border border-rose-400/45 bg-[radial-gradient(circle_at_top,_rgba(255,120,120,0.2)_0%,_rgba(35,10,12,0.94)_48%,_#08080a_100%)] text-rose-50 shadow-[0_24px_80px_rgba(0,0,0,0.56)] transition duration-200 ${errorModalClosing ? "scale-95 opacity-0" : "scale-100 opacity-100"}`}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="relative p-5">
+              <button
+                type="button"
+                onClick={closeErrorModal}
+                className="absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-full border border-rose-300/40 bg-rose-500/10 text-rose-100 transition hover:bg-rose-500/20"
+                aria-label={t.errorPopupClose}
+              >
+                ×
+              </button>
+              <div className="mb-3 flex items-center gap-3">
+                <span className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-rose-300/45 bg-rose-500/20 text-lg shadow-[0_0_25px_rgba(244,63,94,0.35)]">
+                  <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.9" aria-hidden="true">
+                    <path d="M12 9v4m0 4h.01" />
+                    <path d="M10.3 3.84 1.82 18a2 2 0 0 0 1.72 3h16.92a2 2 0 0 0 1.72-3L13.7 3.84a2 2 0 0 0-3.4 0Z" />
+                  </svg>
+                </span>
+                <div>
+                  <h2 className="text-lg font-semibold text-rose-100">{t.errorPopupTitle}</h2>
+                  <p className="text-xs uppercase tracking-[0.16em] text-rose-100/60">Authentication</p>
+                </div>
+              </div>
+              <p className="rounded-xl border border-rose-300/30 bg-rose-500/12 px-3 py-3 text-sm leading-relaxed text-rose-100">{error}</p>
+              <div className="mt-4 flex justify-end">
+                <button
+                  type="button"
+                  onClick={closeErrorModal}
+                  className="inline-flex h-10 items-center justify-center rounded-full border border-rose-300/65 bg-gradient-to-r from-rose-400 to-amber-300 px-5 text-sm font-semibold text-zinc-900 transition hover:brightness-105 active:scale-95"
+                >
+                  {t.errorPopupClose}
+                </button>
+              </div>
+            </div>
+            <div className="h-1.5 w-full animate-pulse bg-[linear-gradient(90deg,rgba(251,113,133,0.9),rgba(251,191,36,0.9),rgba(251,113,133,0.9))]" />
           </div>
         </div>
       ) : null}
