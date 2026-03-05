@@ -29,6 +29,7 @@ const IMPORT_FIELDS = [
 ] as const;
 
 type ImportField = (typeof IMPORT_FIELDS)[number];
+const REQUIRED_IMPORT_FIELDS: ImportField[] = ["title_th", "price", "stock"];
 
 type PreviewMappedColumn = {
   field: ImportField;
@@ -258,6 +259,21 @@ function fieldLabel(field: ImportField, locale: AdminLocale) {
   return locale === "th" ? th[field] : en[field];
 }
 
+function truncateText(value: string, limit = 42) {
+  const normalized = value.replace(/[\u0000-\u001f\u007f]/g, "").replace(/\s+/g, " ").trim();
+  if (!normalized) return "-";
+  if (normalized.length <= limit) return normalized;
+  return `${normalized.slice(0, limit - 1)}…`;
+}
+
+function isLikelyUnreadableHeader(value: string) {
+  const text = value.trim();
+  if (!text) return true;
+  const readableCount = (text.match(/[A-Za-z0-9\u0E00-\u0E7F]/g) || []).length;
+  const noisyCount = (text.match(/[^A-Za-z0-9\u0E00-\u0E7F\s_.\-()/]/g) || []).length;
+  return readableCount === 0 || noisyCount > Math.max(3, readableCount);
+}
+
 export function ProductBulkImportButton({ locale }: ProductBulkImportButtonProps) {
   const router = useRouter();
 
@@ -277,18 +293,19 @@ export function ProductBulkImportButton({ locale }: ProductBulkImportButtonProps
         ? {
             trigger: "เพิ่มสินค้าหลายรายการ",
             title: "เพิ่มสินค้าหลายรายการ",
-            subtitle: "อัปโหลด CSV / รูปภาพ / PDF, ตรวจตัวอย่าง แล้วค่อยบันทึกจริง",
+            subtitle: "อัปโหลด CSV / รูปภาพ / PDF แล้วตรวจตัวอย่างก่อนบันทึกจริง",
             chooseFile: "เลือกไฟล์",
             acceptedHint: "รองรับ .csv, .pdf, .png, .jpg, .jpeg, .webp (สูงสุด 12MB)",
             scan: "สแกนตัวอย่าง",
             scanning: "กำลังสแกน...",
-            save: "บันทึกสินค้าที่พร้อม",
+            save: "บันทึกรายการที่พร้อม",
             saving: "กำลังบันทึก...",
             close: "ปิด",
             clear: "ล้างข้อมูล",
             noFile: "กรุณาเลือกไฟล์ก่อน",
             preview: "ผลสแกนตัวอย่าง",
-            mapTitle: "แมปหัวตาราง (แก้ไขได้)",
+            mapTitle: "จับคู่หัวคอลัมน์กับฟิลด์สินค้า",
+            mapSubtitle: "เลือกคอลัมน์ต้นทางให้ตรงกับข้อมูลสินค้า",
             sampleTitle: "ตัวอย่างรายการ",
             sourceRow: "แถว",
             productName: "ชื่อสินค้า",
@@ -306,10 +323,22 @@ export function ProductBulkImportButton({ locale }: ProductBulkImportButtonProps
             issues: "ปัญหา",
             createdSuccess: "นำเข้าสำเร็จ",
             nothingToSave: "ไม่มีรายการที่พร้อมบันทึก",
-            pickHeader: "เลือกหัวคอลัมน์",
+            pickHeader: "คอลัมน์ต้นทาง",
             confidence: "ความมั่นใจ",
             none: "ไม่เลือก",
-            missingHeader: "ไม่มีหัวคอลัมน์ให้แมป",
+            missingHeader: "ไม่พบหัวคอลัมน์สำหรับจับคู่",
+            autoMap: "จับคู่ให้อัตโนมัติ",
+            clearMap: "ล้างการจับคู่",
+            required: "จำเป็น",
+            example: "ตัวอย่าง",
+            noExample: "ไม่มีตัวอย่าง",
+            column: "คอลัมน์",
+            requiredHint: "ต้องเลือกอย่างน้อย: ชื่อสินค้า(TH), ราคา, สต็อก",
+            missingRequired: "ยังไม่ครบฟิลด์จำเป็น",
+            unreadableHeaders: "พบหัวคอลัมน์ที่อ่านยาก",
+            unreadableHint: "แนะนำเลือกจากตัวอย่างข้อมูลของแต่ละคอลัมน์",
+            fieldMapped: "จับคู่แล้ว",
+            sourceType: "ประเภทไฟล์",
           }
         : {
             trigger: "Bulk Import",
@@ -347,6 +376,19 @@ export function ProductBulkImportButton({ locale }: ProductBulkImportButtonProps
             confidence: "Confidence",
             none: "None",
             missingHeader: "No headers found for mapping",
+            mapSubtitle: "Match source columns to product fields.",
+            autoMap: "Auto map",
+            clearMap: "Clear mapping",
+            required: "Required",
+            example: "Example",
+            noExample: "No sample",
+            column: "Column",
+            requiredHint: "Required fields: Title (TH), Price, Stock",
+            missingRequired: "Missing required field mapping",
+            unreadableHeaders: "Unreadable column headers found",
+            unreadableHint: "Use sample values to identify the right column.",
+            fieldMapped: "Mapped",
+            sourceType: "Source type",
           },
     [locale],
   );
@@ -364,6 +406,28 @@ export function ProductBulkImportButton({ locale }: ProductBulkImportButtonProps
     if (!preview) return null;
     return evaluatePreview(preview, mapping);
   }, [preview, mapping]);
+
+  const headerOptions = useMemo(() => {
+    if (!preview) return [];
+    return preview.headers.map((header, index) => {
+      const sampleValue = preview.drafts
+        .map((draft) => String(draft.source[header] ?? "").trim())
+        .find((value) => value.length > 0);
+      const fallbackLabel = `${t.column} ${index + 1}`;
+      return {
+        value: header,
+        displayLabel: isLikelyUnreadableHeader(header) ? fallbackLabel : truncateText(header, 40),
+        sampleLabel: sampleValue ? truncateText(sampleValue, 28) : t.noExample,
+        unreadable: isLikelyUnreadableHeader(header),
+      };
+    });
+  }, [preview, t.column, t.noExample]);
+
+  const missingRequiredFields = useMemo(
+    () => REQUIRED_IMPORT_FIELDS.filter((field) => !mapping[field]),
+    [mapping],
+  );
+  const unreadableHeaderCount = useMemo(() => headerOptions.filter((item) => item.unreadable).length, [headerOptions]);
 
   useEffect(() => {
     if (!preview) {
@@ -540,7 +604,13 @@ export function ProductBulkImportButton({ locale }: ProductBulkImportButtonProps
                   <button
                     type="button"
                     onClick={handleCommit}
-                    disabled={saveLoading || scanLoading || !evaluatedPreview || evaluatedPreview.readyItems.length === 0}
+                    disabled={
+                      saveLoading ||
+                      scanLoading ||
+                      !evaluatedPreview ||
+                      evaluatedPreview.readyItems.length === 0 ||
+                      missingRequiredFields.length > 0
+                    }
                     className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {saveLoading ? t.saving : t.save}
@@ -570,6 +640,9 @@ export function ProductBulkImportButton({ locale }: ProductBulkImportButtonProps
                       <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-slate-700">
                         {preview.fileName}
                       </span>
+                      <span className="rounded-full border border-violet-200 bg-violet-50 px-3 py-1 font-semibold text-violet-700">
+                        {t.sourceType}: {preview.sourceType.toUpperCase()}
+                      </span>
                       <span className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 font-semibold text-blue-700">
                         {t.totalRows}: {preview.totalRows}
                       </span>
@@ -591,37 +664,100 @@ export function ProductBulkImportButton({ locale }: ProductBulkImportButtonProps
                   </section>
 
                   <section className="rounded-2xl border border-slate-200 bg-white p-4">
-                    <h4 className="mb-3 text-sm font-semibold text-slate-900">{t.mapTitle}</h4>
+                    <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
+                      <div>
+                        <h4 className="text-sm font-semibold text-slate-900">{t.mapTitle}</h4>
+                        <p className="mt-1 text-xs text-slate-600">{t.mapSubtitle}</p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setMapping(buildInitialMapping(preview))}
+                          className="rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-xs font-semibold text-blue-700 transition hover:bg-blue-100"
+                        >
+                          {t.autoMap}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setMapping(emptyMappingState())}
+                          className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                        >
+                          {t.clearMap}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="mb-3 flex flex-wrap gap-2 text-[11px]">
+                      <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 font-semibold text-amber-700">
+                        {t.requiredHint}
+                      </span>
+                      {missingRequiredFields.length > 0 ? (
+                        <span className="rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 font-semibold text-rose-700">
+                          {t.missingRequired}: {missingRequiredFields.map((field) => fieldLabel(field, locale)).join(", ")}
+                        </span>
+                      ) : (
+                        <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 font-semibold text-emerald-700">
+                          {t.fieldMapped}: {REQUIRED_IMPORT_FIELDS.length}/{REQUIRED_IMPORT_FIELDS.length}
+                        </span>
+                      )}
+                      {unreadableHeaderCount > 0 ? (
+                        <span className="rounded-full border border-orange-200 bg-orange-50 px-2.5 py-1 font-semibold text-orange-700">
+                          {t.unreadableHeaders}: {unreadableHeaderCount}
+                        </span>
+                      ) : null}
+                    </div>
+                    {unreadableHeaderCount > 0 ? (
+                      <p className="mb-3 rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-xs text-orange-700">
+                        {t.unreadableHint}
+                      </p>
+                    ) : null}
                     {preview.headers.length === 0 ? (
                       <p className="text-xs text-slate-500">{t.missingHeader}</p>
                     ) : (
                       <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-                        {IMPORT_FIELDS.map((field) => (
-                          <label
-                            key={field}
-                            className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2 text-xs text-slate-700"
-                          >
-                            <span className="block font-semibold text-slate-900">{fieldLabel(field, locale)}</span>
-                            <select
-                              value={mapping[field]}
-                              onChange={(event) => {
-                                const value = event.target.value;
-                                setMapping((prev) => ({ ...prev, [field]: value }));
-                              }}
-                              className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700"
+                        {IMPORT_FIELDS.map((field) => {
+                          const selectedOption = headerOptions.find((item) => item.value === mapping[field]);
+                          const isRequiredField = REQUIRED_IMPORT_FIELDS.includes(field);
+                          return (
+                            <label
+                              key={field}
+                              className={`rounded-xl border bg-slate-50/70 px-3 py-2 text-xs text-slate-700 ${
+                                isRequiredField ? "border-amber-300" : "border-slate-200"
+                              }`}
                             >
-                              <option value="">{t.none}</option>
-                              {preview.headers.map((header) => (
-                                <option key={`${field}-${header}`} value={header}>
-                                  {header}
-                                </option>
-                              ))}
-                            </select>
-                            <span className="mt-1 block text-[11px] text-slate-500">
-                              {t.confidence}: {confidenceByField.get(field) ?? 0}
-                            </span>
-                          </label>
-                        ))}
+                              <span className="flex items-center gap-2 font-semibold text-slate-900">
+                                {fieldLabel(field, locale)}
+                                {isRequiredField ? (
+                                  <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                                    {t.required}
+                                  </span>
+                                ) : null}
+                              </span>
+                              <select
+                                value={mapping[field]}
+                                onChange={(event) => {
+                                  const value = event.target.value;
+                                  setMapping((prev) => ({ ...prev, [field]: value }));
+                                }}
+                                className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700"
+                              >
+                                <option value="">{t.none}</option>
+                                {headerOptions.map((option) => (
+                                  <option key={`${field}-${option.value}`} value={option.value}>
+                                    {`${option.displayLabel} | ${t.example}: ${option.sampleLabel}`}
+                                  </option>
+                                ))}
+                              </select>
+                              <span className="mt-1 block text-[11px] text-slate-500">
+                                {t.confidence}: {confidenceByField.get(field) ?? 0}
+                              </span>
+                              {selectedOption ? (
+                                <span className="mt-1 block text-[11px] text-slate-500">
+                                  {t.example}: {selectedOption.sampleLabel}
+                                </span>
+                              ) : null}
+                            </label>
+                          );
+                        })}
                       </div>
                     )}
                   </section>
