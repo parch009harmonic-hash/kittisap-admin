@@ -7,6 +7,7 @@ import { getUiMaintenanceLockedMessageDual, UI_MAINTENANCE_LOCKED } from "../api
 type ProductImagesUploaderProps = {
   productId?: string;
   onUploaded: (images: Array<{ url: string }>) => Promise<void>;
+  onUploadingChange?: (uploading: boolean) => void;
 };
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
@@ -52,7 +53,7 @@ function toErrorMessage(error: unknown) {
   return "Upload failed";
 }
 
-export function ProductImagesUploader({ productId, onUploaded }: ProductImagesUploaderProps) {
+export function ProductImagesUploader({ productId, onUploaded, onUploadingChange }: ProductImagesUploaderProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -63,6 +64,7 @@ export function ProductImagesUploader({ productId, onUploaded }: ProductImagesUp
 
     setError(null);
     setIsUploading(true);
+    onUploadingChange?.(true);
     try {
       const uploaded: Array<{ url: string }> = [];
 
@@ -101,6 +103,7 @@ export function ProductImagesUploader({ productId, onUploaded }: ProductImagesUp
       setError(toErrorMessage(uploadError));
     } finally {
       setIsUploading(false);
+      onUploadingChange?.(false);
     }
   }
 
@@ -110,13 +113,13 @@ export function ProductImagesUploader({ productId, onUploaded }: ProductImagesUp
         type="file"
         accept="image/*"
         multiple
+        disabled={isUploading}
         onChange={(event) => handleUpload(event.target.files)}
-        className="input-base bg-white"
+        className="input-base bg-white disabled:cursor-not-allowed disabled:opacity-60"
       />
       <p className="text-xs text-steel">
         รองรับหลายรูป สูงสุด 5MB ต่อไฟล์ / Multiple images, max 5MB each.
       </p>
-      {isUploading && <p className="text-xs text-sapphire">กำลังอัปโหลด... / Uploading...</p>}
       {error && <p className="text-xs text-red-600">{error}</p>}
     </div>
   );

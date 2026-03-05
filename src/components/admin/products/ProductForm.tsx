@@ -135,6 +135,7 @@ export function ProductForm({
 }: ProductFormProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [uploadingImages, setUploadingImages] = useState(false);
   const [translating, setTranslating] = useState(false);
   const [autoTranslating, setAutoTranslating] = useState(false);
   const [lastAutoSource, setLastAutoSource] = useState("");
@@ -160,6 +161,8 @@ export function ProductForm({
     const primary = images.find((image) => image.is_primary);
     return primary?.url ?? images[0]?.url ?? null;
   }, [images]);
+  const showProcessingOverlay = pending || uploadingImages;
+  const processingLabel = pending ? "กำลังบันทึกสินค้า" : "กำลังอัปโหลดรูปภาพ";
 
   function setField(name: keyof typeof form, value: string) {
     setForm((prev) => ({ ...prev, [name]: value }));
@@ -778,7 +781,11 @@ export function ProductForm({
           <div className="product-form-images-layout grid grid-cols-1 gap-4 md:grid-cols-[1fr_260px]">
             <div>
               <Field label="Product Images / รูปสินค้า" hint="อัปโหลดได้หลายรูป สูงสุด 5MB ต่อไฟล์">
-                <ProductImagesUploader productId={productId} onUploaded={handleUploaded} />
+                <ProductImagesUploader
+                  productId={productId}
+                  onUploaded={handleUploaded}
+                  onUploadingChange={setUploadingImages}
+                />
               </Field>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-3">
@@ -837,6 +844,7 @@ export function ProductForm({
           </div>
         </div>
       </form>
+      {showProcessingOverlay ? <LoadingPopup label={processingLabel} /> : null}
       {error ? <p className="sr-only">{error}</p> : null}
       <Toast open={Boolean(toast)} type={toast?.type ?? "success"} message={toast?.message ?? ""} onClose={() => setToast(null)} />
     </>
@@ -863,3 +871,34 @@ function Field({
 
 const inputClass = "input-base";
 const textareaClass = `${inputClass} min-h-28`;
+
+function LoadingPopup({ label }: { label: string }) {
+  return (
+    <div className="fixed inset-0 z-[140] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-xs rounded-3xl border border-slate-200 bg-white p-6 text-center shadow-2xl">
+        <div className="mx-auto h-20 w-20">
+          <div className="relative h-full w-full animate-[spin_1.4s_linear_infinite]">
+            {Array.from({ length: 6 }).map((_, index) => {
+              const angle = index * 60;
+              const isEven = index % 2 === 0;
+              return (
+                <span
+                  key={angle}
+                  className={`absolute left-1/2 top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full shadow-sm ${
+                    isEven ? "bg-cyan-500" : "bg-indigo-500"
+                  }`}
+                  style={{
+                    transform: `translate(-50%, -50%) rotate(${angle}deg) translateY(-28px)`,
+                    opacity: 0.45 + index * 0.09,
+                  }}
+                />
+              );
+            })}
+          </div>
+        </div>
+        <p className="mt-3 text-sm font-semibold text-slate-900">{label}...</p>
+        <p className="mt-1 text-xs text-slate-500">กรุณารอสักครู่ / Processing</p>
+      </div>
+    </div>
+  );
+}
