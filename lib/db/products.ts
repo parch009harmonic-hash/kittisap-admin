@@ -291,9 +291,9 @@ export async function listProducts(input: {
   const supabase = await adminReadClient();
   let query = supabase
     .from("products")
-    .select(PRODUCT_SELECT_COLUMNS, { count: "planned" })
+    .select(PRODUCT_SELECT_COLUMNS, { count: "exact" })
     .neq("slug", ORDER_ARCHIVE_PRODUCT_SLUG)
-    .order("sort_order", { ascending: true })
+    .order("sort_order", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: false })
     .range(from, to);
 
@@ -314,7 +314,7 @@ export async function listProducts(input: {
   if (error && (isMissingColumnError(error) || isSortOrderQueryError(error))) {
     let fallbackQuery = supabase
       .from("products")
-      .select("*", { count: "planned" })
+      .select("*", { count: "exact" })
       .neq("slug", ORDER_ARCHIVE_PRODUCT_SLUG)
       .order("created_at", { ascending: false })
       .range(from, to);
