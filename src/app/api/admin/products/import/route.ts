@@ -230,11 +230,11 @@ function normalizeStatus(raw: string): "active" | "inactive" {
     "disable",
     "disabled",
     "off",
-    "ปดใชงาน",
-    "ปด",
-    "ไมใชงาน",
-    "ยกเลก",
-    "หยดขาย",
+    "ปิดใช้งาน",
+    "ปิด",
+    "ไม่ใช้งาน",
+    "ยกเลิก",
+    "หยุดขาย",
     "0",
     "false",
   ]);
@@ -403,22 +403,35 @@ function parseJsonLoose(input: string) {
   }
 }
 
+function scoreDecodedText(value: string) {
+  const replacementCount = (value.match(/\uFFFD/g) ?? []).length;
+  const thaiCount = (value.match(/[\u0E00-\u0E7F]/g) ?? []).length;
+  const latinExtendedCount = (value.match(/[À-ÿ]/g) ?? []).length;
+  const mojibakePatternCount = (value.match(/ï»¿|Ã.|Â.|â.|เธ/g) ?? []).length;
+  const controlCount = (value.match(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g) ?? []).length;
+  return thaiCount * 3 - replacementCount * 10 - latinExtendedCount * 2 - mojibakePatternCount * 8 - controlCount * 6;
+}
+
 function decodeText(buffer: ArrayBuffer) {
   const view = new Uint8Array(buffer);
-  const decoders = ["utf-8", "windows-874", "windows-1252"];
+  const decoders = ["utf-8", "windows-874", "tis-620", "windows-1252"] as const;
   let best = "";
-  let minReplacement = Number.POSITIVE_INFINITY;
+  let bestScore = Number.NEGATIVE_INFINITY;
 
   for (const encoding of decoders) {
-    const decoded = new TextDecoder(encoding as "utf-8").decode(view);
-    const replacementCount = (decoded.match(/\uFFFD/g) ?? []).length;
-    if (replacementCount < minReplacement) {
-      minReplacement = replacementCount;
-      best = decoded;
+    try {
+      const decoded = new TextDecoder(encoding).decode(view);
+      const score = scoreDecodedText(decoded);
+      if (score > bestScore) {
+        bestScore = score;
+        best = decoded;
+      }
+    } catch {
+      // Ignore unsupported encodings in runtime.
     }
   }
 
-  return best;
+  return best.replace(/^\uFEFF/, "").replace(/^ï»¿/, "");
 }
 
 function hasBinary(command: string) {
@@ -497,7 +510,7 @@ function tableFromPlainText(text: string, notes: string[] = []): ParsedTable {
     return {
       headers: [],
       rows: [],
-      notes: [...notes, "No table-like text could be extracted."],
+      notes: [...notes, "ไม่พบข้อมูลตารางที่อ่านได้จากไฟล์"],
     };
   }
 
@@ -576,11 +589,11 @@ async function extractTableViaLocalTesseract(file: File) {
     }
 
     if (!extractedText.trim()) {
-      throw new Error("Local OCR returned empty text");
+      throw new Error("เครื่องมือ OCR ภายในเครื่องไม่พบข้อความ");
     }
 
     return tableFromPlainText(extractedText, [
-      "Parsed via local OCR engine (tesseract).",
+      "อ่านด้วย OCR ภายในเครื่อง (tesseract)",
     ]);
   } finally {
     await fs.rm(tempDir, { recursive: true, force: true }).catch(() => undefined);
@@ -598,10 +611,10 @@ async function extractTableViaLocalPdfText(file: File) {
 
     const text = runBinary("pdftotext", ["-layout", inputPath, "-"]);
     if (!text.trim()) {
-      throw new Error("pdftotext returned empty output");
+      throw new Error("อ่าน PDF ไม่สำเร็จ (pdftotext ไม่พบข้อความ)");
     }
 
-    return tableFromPlainText(text, ["Parsed via local pdftotext engine."]);
+    return tableFromPlainText(text, ["อ่านด้วย pdftotext ภายในเครื่อง"]);
   } finally {
     await fs.rm(tempDir, { recursive: true, force: true }).catch(() => undefined);
   }
@@ -615,7 +628,7 @@ async function extractTableWithoutAi(file: File): Promise<ParsedTable> {
 
   if (isImage) {
     if (!hasBinary("tesseract")) {
-      throw new Error("No local OCR engine found. Install tesseract or set GEMINI_API_KEY.");
+      throw new Error("ไม่พบ OCR ภายในเครื่อง กรุณาติดตั้ง tesseract หรือกำหนด GEMINI_API_KEY");
     }
     return extractTableViaLocalTesseract(file);
   }
@@ -630,15 +643,15 @@ async function extractTableWithoutAi(file: File): Promise<ParsedTable> {
 
     const fallbackText = extractReadablePdfStrings(await file.arrayBuffer());
     if (!fallbackText.trim()) {
-      throw new Error("No local PDF parser found. Install pdftotext/tesseract or set GEMINI_API_KEY.");
+      throw new Error("ไม่พบตัวอ่าน PDF ภายในเครื่อง กรุณาติดตั้ง pdftotext/tesseract หรือกำหนด GEMINI_API_KEY");
     }
 
     return tableFromPlainText(fallbackText, [
-      "Parsed via embedded PDF text fallback (low accuracy).",
+      "อ่านจากข้อความที่ฝังใน PDF (ความแม่นยำต่ำ)",
     ]);
   }
 
-  throw new Error("Unsupported file type for local non-AI extraction.");
+  throw new Error("ชนิดไฟล์นี้ไม่รองรับในโหมดไม่ใช้ AI");
 }
 
 async function extractTableFromVisionFile(file: File): Promise<ParsedTable> {
@@ -649,7 +662,7 @@ async function extractTableFromVisionFile(file: File): Promise<ParsedTable> {
     "";
 
   if (!apiKey) {
-    throw new Error("Image/PDF scan requires GEMINI_API_KEY (or GOOGLE_AI_API_KEY) in server env");
+    throw new Error("การสแกนรูปภาพ/PDF ต้องตั้งค่า GEMINI_API_KEY หรือ GOOGLE_AI_API_KEY");
   }
 
   const bytes = await file.arrayBuffer();
@@ -716,7 +729,7 @@ async function extractTableFromVisionFile(file: File): Promise<ParsedTable> {
 
   const text = raw?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
   if (!text) {
-    throw new Error("AI scan returned empty result");
+    throw new Error("AI ไม่ส่งผลลัพธ์กลับมา");
   }
 
   const parsedRaw = parseJsonLoose(text);
@@ -751,7 +764,7 @@ async function extractTableFromVisionFile(file: File): Promise<ParsedTable> {
   return {
     headers: [],
     rows: [],
-    notes: ["No product table detected from image/PDF."],
+    notes: ["ไม่พบตารางสินค้าจากไฟล์รูปภาพ/PDF"],
   };
 }
 
@@ -763,11 +776,11 @@ async function parseTableFromFile(file: File): Promise<ParsedTable> {
   const isPdf = contentType.includes("pdf") || filename.endsWith(".pdf");
 
   if (!isCsv && !isImage && !isPdf) {
-    throw new Error("Unsupported file type. Please use CSV, image, or PDF.");
+    throw new Error("ชนิดไฟล์ไม่รองรับ กรุณาใช้ CSV, รูปภาพ หรือ PDF");
   }
 
   if (file.size <= 0) {
-    throw new Error("Uploaded file is empty");
+    throw new Error("ไฟล์ที่อัปโหลดว่างเปล่า");
   }
 
   if (file.size > MAX_FILE_SIZE_BYTES) {
@@ -778,7 +791,7 @@ async function parseTableFromFile(file: File): Promise<ParsedTable> {
     const text = decodeText(await file.arrayBuffer());
     const rows = parseCsvRows(text);
     if (rows.length === 0) {
-      throw new Error("CSV has no readable rows");
+      throw new Error("ไม่พบแถวข้อมูลที่อ่านได้ใน CSV");
     }
     const headerResult = findHeaderRow(rows);
     const headerRow = rows[headerResult.headerIndex] ?? [];
@@ -797,7 +810,7 @@ async function parseTableFromFile(file: File): Promise<ParsedTable> {
     return {
       headers,
       rows: dataRows,
-      notes: headerResult.weakHeader ? ["Could not detect strong header row. Mapping may need review."] : [],
+      notes: headerResult.weakHeader ? ["ตรวจไม่พบแถวหัวตารางที่ชัดเจน กรุณาตรวจการจับคู่คอลัมน์อีกครั้ง"] : [],
     };
   }
 
@@ -821,11 +834,16 @@ async function parseTableFromFile(file: File): Promise<ParsedTable> {
     };
   } catch (aiError) {
     const local = await extractTableWithoutAi(file);
+    const aiMessage = aiError instanceof Error ? aiError.message : "";
+    const aiUnavailableNote =
+      /quota|rate|exceed|limit/i.test(aiMessage)
+        ? "AI ไม่พร้อมใช้งานชั่วคราว (โควตาไม่เพียงพอ) ระบบใช้โหมดอ่านไฟล์ภายในเครื่องแทน"
+        : "AI ไม่พร้อมใช้งาน ระบบใช้โหมดอ่านไฟล์ภายในเครื่องแทน";
     return {
       ...local,
       notes: [
         ...local.notes,
-        aiError instanceof Error ? `AI extract unavailable: ${aiError.message}` : "AI extract unavailable",
+        aiUnavailableNote,
       ],
     };
   }
@@ -876,16 +894,16 @@ function buildDraftRows(table: ParsedTable) {
     const statusRaw = read("status");
 
     if (!titleTh) {
-      issues.push("Missing title_th (ชื่อสินค้า)");
+      issues.push("ไม่พบชื่อสินค้า (TH)");
     }
     if (!Number.isFinite(priceValue)) {
-      issues.push("Invalid price");
+      issues.push("ราคาไม่ถูกต้อง");
     }
     if (!Number.isFinite(stockValue)) {
-      issues.push("Invalid stock");
+      issues.push("สต็อกไม่ถูกต้อง");
     }
     if (compareAtRaw && !Number.isFinite(compareAtValue)) {
-      issues.push("Invalid compare_at_price");
+      issues.push("ราคาก่อนลดไม่ถูกต้อง");
     }
 
     const generatedSlugBase = slugify(slugRaw) || slugify(titleTh) || slugify(skuRaw);
@@ -969,7 +987,7 @@ export async function POST(request: NextRequest) {
 
   if (!rateLimit.ok) {
     return NextResponse.json(
-      { ok: false, error: "Too many import requests. Please wait a moment." },
+      { ok: false, error: "ส่งคำขอนำเข้าบ่อยเกินไป กรุณารอสักครู่แล้วลองใหม่" },
       {
         status: 429,
         headers: {
@@ -988,12 +1006,12 @@ export async function POST(request: NextRequest) {
       const formData = await request.formData();
       const mode = String(formData.get("mode") ?? "preview");
       if (mode !== "preview") {
-        return NextResponse.json({ ok: false, error: "Invalid form mode" }, { status: 400 });
+        return NextResponse.json({ ok: false, error: "โหมดฟอร์มไม่ถูกต้อง" }, { status: 400 });
       }
 
       const file = formData.get("file");
       if (!(file instanceof File)) {
-        return NextResponse.json({ ok: false, error: "Missing upload file" }, { status: 400 });
+        return NextResponse.json({ ok: false, error: "ไม่พบไฟล์ที่อัปโหลด" }, { status: 400 });
       }
 
       const parsedTable = await parseTableFromFile(file);
@@ -1035,7 +1053,7 @@ export async function POST(request: NextRequest) {
         const productId = await createProduct(item.data);
         created.push({ rowNumber: item.rowNumber, productId });
       } catch (error) {
-        const message = error instanceof Error ? error.message : "Failed to create product";
+        const message = error instanceof Error ? error.message : "สร้างสินค้าไม่สำเร็จ";
         failed.push({ rowNumber: item.rowNumber, error: message });
       }
     }
@@ -1068,7 +1086,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const message = error instanceof Error ? error.message : "Import failed";
+    const message = error instanceof Error ? error.message : "นำเข้าสินค้าไม่สำเร็จ";
     return NextResponse.json(
       {
         ok: false,
