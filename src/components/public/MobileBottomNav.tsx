@@ -75,6 +75,7 @@ export function MobileBottomNav({ locale }: MobileBottomNavProps) {
   const pathname = usePathname() || withLocale(locale, "/");
   const items = useMemo(() => tabs(locale), [locale]);
   const [hidden, setHidden] = useState(false);
+  const [isTopMenuOpen, setIsTopMenuOpen] = useState(false);
   const [cartCount, setCartCount] = useState(0);
 
   useEffect(() => {
@@ -89,6 +90,18 @@ export function MobileBottomNav({ locale }: MobileBottomNavProps) {
     return () => {
       window.removeEventListener("storage", updateCount);
       window.removeEventListener("focus", updateCount);
+    };
+  }, []);
+
+  useEffect(() => {
+    const onTopMenuToggle = (event: Event) => {
+      const detail = (event as CustomEvent<{ open?: boolean }>).detail;
+      setIsTopMenuOpen(Boolean(detail?.open));
+    };
+
+    window.addEventListener("kittisap:mobile-top-menu", onTopMenuToggle as EventListener);
+    return () => {
+      window.removeEventListener("kittisap:mobile-top-menu", onTopMenuToggle as EventListener);
     };
   }, []);
 
@@ -114,7 +127,7 @@ export function MobileBottomNav({ locale }: MobileBottomNavProps) {
     <nav
       aria-label="Mobile Bottom Navigation"
       className={`fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-2 py-2 backdrop-blur transition-transform duration-300 md:hidden ${
-        hidden ? "translate-y-full" : "translate-y-0"
+        hidden || isTopMenuOpen ? "translate-y-full" : "translate-y-0"
       }`}
     >
       <div className="mx-auto grid w-full max-w-7xl grid-cols-5 gap-1">

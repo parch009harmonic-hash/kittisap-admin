@@ -104,6 +104,24 @@ function copy(locale: AppLocale) {
         admin: "เข้าสู่ระบบแอดมิน",
         dev: "Developer Console",
       },
+      whyItems: [
+        {
+          title: "รับประกันหลังการขาย มั่นใจได้ทุกการใช้งาน",
+          description: "บริการรับประกันสินค้าอย่างชัดเจน ดูแลจริง ไม่ทอดทิ้งลูกค้า ให้คุณมั่นใจได้ว่าใช้งานต่อเนื่อง",
+        },
+        {
+          title: "ดูแลต่อเนื่องแบบหมดประกัน",
+          description: "หมดประกันแล้วก็ยังมีทีมซัพพอร์ตคอยดูแล พร้อมคำแนะนำการใช้งานและการบำรุงรักษา",
+        },
+        {
+          title: "จัดส่งถึงที่ พร้อมรับประกันระหว่างขนส่ง",
+          description: "จัดส่งทั่วประเทศ ดูแลสินค้าระหว่างขนส่ง พร้อมมาตรฐานความปลอดภัยทุกขั้นตอน",
+        },
+        {
+          title: "บริการให้คำปรึกษาสำหรับตัวแทนจำหน่าย",
+          description: "สนับสนุนตัวแทนจำหน่ายทั้งด้านข้อมูลสินค้า การขาย และการดูแลลูกค้า",
+        },
+      ],
       newsletter: {
         title: "รับข่าวสารและโปรโมชันล่าสุด",
         subtitle: "กรอกชื่อและอีเมลของคุณ เพื่อรับข้อเสนอพิเศษและอัปเดตกิจกรรมใหม่ก่อนใคร",
@@ -161,6 +179,24 @@ function copy(locale: AppLocale) {
         admin: "Admin Login",
         dev: "Developer Console",
       },
+      whyItems: [
+        {
+          title: "ມີປະກັນຫຼັງການຂາຍ",
+          description: "ມີລະບົບປະກັນຊັດເຈນ ດູແລລູກຄ້າຕໍ່ເນື່ອງ",
+        },
+        {
+          title: "ດູແລຕໍ່ເນື່ອງແມ່ນແຕ່ໝົດປະກັນ",
+          description: "ຫຼັງໝົດປະກັນຍັງມີທີມງານຄອຍແນະນຳ ແລະຊ່ວຍເຫຼືອ",
+        },
+        {
+          title: "ຈັດສົ່ງເຖິງທີ່ພ້ອມປະກັນຂົນສົ່ງ",
+          description: "ຈັດສົ່ງທົ່ວປະເທດ ພ້ອມລະບົບປົກປ້ອງລະຫວ່າງຂົນສົ່ງ",
+        },
+        {
+          title: "ທີ່ປຶກສາສຳລັບຕົວແທນ",
+          description: "ຊ່ວຍວາງແຜນການຂາຍ ແລະການດູແລລູກຄ້າຢ່າງເປັນລະບົບ",
+        },
+      ],
       newsletter: {
         title: "ຮັບຂ່າວສານ ແລະ ໂປຣໂມຊັນຫຼ້າສຸດ",
         subtitle: "ກອກຊື່ ແລະ ອີເມວ ເພື່ອຮັບຂໍ້ສະເໜີພິເສດ ແລະ ການອັບເດດໃໝ່ກ່ອນໃຜ",
@@ -217,6 +253,24 @@ function copy(locale: AppLocale) {
       admin: "Admin Login",
       dev: "Developer Console",
     },
+    whyItems: [
+      {
+        title: "Reliable after-sales support",
+        description: "Clear warranty and responsive support team for confident ownership.",
+      },
+      {
+        title: "Continued care after warranty",
+        description: "Technical guidance and service assistance even after warranty expires.",
+      },
+      {
+        title: "Nationwide delivery with transport protection",
+        description: "Safe delivery process with quality checks and transport coverage.",
+      },
+      {
+        title: "Dealer consultation service",
+        description: "Support for partner planning, sales setup, and customer management.",
+      },
+    ],
     newsletter: {
       title: "Get Latest News and Promotions",
       subtitle: "Enter your name and email to receive exclusive offers and campaign updates.",
@@ -369,6 +423,30 @@ export async function MarketingLandingPage({
   const localizedHeroDesc = localizeSettingText(bannerSettings.description, locale, t.hero.desc);
   const localizedPrimaryButton = localizeSettingText(bannerSettings.primaryButtonLabel, locale, t.nav.products);
   const localizedSecondaryButton = localizeSettingText(bannerSettings.secondaryButtonLabel, locale, t.nav.promotions);
+  const localizedCallButtonLabel = localizeSettingText(
+    storefrontSettings.callButtonLabel,
+    locale,
+    locale === "th" ? "โทรหาเรา" : locale === "lo" ? "ໂທຫາພວກເຮົາ" : "Call Us",
+  );
+  const localizedFooterTitle = localizeSettingText(storefrontSettings.footerTitle, locale, t.footer.title);
+  const localizedFooterDesc1 = localizeSettingText(storefrontSettings.footerDescription1, locale, t.footer.desc1);
+  const localizedFooterDesc2 = localizeSettingText(storefrontSettings.footerDescription2, locale, t.footer.desc2);
+  const localizedFooterContactTitle = localizeSettingText(storefrontSettings.footerContactTitle, locale, t.footer.contact);
+  const localizedFooterCallLabel = localizeSettingText(
+    storefrontSettings.footerCallLabel,
+    locale,
+    locale === "th" ? "โทร" : locale === "lo" ? "ໂທ" : "Call",
+  );
+  const localizedFooterLineLabel = localizeSettingText(
+    storefrontSettings.footerLineLabel,
+    locale,
+    locale === "th" ? "ไลน์" : locale === "lo" ? "LINE" : "LINE",
+  );
+  const localizedFooterFacebookLabel = localizeSettingText(
+    storefrontSettings.footerFacebookLabel,
+    locale,
+    locale === "th" ? "เฟซบุ๊ก" : locale === "lo" ? "Facebook" : "Facebook",
+  );
   const localizedIntroTitle = localizeSettingText(
     homepageAppearance.introTitle,
     locale,
@@ -461,9 +539,7 @@ export async function MarketingLandingPage({
             nav={t.nav}
             cta={{
               ...t.cta,
-              call:
-                storefrontSettings.callButtonLabel ||
-                (locale === "th" ? "โทรหาเรา" : locale === "lo" ? "ໂທຫາພວກເຮົາ" : "Call Us"),
+              call: localizedCallButtonLabel,
               phone: storefrontSettings.callPhone || "+66843374982",
             }}
           />
@@ -686,17 +762,27 @@ export async function MarketingLandingPage({
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {whyChooseUsSettings.items.slice(0, 6).map((item) => (
+            {whyChooseUsSettings.items.slice(0, 6).map((item, index) => {
+              const fallbackItem = t.whyItems[index] ?? t.whyItems[t.whyItems.length - 1];
+              const localizedWhyItemTitle = localizeSettingText(item.title, locale, fallbackItem.title);
+              const localizedWhyItemDescription = localizeSettingText(
+                item.description,
+                locale,
+                fallbackItem.description,
+              );
+
+              return (
               <article key={item.id} className="rounded-2xl border border-slate-300/25 bg-white/5 p-5 shadow-[0_10px_30px_rgba(0,0,0,0.15)] backdrop-blur-[1px]">
                 <div className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100/95 text-blue-600">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5" aria-hidden>
                     <WhyChooseUsIconSvg icon={item.icon} />
                   </svg>
                 </div>
-                <h3 className="text-xl font-black tracking-tight text-slate-100">{item.title}</h3>
-                <p className="mt-2 whitespace-pre-line text-sm leading-6 text-slate-300/85">{item.description}</p>
+                <h3 className="text-xl font-black tracking-tight text-slate-100">{localizedWhyItemTitle}</h3>
+                <p className="mt-2 whitespace-pre-line text-sm leading-6 text-slate-300/85">{localizedWhyItemDescription}</p>
               </article>
-            ))}
+              );
+            })}
           </div>
         </section>
       ) : null}
@@ -731,9 +817,9 @@ export async function MarketingLandingPage({
       >
         <div className="mx-auto grid w-full max-w-7xl gap-4 px-4 md:grid-cols-[1.2fr_1fr_1fr]">
           <div>
-            <p className="text-base font-black text-slate-100">{storefrontSettings.footerTitle || t.footer.title}</p>
-            <p className="mt-2 text-sm text-slate-300/75">{storefrontSettings.footerDescription1 || t.footer.desc1}</p>
-            <p className="text-sm text-slate-300/75">{storefrontSettings.footerDescription2 || t.footer.desc2}</p>
+            <p className="text-base font-black text-slate-100">{localizedFooterTitle}</p>
+            <p className="mt-2 text-sm text-slate-300/75">{localizedFooterDesc1}</p>
+            <p className="text-sm text-slate-300/75">{localizedFooterDesc2}</p>
           </div>
 
           <div>
@@ -748,16 +834,16 @@ export async function MarketingLandingPage({
           </div>
 
           <div>
-            <p className="text-base font-black text-slate-100">{storefrontSettings.footerContactTitle || t.footer.contact}</p>
+            <p className="text-base font-black text-slate-100">{localizedFooterContactTitle}</p>
             <div className="mt-2 space-y-1 text-sm">
               <a href={`tel:${storefrontSettings.callPhone || "+66843374982"}`} className="block hover:text-amber-200">
-                {storefrontSettings.footerCallLabel || "Call"}
+                {localizedFooterCallLabel}
               </a>
               <a href={storefrontSettings.lineUrl || "https://line.me"} className="block hover:text-amber-200">
-                {storefrontSettings.footerLineLabel || "LINE"}
+                {localizedFooterLineLabel}
               </a>
               <a href={storefrontSettings.facebookUrl || "https://facebook.com"} className="block hover:text-amber-200">
-                {storefrontSettings.footerFacebookLabel || "Facebook"}
+                {localizedFooterFacebookLabel}
               </a>
             </div>
           </div>
@@ -770,7 +856,7 @@ export async function MarketingLandingPage({
             color: homepageAppearance.textColor,
           }}
         >
-          © {new Date().getFullYear()} {storefrontSettings.footerTitle || t.footer.title}
+          © {new Date().getFullYear()} {localizedFooterTitle}
           <span className="mx-2">|</span>
           <Link href="/login" className="hover:text-amber-200">{t.footer.admin}</Link>
           <span className="mx-2">|</span>

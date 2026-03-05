@@ -203,7 +203,7 @@ export async function ProductsCatalogPage({ locale, searchParams = {}, useLocale
   return (
     <>
       <StorefrontRealtimeRefresh />
-      <StorefrontTopMenu locale={locale} useLocalePrefix={useLocalePrefix} />
+      {!useLocalePrefix ? <StorefrontTopMenu locale={locale} useLocalePrefix={useLocalePrefix} /> : null}
       <main className="min-h-screen bg-[#f4f6fb] text-slate-900">
         <section className="mx-auto w-full max-w-7xl px-3 pb-4 pt-1 md:px-4 md:pb-8 md:pt-2">
           <div className="sticky top-16 z-30 -mx-1 bg-[#f4f6fb]/95 px-1 pb-2 pt-1 backdrop-blur supports-[backdrop-filter]:bg-[#f4f6fb]/85">

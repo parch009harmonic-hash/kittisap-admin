@@ -138,7 +138,7 @@ export async function PricingTablePage({ locale, useLocalePrefix = false }: Pric
 
   return (
     <>
-      <StorefrontTopMenu locale={locale} useLocalePrefix={useLocalePrefix} />
+      {!useLocalePrefix ? <StorefrontTopMenu locale={locale} useLocalePrefix={useLocalePrefix} /> : null}
       <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,_#5c3f00_0%,_#1a1200_30%,_#090909_68%)] text-amber-50">
         <section className="mx-auto w-full max-w-7xl px-4 py-8 md:px-6 md:py-12">
         <header className="rounded-3xl border border-amber-500/35 bg-black/55 p-6 shadow-[0_20px_80px_rgba(0,0,0,0.45)] backdrop-blur">

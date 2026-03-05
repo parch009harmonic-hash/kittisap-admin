@@ -52,6 +52,17 @@ function text(locale: AppLocale) {
   };
 }
 
+function hasThaiChars(value: string) {
+  return /[\u0E00-\u0E7F]/.test(value);
+}
+
+function localizeSettingText(raw: string | null | undefined, locale: AppLocale, fallback: string) {
+  const value = String(raw ?? "").trim();
+  if (!value) return fallback;
+  if (locale === "th") return value;
+  return hasThaiChars(value) ? fallback : value;
+}
+
 function formatPhoneHref(phone: string) {
   const normalized = phone.replace(/[^0-9+]/g, "");
   return `tel:${normalized}`;
@@ -130,10 +141,27 @@ function toOpenMapUrl(rawOpen: string, rawEmbed: string, fallbackQuery: string) 
 export async function ContactPage({ locale, useLocalePrefix = false }: ContactPageProps) {
   const t = text(locale);
   const storefrontSettings = await getWebStorefrontSettings();
+  const localizedContactTitle = localizeSettingText(storefrontSettings.contactTitle, locale, t.title);
+  const localizedContactSubtitle = localizeSettingText(storefrontSettings.contactSubtitle, locale, t.subtitle);
+  const localizedCallNow = localizeSettingText(storefrontSettings.contactCallButtonLabel, locale, t.callNow);
+  const localizedOpenMap = localizeSettingText(storefrontSettings.contactMapButtonLabel, locale, t.openMap);
+  const localizedOpenLine = localizeSettingText(storefrontSettings.contactLineButtonLabel, locale, t.openLine);
   const contactPhone = storefrontSettings.contactPhone || storefrontSettings.callPhone;
   const lineId = storefrontSettings.contactLineId;
   const lineUrl = storefrontSettings.lineUrl || "https://line.me";
-  const address = locale === "en" ? storefrontSettings.contactAddressEn : storefrontSettings.contactAddressTh;
+  const addressRaw =
+    locale === "en"
+      ? storefrontSettings.contactAddressEn || storefrontSettings.contactAddressTh
+      : locale === "lo"
+        ? storefrontSettings.contactAddressEn || storefrontSettings.contactAddressTh
+        : storefrontSettings.contactAddressTh || storefrontSettings.contactAddressEn;
+  const addressFallback =
+    locale === "en"
+      ? "Bangkok, Thailand"
+      : locale === "lo"
+        ? "ບາງກອກ, ປະເທດໄທ"
+        : "กรุงเทพมหานคร ประเทศไทย";
+  const address = localizeSettingText(addressRaw, locale, addressFallback);
   const fallbackMapQuery = address?.trim() || "Bangkok";
   const mapEmbedUrl = toEmbeddedMapUrl(
     extractIframeSrc(storefrontSettings.contactMapEmbedUrl) || storefrontSettings.contactMapEmbedUrl,
@@ -144,20 +172,39 @@ export async function ContactPage({ locale, useLocalePrefix = false }: ContactPa
     storefrontSettings.contactMapEmbedUrl,
     fallbackMapQuery,
   );
+  const hourLabelFallbacks =
+    locale === "en"
+      ? ["Mon - Fri", "Saturday", "Sunday"]
+      : locale === "lo"
+        ? ["ຈັນ - ສຸກ", "ເສົາ", "ອາທິດ"]
+        : [
+            storefrontSettings.contactHoursWeekdayLabel,
+            storefrontSettings.contactHoursSaturdayLabel,
+            storefrontSettings.contactHoursSundayLabel,
+          ];
   const businessHours = [
-    { day: storefrontSettings.contactHoursWeekdayLabel, time: storefrontSettings.contactHoursWeekdayTime },
-    { day: storefrontSettings.contactHoursSaturdayLabel, time: storefrontSettings.contactHoursSaturdayTime },
-    { day: storefrontSettings.contactHoursSundayLabel, time: storefrontSettings.contactHoursSundayTime },
+    {
+      day: localizeSettingText(storefrontSettings.contactHoursWeekdayLabel, locale, hourLabelFallbacks[0]),
+      time: storefrontSettings.contactHoursWeekdayTime,
+    },
+    {
+      day: localizeSettingText(storefrontSettings.contactHoursSaturdayLabel, locale, hourLabelFallbacks[1]),
+      time: storefrontSettings.contactHoursSaturdayTime,
+    },
+    {
+      day: localizeSettingText(storefrontSettings.contactHoursSundayLabel, locale, hourLabelFallbacks[2]),
+      time: storefrontSettings.contactHoursSundayTime,
+    },
   ];
 
   return (
     <>
-      <StorefrontTopMenu locale={locale} useLocalePrefix={useLocalePrefix} />
+      {!useLocalePrefix ? <StorefrontTopMenu locale={locale} useLocalePrefix={useLocalePrefix} /> : null}
       <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,_#5c3f00_0%,_#1a1200_30%,_#090909_68%)] text-amber-50">
         <section className="mx-auto w-full max-w-7xl px-4 py-8 md:px-6 md:py-12">
           <header className="rounded-3xl border border-amber-500/35 bg-black/55 p-6 shadow-[0_20px_80px_rgba(0,0,0,0.45)] backdrop-blur">
-            <h1 className="font-heading text-3xl font-semibold text-amber-300 md:text-4xl">{storefrontSettings.contactTitle || t.title}</h1>
-            <p className="mt-2 text-sm text-amber-100/80 md:text-base">{storefrontSettings.contactSubtitle || t.subtitle}</p>
+            <h1 className="font-heading text-3xl font-semibold text-amber-300 md:text-4xl">{localizedContactTitle}</h1>
+            <p className="mt-2 text-sm text-amber-100/80 md:text-base">{localizedContactSubtitle}</p>
           </header>
 
           <section className="mt-6 grid gap-5 lg:grid-cols-[1.1fr_1fr]">
@@ -184,7 +231,7 @@ export async function ContactPage({ locale, useLocalePrefix = false }: ContactPa
                   href={formatPhoneHref(contactPhone)}
                   className="inline-flex items-center justify-center rounded-xl border border-amber-400/60 bg-amber-400/20 px-4 py-2 text-sm font-semibold text-amber-100 hover:bg-amber-300/30"
                 >
-                  {storefrontSettings.contactCallButtonLabel || t.callNow}
+                  {localizedCallNow}
                 </a>
                 <a
                   href={mapOpenUrl}
@@ -192,7 +239,7 @@ export async function ContactPage({ locale, useLocalePrefix = false }: ContactPa
                   rel="noreferrer"
                   className="inline-flex items-center justify-center rounded-xl border border-amber-500/35 bg-black/45 px-4 py-2 text-sm font-semibold text-amber-100 hover:bg-black/60"
                 >
-                  {storefrontSettings.contactMapButtonLabel || t.openMap}
+                  {localizedOpenMap}
                 </a>
                 <a
                   href={lineUrl}
@@ -200,7 +247,7 @@ export async function ContactPage({ locale, useLocalePrefix = false }: ContactPa
                   rel="noreferrer"
                   className="inline-flex items-center justify-center rounded-xl border border-amber-500/35 bg-black/45 px-4 py-2 text-sm font-semibold text-amber-100 hover:bg-black/60"
                 >
-                  {storefrontSettings.contactLineButtonLabel || t.openLine}
+                  {localizedOpenLine}
                 </a>
               </div>
             </article>

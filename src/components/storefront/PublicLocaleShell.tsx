@@ -1,15 +1,8 @@
 ﻿"use client";
 
-import Link from "next/link";
-import dynamic from "next/dynamic";
 import { usePathname, useSearchParams } from "next/navigation";
 import { ReactNode, useEffect } from "react";
 import { StorefrontTopMenu } from "./StorefrontTopMenu";
-
-const MobileBottomNav = dynamic(
-  () => import("../public/MobileBottomNav").then((mod) => mod.MobileBottomNav),
-  { ssr: false },
-);
 
 type AppLocale = "th" | "en" | "lo";
 
@@ -36,11 +29,11 @@ export function PublicLocaleShell({ locale, children }: PublicLocaleShellProps) 
   }, [pathname, searchParams]);
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_right,_#5c3f00_0%,_#1a1200_30%,_#090909_68%)] text-amber-50">
+    <div className="min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_top_right,_#5c3f00_0%,_#1a1200_30%,_#090909_68%)] text-amber-50">
       <StorefrontTopMenu locale={locale} useLocalePrefix />
 
-      <main className="pb-24 md:pb-0">
-        <div key={pathname} className="page-enter mx-auto w-full max-w-7xl px-4">{children}</div>
+      <main>
+        <div key={pathname} className="page-enter">{children}</div>
       </main>
 
       <footer className="hidden border-t border-amber-500/20 bg-black/60 py-8 md:block">
@@ -48,8 +41,6 @@ export function PublicLocaleShell({ locale, children }: PublicLocaleShellProps) 
           <span>Kittisap © {new Date().getFullYear()}</span>
         </div>
       </footer>
-
-      <MobileBottomNav locale={locale} />
     </div>
   );
 }

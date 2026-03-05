@@ -94,6 +94,17 @@ function normalizePath(path: string) {
   return noQuery;
 }
 
+function hasThaiChars(value: string) {
+  return /[\u0E00-\u0E7F]/.test(value);
+}
+
+function localizeStorefrontText(raw: string | null | undefined, locale: AppLocale, fallback: string) {
+  const value = String(raw ?? "").trim();
+  if (!value) return fallback;
+  if (locale === "th") return value;
+  return hasThaiChars(value) ? fallback : value;
+}
+
 export function MarketingTopNav({ locale, useLocalePrefix, brand, nav, cta }: MarketingTopNavProps) {
   const router = useRouter();
   const pathname = normalizePath(usePathname() || withLocale(locale, "/", useLocalePrefix));
@@ -126,13 +137,32 @@ export function MarketingTopNav({ locale, useLocalePrefix, brand, nav, cta }: Ma
   const quickMenuLabel = locale === "th" ? "เมนูลัดลูกค้า" : locale === "lo" ? "ເມນູລັດລູກຄ້າ" : "Customer shortcuts";
   const callPhone = callPhoneOverride ?? cta.phone ?? "+66843374982";
   const callHref = `tel:${callPhone}`;
-  const callLabel =
-    callLabelOverride ?? cta.call ?? (locale === "th" ? "โทรหาเรา" : locale === "lo" ? "ໂທຫາພວກເຮົາ" : "Call Us");
+  const callLabel = localizeStorefrontText(
+    callLabelOverride,
+    locale,
+    cta.call ?? (locale === "th" ? "โทรหาเรา" : locale === "lo" ? "ໂທຫາພວກເຮົາ" : "Call Us"),
+  );
   const onLocaleChange = (nextLocale: AppLocale) => {
     if (nextLocale === locale) return;
     setLocaleMenuOpen(false);
     router.push(switchLocalePath(pathname, nextLocale));
   };
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.dispatchEvent(
+      new CustomEvent("kittisap:mobile-top-menu", {
+        detail: { open: mobileOpen },
+      }),
+    );
+    return () => {
+      window.dispatchEvent(
+        new CustomEvent("kittisap:mobile-top-menu", {
+          detail: { open: false },
+        }),
+      );
+    };
+  }, [mobileOpen]);
 
   useEffect(() => {
     const onClickOutside = (event: MouseEvent) => {
