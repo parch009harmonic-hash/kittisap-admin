@@ -3,6 +3,7 @@ import Link from "next/link";
 import { listProducts } from "../../../../lib/db/products";
 import { getAdminLocale } from "../../../../lib/i18n/admin";
 import { ProductStatus } from "../../../../lib/types/product";
+import { ProductBulkImportButton } from "../../../components/admin/products/ProductBulkImportButton";
 import { ProductsPageToast } from "../../../components/admin/products/ProductsPageToast";
 import { ProductsTableClient } from "../../../components/admin/products/ProductsTableClient";
 
@@ -13,6 +14,7 @@ type ProductsPageProps = {
     featured?: string;
     page?: string;
     notice?: string;
+    count?: string;
     error?: string;
     sync?: string;
   }>;
@@ -29,6 +31,7 @@ export default async function AdminProductsPage({ searchParams }: ProductsPagePr
   const featuredOnly = params.featured === "1";
   const page = Math.max(1, Number(params.page ?? "1") || 1);
   const notice = params.notice?.trim() || "";
+  const importedCount = Math.max(0, Number(params.count ?? "0") || 0);
   const errorMessage = params.error?.trim() || "";
   const shouldSyncStorefront = params.sync === "1";
 
@@ -78,6 +81,10 @@ export default async function AdminProductsPage({ searchParams }: ProductsPagePr
       ? locale === "th"
         ? "เพิ่มสินค้าสำเร็จ"
         : "Product created successfully."
+      : notice === "bulk_imported"
+        ? locale === "th"
+          ? `นำเข้าสินค้าหลายรายการสำเร็จ ${importedCount} รายการ`
+          : `Bulk imported ${importedCount} products successfully.`
       : notice === "updated"
         ? locale === "th"
           ? "อัปเดตสินค้าสำเร็จ"
@@ -94,7 +101,7 @@ export default async function AdminProductsPage({ searchParams }: ProductsPagePr
   return (
     <div className="product-page space-y-6">
       <ProductsPageToast
-        key={`${notice}:${errorMessage}`}
+        key={`${notice}:${params.count ?? ""}:${errorMessage}`}
         successMessage={successMessage}
         errorMessage={toastErrorMessage}
         syncStorefront={shouldSyncStorefront}
@@ -111,12 +118,15 @@ export default async function AdminProductsPage({ searchParams }: ProductsPagePr
               <h1 className="font-heading text-2xl text-slate-900 md:text-3xl">{t.title}</h1>
               <p className="mt-0.5 text-xs text-slate-600 md:text-sm">{t.subtitle}</p>
             </div>
-            <Link
-              href="/admin/products/new"
-              className="product-page-add-btn btn-primary inline-flex h-10 items-center justify-center gap-2 rounded-full px-4 text-sm font-semibold text-white md:px-5"
-            >
-              {t.addProduct}
-            </Link>
+            <div className="flex flex-wrap items-center gap-2">
+              <ProductBulkImportButton locale={locale} />
+              <Link
+                href="/admin/products/new"
+                className="product-page-add-btn btn-primary inline-flex h-10 items-center justify-center gap-2 rounded-full px-4 text-sm font-semibold text-white md:px-5"
+              >
+                {t.addProduct}
+              </Link>
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-2">
