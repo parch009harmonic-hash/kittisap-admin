@@ -55,6 +55,18 @@ export type WebHomepageImageStripSettings = {
   updatedAt: string | null;
 };
 
+export type WebHomepagePopupSettings = {
+  enabled: boolean;
+  imageUrl: string | null;
+  altText: string;
+  targetUrl: string;
+  openInNewTab: boolean;
+  showOnEveryVisit: boolean;
+  delayMs: number;
+  backdropOpacityPercent: number;
+  updatedAt: string | null;
+};
+
 export type WhyChooseUsIcon =
   | "shield"
   | "spark"
@@ -213,6 +225,20 @@ export function getDefaultWebHomepageImageStripSettings(): WebHomepageImageStrip
   return {
     sectionGapPx: 36,
     items: [],
+    updatedAt: null,
+  };
+}
+
+export function getDefaultWebHomepagePopupSettings(): WebHomepagePopupSettings {
+  return {
+    enabled: false,
+    imageUrl: null,
+    altText: "",
+    targetUrl: "",
+    openInNewTab: false,
+    showOnEveryVisit: true,
+    delayMs: 0,
+    backdropOpacityPercent: 72,
     updatedAt: null,
   };
 }

@@ -51,6 +51,7 @@ export default function MiddleBannerSettingsClient({
             middleBannerMenu: "แถบแบนเนอร์กลางเว็บ",
             newsCardsMenu: "กิจกรรมและข่าวสาร",
             brandGuaranteeMenu: "แบรนด์การันตี",
+            popupMenu: "Popup หน้าแรก",
             sectionGapRem: "ระยะห่างใต้สินค้าแนะนำ (rem)",
             backgroundColor: "สีพื้นหลังแถบ",
             imageUrl: "ลิงก์รูปแบนเนอร์",
@@ -82,6 +83,7 @@ export default function MiddleBannerSettingsClient({
             middleBannerMenu: "Middle Website Banner",
             newsCardsMenu: "Activities & News",
             brandGuaranteeMenu: "Brand Guarantee",
+            popupMenu: "Homepage Popup",
             sectionGapRem: "Gap below Featured Products (rem)",
             backgroundColor: "Banner Background Color",
             imageUrl: "Banner Image URL",
@@ -229,6 +231,7 @@ export default function MiddleBannerSettingsClient({
           <div className="mt-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-700">{text.middleBannerMenu}</div>
           <Link href="/admin/web-settings/news-cards" className="mt-2 block rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">{text.newsCardsMenu}</Link>
           <Link href="/admin/web-settings/brand-guarantee" className="mt-2 block rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">{text.brandGuaranteeMenu}</Link>
+          <Link href="/admin/web-settings/homepage-popup" className="mt-2 block rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">{text.popupMenu}</Link>
         </aside>
 
         <form onSubmit={handleSubmit} className="space-y-4">

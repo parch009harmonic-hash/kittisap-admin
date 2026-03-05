@@ -10,6 +10,7 @@ import {
   getDefaultWebStorefrontSettings,
   getDefaultWebHomepageAppearanceSettings,
   getDefaultWebHomepageImageStripSettings,
+  getDefaultWebHomepagePopupSettings,
   getDefaultWebMiddleBannerSettings,
   getDefaultWebBrandGuaranteeSettings,
   getDefaultWebNewsCardsSettings,
@@ -22,6 +23,7 @@ import {
   WebNewsCardsSettings,
   WebHomepageAppearanceSettings,
   WebHomepageImageStripSettings,
+  WebHomepagePopupSettings,
   WebWhyChooseUsSettings,
 } from "../types/web-settings";
 
@@ -95,6 +97,17 @@ const WebHomepageImageItemInputSchema = z.object({
 const WebHomepageImageStripInputSchema = z.object({
   sectionGapPx: z.coerce.number().int().min(0).max(200),
   items: z.array(WebHomepageImageItemInputSchema).max(4),
+});
+
+const WebHomepagePopupInputSchema = z.object({
+  enabled: z.boolean().default(false),
+  imageUrl: z.string().trim().url().or(z.literal("")).nullable().optional(),
+  altText: z.string().trim().max(180).default(""),
+  targetUrl: z.string().trim().max(500).default(""),
+  openInNewTab: z.boolean().default(false),
+  showOnEveryVisit: z.boolean().default(true),
+  delayMs: z.coerce.number().int().min(0).max(10000),
+  backdropOpacityPercent: z.coerce.number().int().min(10).max(95),
 });
 
 const WhyChooseUsIconSchema = z.enum([
@@ -218,6 +231,14 @@ function isMissingBannerThaiScaleColumn(error: unknown) {
   );
 }
 
+function isMissingHomepagePopupColumns(error: unknown) {
+  const message = errorText(error, "").toLowerCase();
+  return (
+    message.includes("homepage_popup_")
+    && (message.includes("does not exist") || message.includes("schema cache") || message.includes("column"))
+  );
+}
+
 function mapBanner(row: Record<string, unknown> | null | undefined): WebBannerSettings {
   const defaults = getDefaultWebBannerSettings();
   if (!row) {
@@ -305,6 +326,27 @@ function mapHomepageImageStrip(row: Record<string, unknown> | null | undefined):
   return {
     sectionGapPx: Number(row.homepage_image_section_gap_px ?? defaults.sectionGapPx),
     items,
+    updatedAt: row.updated_at ? String(row.updated_at) : null,
+  };
+}
+
+function mapHomepagePopup(row: Record<string, unknown> | null | undefined): WebHomepagePopupSettings {
+  const defaults = getDefaultWebHomepagePopupSettings();
+  if (!row) {
+    return defaults;
+  }
+
+  return {
+    enabled: Boolean(row.homepage_popup_enabled ?? defaults.enabled),
+    imageUrl: row.homepage_popup_image_url ? String(row.homepage_popup_image_url) : null,
+    altText: String(row.homepage_popup_alt_text ?? defaults.altText),
+    targetUrl: String(row.homepage_popup_target_url ?? defaults.targetUrl),
+    openInNewTab: Boolean(row.homepage_popup_open_in_new_tab ?? defaults.openInNewTab),
+    showOnEveryVisit: Boolean(row.homepage_popup_show_on_every_visit ?? defaults.showOnEveryVisit),
+    delayMs: Number(row.homepage_popup_delay_ms ?? defaults.delayMs),
+    backdropOpacityPercent: Number(
+      row.homepage_popup_backdrop_opacity_percent ?? defaults.backdropOpacityPercent,
+    ),
     updatedAt: row.updated_at ? String(row.updated_at) : null,
   };
 }
@@ -653,6 +695,71 @@ export async function updateWebHomepageImageStripSettingsApi(input: unknown) {
   }
 
   return mapHomepageImageStrip(data as Record<string, unknown>);
+}
+
+export async function getWebHomepagePopupSettings() {
+  const supabase = getSupabaseServiceRoleClient();
+  const { data, error } = await supabase.from("web_settings").select("*").eq("id", "default").maybeSingle();
+
+  if (error) {
+    if (isMissingWebSettingsTable(error) || isMissingHomepagePopupColumns(error)) {
+      return getDefaultWebHomepagePopupSettings();
+    }
+    throw new Error(`Failed to load homepage popup settings: ${errorText(error, "Unknown error")}`);
+  }
+
+  return mapHomepagePopup(data as Record<string, unknown> | null);
+}
+
+export async function getWebHomepagePopupSettingsApi() {
+  await requireAdminApi();
+  return getWebHomepagePopupSettings();
+}
+
+export async function updateWebHomepagePopupSettingsApi(input: unknown) {
+  await requireAdminApi();
+  const actor = await getAdminActor();
+  if (!actor || actor.role !== "admin") {
+    throw new Error("Not authorized to manage web settings");
+  }
+
+  await assertUiWriteAllowed({
+    path: "/admin/web-settings/homepage-popup",
+    actorRole: actor.role,
+  });
+
+  const parsed = WebHomepagePopupInputSchema.parse(input);
+  const imageUrl = parsed.imageUrl?.trim() ? parsed.imageUrl.trim() : null;
+  const targetUrl = parsed.targetUrl.trim();
+
+  const supabase = getSupabaseServiceRoleClient();
+  const payload = {
+    id: "default",
+    homepage_popup_enabled: parsed.enabled,
+    homepage_popup_image_url: imageUrl,
+    homepage_popup_alt_text: parsed.altText,
+    homepage_popup_target_url: targetUrl,
+    homepage_popup_open_in_new_tab: parsed.openInNewTab,
+    homepage_popup_show_on_every_visit: parsed.showOnEveryVisit,
+    homepage_popup_delay_ms: parsed.delayMs,
+    homepage_popup_backdrop_opacity_percent: parsed.backdropOpacityPercent,
+    updated_by: actor.user.id,
+  };
+
+  const { data, error } = await supabase
+    .from("web_settings")
+    .upsert(payload, { onConflict: "id" })
+    .select("*")
+    .single();
+
+  if (error) {
+    if (isMissingWebSettingsTable(error) || isMissingHomepagePopupColumns(error)) {
+      throw new Error("Missing homepage popup columns. Run sql/ensure-web-settings.sql first.");
+    }
+    throw new Error(`Failed to update homepage popup settings: ${errorText(error, "Unknown error")}`);
+  }
+
+  return mapHomepagePopup(data as Record<string, unknown>);
 }
 
 export async function getWebWhyChooseUsSettings() {

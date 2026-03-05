@@ -38,6 +38,7 @@ export default function BannerSettingsClient({ locale, initialSettings, bootstra
             middleBannerMenu: "แถบแบนเนอร์กลางเว็บ",
             newsCardsMenu: "กิจกรรมและข่าวสาร",
             brandGuaranteeMenu: "แบรนด์การันตี",
+            popupMenu: "Popup หน้าแรก",
             eyebrow: "หัวข้อย่อย",
             heading: "หัวข้อหลัก",
             description: "คำอธิบาย",
@@ -104,6 +105,7 @@ export default function BannerSettingsClient({ locale, initialSettings, bootstra
             middleBannerMenu: "Middle Website Banner",
             newsCardsMenu: "Activities & News",
             brandGuaranteeMenu: "Brand Guarantee",
+            popupMenu: "Homepage Popup",
             eyebrow: "Eyebrow",
             heading: "Heading",
             description: "Description",
@@ -277,6 +279,7 @@ export default function BannerSettingsClient({ locale, initialSettings, bootstra
           <Link href="/admin/web-settings/middle-banner" className="mt-2 block rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">{text.middleBannerMenu}</Link>
           <Link href="/admin/web-settings/news-cards" className="mt-2 block rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">{text.newsCardsMenu}</Link>
           <Link href="/admin/web-settings/brand-guarantee" className="mt-2 block rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">{text.brandGuaranteeMenu}</Link>
+          <Link href="/admin/web-settings/homepage-popup" className="mt-2 block rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">{text.popupMenu}</Link>
         </aside>
 
         <form onSubmit={handleSubmit} className="space-y-4">

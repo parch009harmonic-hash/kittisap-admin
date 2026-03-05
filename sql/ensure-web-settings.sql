@@ -41,6 +41,14 @@ create table if not exists public.web_settings (
   homepage_intro_text_glow boolean not null default false,
   homepage_image_section_gap_px integer not null default 36,
   homepage_image_boxes jsonb not null default '[]'::jsonb,
+  homepage_popup_enabled boolean not null default false,
+  homepage_popup_image_url text null,
+  homepage_popup_alt_text text not null default '',
+  homepage_popup_target_url text not null default '',
+  homepage_popup_open_in_new_tab boolean not null default false,
+  homepage_popup_show_on_every_visit boolean not null default true,
+  homepage_popup_delay_ms integer not null default 0,
+  homepage_popup_backdrop_opacity_percent integer not null default 72,
   homepage_why_choose_us_section_gap_px integer not null default 44,
   homepage_why_choose_us_title text not null default 'ทำไมต้อง SST INNOVATION Pro',
   homepage_why_choose_us_subtitle text not null default 'ออกแบบเพื่อธุรกิจที่ต้องการความแตกต่างและความน่าเชื่อถือ',
@@ -88,6 +96,8 @@ create table if not exists public.web_settings (
   constraint web_settings_homepage_intro_title_font_weight_check check (homepage_intro_title_font_weight in (300,400,500,600,700,800,900)),
   constraint web_settings_homepage_intro_content_font_weight_check check (homepage_intro_content_font_weight in (300,400,500,600,700,800,900)),
   constraint web_settings_homepage_image_section_gap_px_check check (homepage_image_section_gap_px between 0 and 200),
+  constraint web_settings_homepage_popup_delay_ms_check check (homepage_popup_delay_ms between 0 and 10000),
+  constraint web_settings_homepage_popup_backdrop_opacity_percent_check check (homepage_popup_backdrop_opacity_percent between 10 and 95),
   constraint web_settings_homepage_why_choose_us_section_gap_px_check check (homepage_why_choose_us_section_gap_px between 0 and 220),
   constraint web_settings_homepage_middle_banner_section_gap_px_check check (homepage_middle_banner_section_gap_px between 0 and 240),
   constraint web_settings_homepage_middle_banner_section_gap_rem_check check (homepage_middle_banner_section_gap_rem between 0 and 5),
@@ -114,6 +124,22 @@ alter table public.web_settings
   add column if not exists homepage_intro_content text not null default 'SST INNOVATION คือทีมผู้เชี่ยวชาญด้านงานระบบครบวงจร ตั้งแต่กลยุทธ์ดิจิทัล การออกแบบ พัฒนา ไปจนถึงการดูแลหลังส่งมอบ โดยมุ่งเน้นคุณภาพและผลลัพธ์ทางธุรกิจที่วัดผลได้จริง';
 alter table public.web_settings
   add column if not exists homepage_why_choose_us_title text not null default 'ทำไมต้อง SST INNOVATION Pro';
+alter table public.web_settings
+  add column if not exists homepage_popup_enabled boolean not null default false;
+alter table public.web_settings
+  add column if not exists homepage_popup_image_url text null;
+alter table public.web_settings
+  add column if not exists homepage_popup_alt_text text not null default '';
+alter table public.web_settings
+  add column if not exists homepage_popup_target_url text not null default '';
+alter table public.web_settings
+  add column if not exists homepage_popup_open_in_new_tab boolean not null default false;
+alter table public.web_settings
+  add column if not exists homepage_popup_show_on_every_visit boolean not null default true;
+alter table public.web_settings
+  add column if not exists homepage_popup_delay_ms integer not null default 0;
+alter table public.web_settings
+  add column if not exists homepage_popup_backdrop_opacity_percent integer not null default 72;
 alter table public.web_settings
   add column if not exists homepage_why_choose_us_subtitle text not null default 'ออกแบบเพื่อธุรกิจที่ต้องการความแตกต่างและความน่าเชื่อถือ';
 alter table public.web_settings

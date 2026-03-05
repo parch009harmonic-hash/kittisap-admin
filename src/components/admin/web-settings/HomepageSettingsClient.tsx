@@ -42,6 +42,7 @@ export default function HomepageSettingsClient({
             middleBannerMenu: "แถบแบนเนอร์กลางเว็บ",
             newsCardsMenu: "กิจกรรมและข่าวสาร",
             brandGuaranteeMenu: "แบรนด์การันตี",
+            popupMenu: "Popup หน้าแรก",
             pageBackgroundColor: "ส่วนที่ 1: พื้นหลังเว็บ",
             footerBottomBackgroundColor: "ส่วนที่ 2: พื้นหลังล่างสุด",
             textColor: "สีตัวหนังสือทั่วไป",
@@ -76,6 +77,7 @@ export default function HomepageSettingsClient({
             middleBannerMenu: "Middle Website Banner",
             newsCardsMenu: "Activities & News",
             brandGuaranteeMenu: "Brand Guarantee",
+            popupMenu: "Homepage Popup",
             pageBackgroundColor: "Section 1: Website Background",
             footerBottomBackgroundColor: "Section 2: Bottom Footer Background",
             textColor: "Global Text Color",
@@ -206,6 +208,12 @@ export default function HomepageSettingsClient({
             className="mt-2 block rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
           >
             {text.brandGuaranteeMenu}
+          </Link>
+          <Link
+            href="/admin/web-settings/homepage-popup"
+            className="mt-2 block rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            {text.popupMenu}
           </Link>
         </aside>
 

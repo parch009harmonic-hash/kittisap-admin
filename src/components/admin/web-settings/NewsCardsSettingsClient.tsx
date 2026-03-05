@@ -69,6 +69,7 @@ export default function NewsCardsSettingsClient({
             middleBannerMenu: "แถบแบนเนอร์กลางเว็บ",
             newsCardsMenu: "กิจกรรมและข่าวสาร",
             brandGuaranteeMenu: "แบรนด์การันตี",
+            popupMenu: "Popup หน้าแรก",
             sectionGapPx: "ระยะห่างก่อนส่วนกิจกรรม (px)",
             mediaType: "ชนิดสื่อ",
             image: "รูปภาพ",
@@ -102,6 +103,7 @@ export default function NewsCardsSettingsClient({
             middleBannerMenu: "Middle Website Banner",
             newsCardsMenu: "Activities & News",
             brandGuaranteeMenu: "Brand Guarantee",
+            popupMenu: "Homepage Popup",
             sectionGapPx: "Gap before news section (px)",
             mediaType: "Media Type",
             image: "Image",
@@ -228,6 +230,7 @@ export default function NewsCardsSettingsClient({
           <Link href="/admin/web-settings/middle-banner" className="mt-2 block rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">{text.middleBannerMenu}</Link>
           <div className="mt-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-700">{text.newsCardsMenu}</div>
           <Link href="/admin/web-settings/brand-guarantee" className="mt-2 block rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">{text.brandGuaranteeMenu}</Link>
+          <Link href="/admin/web-settings/homepage-popup" className="mt-2 block rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">{text.popupMenu}</Link>
         </aside>
 
         <form onSubmit={handleSubmit} className="space-y-4">

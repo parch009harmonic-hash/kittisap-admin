@@ -50,6 +50,7 @@ export default function HomepageImageBoxesClient({
             middleBannerMenu: "แถบแบนเนอร์กลางเว็บ",
             newsCardsMenu: "กิจกรรมและข่าวสาร",
             brandGuaranteeMenu: "แบรนด์การันตี",
+            popupMenu: "Popup หน้าแรก",
             sectionGapPx: "ระยะห่างหลังเนื้อหา (px)",
             imageUrl: "ลิงก์ภาพ",
             altText: "คำบรรยายภาพ (alt)",
@@ -76,6 +77,7 @@ export default function HomepageImageBoxesClient({
             middleBannerMenu: "Middle Website Banner",
             newsCardsMenu: "Activities & News",
             brandGuaranteeMenu: "Brand Guarantee",
+            popupMenu: "Homepage Popup",
             sectionGapPx: "Gap after Intro (px)",
             imageUrl: "Image URL",
             altText: "Image Alt Text",
@@ -206,6 +208,7 @@ export default function HomepageImageBoxesClient({
           <Link href="/admin/web-settings/middle-banner" className="mt-2 block rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">{text.middleBannerMenu}</Link>
           <Link href="/admin/web-settings/news-cards" className="mt-2 block rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">{text.newsCardsMenu}</Link>
           <Link href="/admin/web-settings/brand-guarantee" className="mt-2 block rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">{text.brandGuaranteeMenu}</Link>
+          <Link href="/admin/web-settings/homepage-popup" className="mt-2 block rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">{text.popupMenu}</Link>
         </aside>
 
         <form onSubmit={handleSubmit} className="space-y-4">

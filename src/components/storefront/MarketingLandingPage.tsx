@@ -8,6 +8,7 @@ import {
   getWebStorefrontSettings,
   getWebHomepageAppearanceSettings,
   getWebHomepageImageStripSettings,
+  getWebHomepagePopupSettings,
   getWebMiddleBannerSettings,
   getWebBrandGuaranteeSettings,
   getWebNewsCardsSettings,
@@ -19,6 +20,7 @@ import {
   getDefaultWebStorefrontSettings,
   getDefaultWebHomepageAppearanceSettings,
   getDefaultWebHomepageImageStripSettings,
+  getDefaultWebHomepagePopupSettings,
   getDefaultWebMiddleBannerSettings,
   getDefaultWebBrandGuaranteeSettings,
   getDefaultWebNewsCardsSettings,
@@ -30,6 +32,7 @@ import { FeaturedProductsLiveSection } from "./FeaturedProductsLiveSection";
 import { MiddleBannerStrip } from "./MiddleBannerStrip";
 import { MarketingTopNav } from "./MarketingTopNav";
 import { NewsletterSubscribeSection } from "./NewsletterSubscribeSection";
+import { HomepagePromoPopup } from "./HomepagePromoPopup";
 import { StorefrontRealtimeRefresh } from "./StorefrontRealtimeRefresh";
 
 type MarketingLandingPageProps = {
@@ -320,6 +323,7 @@ export async function MarketingLandingPage({
   let storefrontSettings = getDefaultWebStorefrontSettings();
   let homepageAppearance = getDefaultWebHomepageAppearanceSettings();
   let homepageImageStrip = getDefaultWebHomepageImageStripSettings();
+  let homepagePopupSettings = getDefaultWebHomepagePopupSettings();
   let middleBannerSettings = getDefaultWebMiddleBannerSettings();
   let brandGuaranteeSettings = getDefaultWebBrandGuaranteeSettings();
   let newsCardsSettings = getDefaultWebNewsCardsSettings();
@@ -329,6 +333,7 @@ export async function MarketingLandingPage({
     getWebStorefrontSettings(),
     getWebHomepageAppearanceSettings(),
     getWebHomepageImageStripSettings(),
+    getWebHomepagePopupSettings(),
     getWebWhyChooseUsSettings(),
     getWebMiddleBannerSettings(),
     getWebBrandGuaranteeSettings(),
@@ -339,6 +344,7 @@ export async function MarketingLandingPage({
     storefrontResult,
     homepageAppearanceResult,
     homepageImageStripResult,
+    homepagePopupResult,
     whyChooseUsResult,
     middleBannerResult,
     brandGuaranteeResult,
@@ -348,6 +354,7 @@ export async function MarketingLandingPage({
   if (storefrontResult.status === "fulfilled") storefrontSettings = storefrontResult.value;
   if (homepageAppearanceResult.status === "fulfilled") homepageAppearance = homepageAppearanceResult.value;
   if (homepageImageStripResult.status === "fulfilled") homepageImageStrip = homepageImageStripResult.value;
+  if (homepagePopupResult.status === "fulfilled") homepagePopupSettings = homepagePopupResult.value;
   if (whyChooseUsResult.status === "fulfilled") whyChooseUsSettings = whyChooseUsResult.value;
   if (middleBannerResult.status === "fulfilled") middleBannerSettings = middleBannerResult.value;
   if (brandGuaranteeResult.status === "fulfilled") brandGuaranteeSettings = brandGuaranteeResult.value;
@@ -445,6 +452,7 @@ export async function MarketingLandingPage({
         }}
       >
         <StorefrontRealtimeRefresh />
+        <HomepagePromoPopup locale={locale} settings={homepagePopupSettings} />
         {showTopNav ? (
           <MarketingTopNav
             locale={locale}
