@@ -113,62 +113,65 @@ export default async function AdminProductsPage({ searchParams }: ProductsPagePr
 
       <section className="sticky top-0 z-30 -mx-1 bg-[#edf4fb]/95 px-1 pb-3 pt-1 backdrop-blur supports-[backdrop-filter]:bg-[#edf4fb]/85">
         <div className="space-y-3 rounded-2xl border border-slate-200/80 bg-white/90 p-3 shadow-sm">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h1 className="font-heading text-2xl text-slate-900 md:text-3xl">{t.title}</h1>
-              <p className="mt-0.5 text-xs text-slate-600 md:text-sm">{t.subtitle}</p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <ProductBulkImportButton locale={locale} />
-              <Link
-                href="/admin/products/new"
-                className="product-page-add-btn btn-primary inline-flex h-10 items-center justify-center gap-2 rounded-full px-4 text-sm font-semibold text-white md:px-5"
-              >
-                {t.addProduct}
-              </Link>
-            </div>
-          </div>
+          <form className="product-page-filter space-y-3 rounded-xl border border-slate-200/80 bg-white p-3">
+            <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(160px,1fr)_minmax(360px,620px)_auto] xl:items-start">
+              <div>
+                <h1 className="font-heading text-2xl text-slate-900 md:text-3xl">{t.title}</h1>
+                <p className="mt-0.5 text-xs text-slate-600 md:text-sm">{t.subtitle}</p>
+              </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="product-page-summary flex flex-wrap gap-2 text-xs">
-              <span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 font-semibold text-blue-700">
-                {result.total} {t.totalItems}
-              </span>
-              <span className="rounded-full border border-slate-200 bg-white px-3 py-1 font-semibold text-slate-600">
-                {t.page} {result.page}/{result.totalPages}
-              </span>
-            </div>
-          </div>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(220px,1fr)_220px_auto] sm:items-center">
+                <input
+                  type="search"
+                  name="q"
+                  defaultValue={q ?? ""}
+                  placeholder={t.searchPlaceholder}
+                  className="input-base h-10"
+                />
+                <select name="status" defaultValue={status ?? ""} className="input-base h-10">
+                  <option value="">{t.allStatus}</option>
+                  <option value="active">{t.active}</option>
+                  <option value="inactive">{t.inactive}</option>
+                </select>
+                <button
+                  type="submit"
+                  className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-900 transition hover:bg-slate-50"
+                >
+                  {t.filter}
+                </button>
+              </div>
 
-          <form className="product-page-filter grid grid-cols-1 gap-3 rounded-xl border border-slate-200/80 bg-white p-3 md:grid-cols-[1fr_220px_auto]">
-            <input
-              type="search"
-              name="q"
-              defaultValue={q ?? ""}
-              placeholder={t.searchPlaceholder}
-              className="input-base"
-            />
-            <select name="status" defaultValue={status ?? ""} className="input-base">
-              <option value="">{t.allStatus}</option>
-              <option value="active">{t.active}</option>
-              <option value="inactive">{t.inactive}</option>
-            </select>
-            <label className="md:col-span-2 inline-flex items-center gap-2 text-sm font-medium text-slate-700">
-              <input
-                type="checkbox"
-                name="featured"
-                value="1"
-                defaultChecked={featuredOnly}
-                className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-              />
-              <span>{t.featuredOnly}</span>
-            </label>
-            <button
-              type="submit"
-              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-900 transition hover:bg-slate-50"
-            >
-              {t.filter}
-            </button>
+              <div className="flex flex-wrap items-center justify-start gap-2 xl:justify-end">
+                <ProductBulkImportButton locale={locale} />
+                <Link
+                  href="/admin/products/new"
+                  className="product-page-add-btn btn-primary inline-flex h-10 items-center justify-center gap-2 rounded-full px-4 text-sm font-semibold text-white md:px-5"
+                >
+                  {t.addProduct}
+                </Link>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="product-page-summary flex flex-wrap gap-2 text-xs">
+                <span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 font-semibold text-blue-700">
+                  {result.total} {t.totalItems}
+                </span>
+                <span className="rounded-full border border-slate-200 bg-white px-3 py-1 font-semibold text-slate-600">
+                  {t.page} {result.page}/{result.totalPages}
+                </span>
+              </div>
+              <label className="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
+                <input
+                  type="checkbox"
+                  name="featured"
+                  value="1"
+                  defaultChecked={featuredOnly}
+                  className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span>{t.featuredOnly}</span>
+              </label>
+            </div>
           </form>
 
           <nav className="flex items-center gap-2 overflow-x-auto pb-1 md:hidden">
