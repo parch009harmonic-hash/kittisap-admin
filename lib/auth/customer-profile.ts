@@ -6,6 +6,7 @@ import { getSupabaseServerClient } from "../supabase/server";
 
 export type CustomerProfilePayload = {
   id: string;
+  email: string;
   full_name: string;
   phone: string;
   address?: string;
@@ -70,12 +71,14 @@ function guessAddress(user: User) {
 }
 
 export function toCustomerProfilePayload(user: User, input?: { fullName?: string; phone?: string; address?: string }): CustomerProfilePayload {
+  const email = asString(user.email).toLowerCase();
   const fullName = asString(input?.fullName) || guessFullName(user);
   const phone = asString(input?.phone) || guessPhone(user);
   const address = asString(input?.address) || guessAddress(user);
 
   return {
     id: user.id,
+    email,
     full_name: fullName,
     phone,
     address,
@@ -97,7 +100,7 @@ export async function upsertCustomerProfileForSessionUser(input?: { fullName?: s
       throw new Error(upsertAttempt.error.message);
     }
 
-    // Fallback for environments where `address` column is not deployed yet.
+    // Fallback for environments where optional columns are not deployed yet.
     const fallbackPayload = { id: payload.id, full_name: payload.full_name, phone: payload.phone };
     const fallbackAttempt = await supabase.from("customer_profiles").upsert(fallbackPayload, { onConflict: "id" });
     if (fallbackAttempt.error) {

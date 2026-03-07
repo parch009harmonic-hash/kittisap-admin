@@ -185,6 +185,7 @@ export async function GET(request: NextRequest) {
       .upsert(
         {
           id: user.id,
+          email: asString(user.email).toLowerCase(),
           full_name: guessFullName(user),
           phone: guessPhone(user),
         },

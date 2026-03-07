@@ -65,6 +65,19 @@ function text(mode: Mode, locale: AppLocale) {
       accountRecovered: isThai ? "กู้คืนบัญชีสำเร็จแล้ว สามารถใช้งานต่อได้ทันที" : isLao ? "ກູ້ຄືນບັນຊີສຳເລັດແລ້ວ" : "Account recovered successfully.",
       unauthorized: isThai ? "อีเมลหรือรหัสผ่านไม่ถูกต้อง" : isLao ? "ອີເມວ ຫຼື ລະຫັດຜ່ານບໍ່ຖືກຕ້ອງ" : "Invalid email or password.",
       networkUnstable: isThai ? "เครือข่ายไม่เสถียร กรุณาลองใหม่" : isLao ? "ເຄືອຂ່າຍບໍ່ສະຖຽນ ກະລຸນາລອງໃໝ່" : "Network unstable. Please try again.",
+      emailRateLimit: isThai ? "ส่งอีเมลบ่อยเกินไป กรุณารอสักครู่ หรือกู้คืนด้วยการสแกนหน้า" : isLao ? "ສົ່ງອີເມວຖີ່ເກີນໄປ ກະລຸນາລໍຖ້າ ຫຼື ກູ້ຄືນດ້ວຍການສະແກນໃບໜ້າ" : "Email rate limit exceeded. Please wait or recover with face scan.",
+      recoverByFaceAction: isThai ? "กู้คืนด้วยสแกนหน้า" : isLao ? "ກູ້ຄືນດ້ວຍສະແກນໃບໜ້າ" : "Recover by Face Scan",
+      recoverByFaceTitle: isThai ? "กู้คืนบัญชีด้วยสแกนหน้า" : isLao ? "ກູ້ຄືນບັນຊີດ້ວຍສະແກນໃບໜ້າ" : "Recover Account by Face Scan",
+      recoverByFacePassword: isThai ? "รหัสผ่านยืนยัน" : isLao ? "ລະຫັດຜ່ານຢືນຢັນ" : "Confirm password",
+      recoverByFaceScan: isThai ? "สแกนใบหน้า" : isLao ? "ສະແກນໃບໜ້າ" : "Scan Face",
+      recoverByFaceScanning: isThai ? "กำลังสแกน..." : isLao ? "ກຳລັງສະແກນ..." : "Scanning...",
+      recoverByFaceScanned: isThai ? "ยืนยันใบหน้าสำเร็จ" : isLao ? "ຢືນຢັນໃບໜ້າສຳເລັດ" : "Face scan verified.",
+      recoverByFaceNeedScan: isThai ? "กรุณาสแกนใบหน้าก่อนยืนยันกู้คืน" : isLao ? "ກະລຸນາສະແກນໃບໜ້າກ່ອນຢືນຢັນກູ້ຄືນ" : "Please scan face before recovery.",
+      recoverByFaceConfirm: isThai ? "ยืนยันกู้คืนบัญชี" : isLao ? "ຢືນຢັນກູ້ຄືນບັນຊີ" : "Confirm recovery",
+      recoverByFaceCancel: isThai ? "ยกเลิก" : isLao ? "ຍົກເລີກ" : "Cancel",
+      recoverByFaceWorking: isThai ? "กำลังกู้คืน..." : isLao ? "ກຳລັງກູ້ຄືນ..." : "Recovering...",
+      recoverByFaceNoCamera: isThai ? "อุปกรณ์นี้ไม่รองรับกล้อง" : isLao ? "ອຸປະກອນນີ້ບໍ່ຮອງຮັບກ້ອງ" : "Camera is not available on this device.",
+      recoverByFaceFailed: isThai ? "สแกนใบหน้าไม่สำเร็จ กรุณาลองใหม่ในที่แสงพอ" : isLao ? "ສະແກນໃບໜ້າບໍ່ສຳເລັດ ກະລຸນາລອງໃໝ່" : "Face scan failed. Please try again.",
     };
   }
 
@@ -106,6 +119,19 @@ function text(mode: Mode, locale: AppLocale) {
     accountRecovered: isThai ? "กู้คืนบัญชีสำเร็จแล้ว สามารถใช้งานต่อได้ทันที" : isLao ? "ກູ້ຄືນບັນຊີສຳເລັດແລ້ວ" : "Account recovered successfully.",
     unauthorized: isThai ? "อีเมลหรือรหัสผ่านไม่ถูกต้อง" : isLao ? "ອີເມວ ຫຼື ລະຫັດຜ່ານບໍ່ຖືກຕ້ອງ" : "Invalid email or password.",
     networkUnstable: isThai ? "เครือข่ายไม่เสถียร กรุณาลองใหม่" : isLao ? "ເຄືອຂ່າຍບໍ່ສະຖຽນ ກະລຸນາລອງໃໝ່" : "Network unstable. Please try again.",
+    emailRateLimit: isThai ? "ส่งอีเมลบ่อยเกินไป กรุณารอสักครู่ หรือกู้คืนด้วยการสแกนหน้า" : isLao ? "ສົ່ງອີເມວຖີ່ເກີນໄປ ກະລຸນາລໍຖ້າ ຫຼື ກູ້ຄືນດ້ວຍການສະແກນໃບໜ້າ" : "Email rate limit exceeded. Please wait or recover with face scan.",
+    recoverByFaceAction: isThai ? "กู้คืนด้วยสแกนหน้า" : isLao ? "ກູ້ຄືນດ້ວຍສະແກນໃບໜ້າ" : "Recover by Face Scan",
+    recoverByFaceTitle: isThai ? "กู้คืนบัญชีด้วยสแกนหน้า" : isLao ? "ກູ້ຄືນບັນຊີດ້ວຍສະແກນໃບໜ້າ" : "Recover Account by Face Scan",
+    recoverByFacePassword: isThai ? "รหัสผ่านยืนยัน" : isLao ? "ລະຫັດຜ່ານຢືນຢັນ" : "Confirm password",
+    recoverByFaceScan: isThai ? "สแกนใบหน้า" : isLao ? "ສະແກນໃບໜ້າ" : "Scan Face",
+    recoverByFaceScanning: isThai ? "กำลังสแกน..." : isLao ? "ກຳລັງສະແກນ..." : "Scanning...",
+    recoverByFaceScanned: isThai ? "ยืนยันใบหน้าสำเร็จ" : isLao ? "ຢືນຢັນໃບໜ້າສຳເລັດ" : "Face scan verified.",
+    recoverByFaceNeedScan: isThai ? "กรุณาสแกนใบหน้าก่อนยืนยันกู้คืน" : isLao ? "ກະລຸນາສະແກນໃບໜ້າກ່ອນຢືນຢັນກູ້ຄືນ" : "Please scan face before recovery.",
+    recoverByFaceConfirm: isThai ? "ยืนยันกู้คืนบัญชี" : isLao ? "ຢືນຢັນກູ້ຄືນບັນຊີ" : "Confirm recovery",
+    recoverByFaceCancel: isThai ? "ยกเลิก" : isLao ? "ຍົກເລີກ" : "Cancel",
+    recoverByFaceWorking: isThai ? "กำลังกู้คืน..." : isLao ? "ກຳລັງກູ້ຄືນ..." : "Recovering...",
+    recoverByFaceNoCamera: isThai ? "อุปกรณ์นี้ไม่รองรับกล้อง" : isLao ? "ອຸປະກອນນີ້ບໍ່ຮອງຮັບກ້ອງ" : "Camera is not available on this device.",
+    recoverByFaceFailed: isThai ? "สแกนใบหน้าไม่สำเร็จ กรุณาลองใหม่ในที่แสงพอ" : isLao ? "ສະແກນໃບໜ້າບໍ່ສຳເລັດ ກະລຸນາລອງໃໝ່" : "Face scan failed. Please try again.",
   };
 }
 
@@ -144,6 +170,10 @@ function mapAuthErrorMessage(message: string, locale: AppLocale, textCopy: Retur
     return textCopy.accountDeletePending;
   }
 
+  if (lower.includes("email rate limit exceeded") || lower.includes("rate limit")) {
+    return textCopy.emailRateLimit;
+  }
+
   if (locale === "th" && lower.includes("unable to resend confirmation email")) {
     return "ส่งอีเมลยืนยันไม่สำเร็จ กรุณาลองใหม่";
   }
@@ -153,6 +183,11 @@ function mapAuthErrorMessage(message: string, locale: AppLocale, textCopy: Retur
   }
 
   return message;
+}
+
+function isEmailRateLimitError(message: string) {
+  const lower = message.toLowerCase();
+  return lower.includes("email rate limit exceeded") || lower.includes("rate limit");
 }
 
 async function upsertProfile(input: { fullName?: string; phone?: string }) {
@@ -193,6 +228,13 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
   const [sendingRecoveryLink, setSendingRecoveryLink] = useState(false);
   const [pendingConfirmEmail, setPendingConfirmEmail] = useState<string | null>(null);
   const [pendingDeleteRecovery, setPendingDeleteRecovery] = useState(false);
+  const [emailRateLimited, setEmailRateLimited] = useState(false);
+  const [showFaceRecoveryModal, setShowFaceRecoveryModal] = useState(false);
+  const [recoverPassword, setRecoverPassword] = useState("");
+  const [faceScanPassed, setFaceScanPassed] = useState(false);
+  const [faceScanMethod, setFaceScanMethod] = useState("");
+  const [faceScanning, setFaceScanning] = useState(false);
+  const [recoveringByFace, setRecoveringByFace] = useState(false);
   const [showGooglePendingModal, setShowGooglePendingModal] = useState(false);
   const [googlePendingClosing, setGooglePendingClosing] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
@@ -326,6 +368,7 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
     setMessage(null);
     setPendingConfirmEmail(null);
     setPendingDeleteRecovery(false);
+    setEmailRateLimited(false);
 
     try {
       const supabase = getSupabaseBrowserClient();
@@ -354,7 +397,9 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
         }
 
         if (!data.session) {
-          setMessage("สมัครสำเร็จ กรุณาตรวจสอบอีเมลเพื่อยืนยันบัญชี แล้วกลับมาเข้าสู่ระบบ");
+          setMessage(locale === "th"
+            ? "สมัครสำเร็จ กรุณาตรวจสอบอีเมลเพื่อยืนยันบัญชี จากนั้นระบบจะพาไปทำ KYC สแกนใบหน้า"
+            : "Registration complete. Please verify your email, then continue to face KYC.");
           const normalizedEmail = email.trim();
           setPendingConfirmEmail(normalizedEmail);
           router.replace(`${verifyEmailPath}?email=${encodeURIComponent(normalizedEmail)}`);
@@ -369,6 +414,10 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
           } else if (signInError.message.toLowerCase().includes("account deletion is pending")) {
             setPendingDeleteRecovery(true);
             setError(t.accountDeletePending);
+          } else if (isEmailRateLimitError(signInError.message)) {
+            setPendingDeleteRecovery(true);
+            setEmailRateLimited(true);
+            setError(t.emailRateLimit);
           } else {
             setError(mapAuthErrorMessage(signInError.message, locale, t));
           }
@@ -446,6 +495,7 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
     setSendingRecoveryLink(true);
     setError(null);
     setMessage(null);
+    setEmailRateLimited(false);
 
     try {
       const supabase = getSupabaseBrowserClient();
@@ -464,6 +514,12 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
       });
 
       if (otpError) {
+        if (isEmailRateLimitError(otpError.message)) {
+          setPendingDeleteRecovery(true);
+          setEmailRateLimited(true);
+          setError(t.emailRateLimit);
+          return;
+        }
         setError(mapAuthErrorMessage(otpError.message, locale, t));
         return;
       }
@@ -474,6 +530,175 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
       setError(mapAuthErrorMessage(fallback, locale, t));
     } finally {
       setSendingRecoveryLink(false);
+    }
+  }
+
+  function openFaceRecoveryModal() {
+    setRecoverPassword(password);
+    setFaceScanPassed(false);
+    setFaceScanMethod("");
+    setShowFaceRecoveryModal(true);
+  }
+
+  function closeFaceRecoveryModal() {
+    if (recoveringByFace || faceScanning) {
+      return;
+    }
+    setShowFaceRecoveryModal(false);
+  }
+
+  async function handleFaceScan() {
+    if (faceScanning) {
+      return;
+    }
+    if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+      setError(t.recoverByFaceNoCamera);
+      return;
+    }
+
+    setFaceScanning(true);
+    setError(null);
+    let stream: MediaStream | null = null;
+
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: "user",
+          width: { ideal: 640 },
+          height: { ideal: 480 },
+        },
+        audio: false,
+      });
+
+      const video = document.createElement("video");
+      video.srcObject = stream;
+      video.muted = true;
+      video.playsInline = true;
+      await video.play();
+
+      await new Promise<void>((resolve) => {
+        if (video.readyState >= 2) {
+          resolve();
+          return;
+        }
+        video.onloadeddata = () => resolve();
+      });
+
+      const width = video.videoWidth || 640;
+      const height = video.videoHeight || 480;
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext("2d");
+      if (!context) {
+        throw new Error(t.recoverByFaceFailed);
+      }
+      context.drawImage(video, 0, 0, width, height);
+
+      let scanMethod = "camera";
+      let detected = true;
+
+      const windowWithFaceDetector = window as Window & {
+        FaceDetector?: new (options?: { fastMode?: boolean; maxDetectedFaces?: number }) => {
+          detect: (input: HTMLCanvasElement) => Promise<Array<unknown>>;
+        };
+      };
+      if (windowWithFaceDetector.FaceDetector) {
+        scanMethod = "camera+facedetector";
+        const detector = new windowWithFaceDetector.FaceDetector({ fastMode: true, maxDetectedFaces: 1 });
+        const faces = await detector.detect(canvas);
+        detected = Array.isArray(faces) && faces.length > 0;
+      }
+
+      if (!detected) {
+        throw new Error(t.recoverByFaceFailed);
+      }
+
+      setFaceScanPassed(true);
+      setFaceScanMethod(scanMethod);
+      setMessage(t.recoverByFaceScanned);
+    } catch (caught) {
+      setFaceScanPassed(false);
+      setFaceScanMethod("");
+      setError(caught instanceof Error ? caught.message : t.recoverByFaceFailed);
+    } finally {
+      if (stream) {
+        for (const track of stream.getTracks()) {
+          track.stop();
+        }
+      }
+      setFaceScanning(false);
+    }
+  }
+
+  async function handleRecoverByFace() {
+    const normalizedEmail = email.trim();
+    const normalizedPassword = recoverPassword.trim();
+    if (!normalizedEmail) {
+      setError(t.recoveryNeedEmail);
+      return;
+    }
+    if (!normalizedPassword) {
+      setError(t.unauthorized);
+      return;
+    }
+    if (!faceScanPassed) {
+      setError(t.recoverByFaceNeedScan);
+      return;
+    }
+
+    setRecoveringByFace(true);
+    setError(null);
+    setMessage(null);
+
+    try {
+      const response = await fetch("/api/customer/account-delete/recover-verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: normalizedEmail,
+          password: normalizedPassword,
+          faceScanPassed: true,
+          faceScanMethod: faceScanMethod || "camera",
+        }),
+      });
+
+      const payload = (await response.json().catch(() => null)) as { ok?: boolean; code?: string; error?: string } | null;
+      if (!response.ok || !payload?.ok) {
+        if (payload?.code === "DELETION_RECOVERY_EXPIRED") {
+          throw new Error(t.recoveryExpired);
+        }
+        if (payload?.code === "INVALID_PASSWORD") {
+          throw new Error(t.unauthorized);
+        }
+        if (payload?.code === "FACE_SCAN_REQUIRED") {
+          throw new Error(t.recoverByFaceNeedScan);
+        }
+        throw new Error(mapAuthErrorMessage(payload?.error ?? t.recoveryFailed, locale, t));
+      }
+
+      const supabase = getSupabaseBrowserClient();
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: normalizedEmail,
+        password: normalizedPassword,
+      });
+
+      if (signInError) {
+        setMessage(t.accountRecovered);
+        setShowFaceRecoveryModal(false);
+        return;
+      }
+
+      markCustomerSessionActive();
+      setMessage(t.accountRecovered);
+      setShowFaceRecoveryModal(false);
+      router.replace(accountPath);
+      router.refresh();
+    } catch (caught) {
+      const fallback = caught instanceof Error ? caught.message : t.recoveryFailed;
+      setError(mapAuthErrorMessage(fallback, locale, t));
+    } finally {
+      setRecoveringByFace(false);
     }
   }
 
@@ -542,15 +767,25 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
             {resendingConfirm ? "Sending..." : t.resendConfirm}
           </button>
         ) : null}
-        {pendingDeleteRecovery ? (
-          <button
-            type="button"
-            onClick={handleSendRecoveryLink}
-            disabled={sendingRecoveryLink || loading}
-            className="mt-3 inline-flex w-full items-center justify-center rounded-xl border border-sky-400/55 bg-sky-500/10 px-3 py-2 text-sm font-semibold text-sky-200 transition hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {sendingRecoveryLink ? t.recoveryLinkSending : t.recoveryLinkAction}
-          </button>
+        {pendingDeleteRecovery || emailRateLimited ? (
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={handleSendRecoveryLink}
+              disabled={sendingRecoveryLink || loading}
+              className="inline-flex w-full items-center justify-center rounded-xl border border-sky-400/55 bg-sky-500/10 px-3 py-2 text-sm font-semibold text-sky-200 transition hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {sendingRecoveryLink ? t.recoveryLinkSending : t.recoveryLinkAction}
+            </button>
+            <button
+              type="button"
+              onClick={openFaceRecoveryModal}
+              disabled={loading}
+              className="inline-flex w-full items-center justify-center rounded-xl border border-emerald-400/55 bg-emerald-500/10 px-3 py-2 text-sm font-semibold text-emerald-200 transition hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {t.recoverByFaceAction}
+            </button>
+          </div>
         ) : null}
         {message ? <p className="mt-4 rounded-xl border border-emerald-400/35 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">{message}</p> : null}
 
@@ -669,6 +904,72 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
         </div>
       ) : null}
 
+      {showFaceRecoveryModal ? (
+        <div
+          className="fixed inset-0 z-[130] flex items-center justify-center bg-black/65 px-4"
+          onClick={closeFaceRecoveryModal}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="w-full max-w-md rounded-2xl border border-emerald-400/40 bg-[radial-gradient(circle_at_top,_rgba(52,211,153,0.18)_0%,_rgba(8,20,18,0.94)_48%,_#070a09_100%)] p-5 text-emerald-50 shadow-[0_24px_80px_rgba(0,0,0,0.56)]"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h2 className="text-lg font-semibold text-emerald-200">{t.recoverByFaceTitle}</h2>
+            <p className="mt-2 text-sm text-emerald-100/85">{t.accountDeletePending}</p>
+            <div className="mt-4 space-y-3">
+              <label className="block">
+                <span className="mb-1.5 block text-sm font-medium text-emerald-100/90">{t.emailPlaceholder}</span>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  className="h-11 w-full rounded-xl border border-emerald-300/35 bg-black/35 px-3 text-sm text-emerald-50 outline-none transition focus:border-emerald-200 focus:ring-2 focus:ring-emerald-200/20"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1.5 block text-sm font-medium text-emerald-100/90">{t.recoverByFacePassword}</span>
+                <input
+                  type="password"
+                  value={recoverPassword}
+                  onChange={(event) => setRecoverPassword(event.target.value)}
+                  className="h-11 w-full rounded-xl border border-emerald-300/35 bg-black/35 px-3 text-sm text-emerald-50 outline-none transition focus:border-emerald-200 focus:ring-2 focus:ring-emerald-200/20"
+                />
+              </label>
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => void handleFaceScan()}
+                disabled={faceScanning || recoveringByFace}
+                className="inline-flex h-10 items-center justify-center rounded-lg border border-emerald-300/55 bg-emerald-500/20 px-4 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-500/30 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {faceScanning ? t.recoverByFaceScanning : t.recoverByFaceScan}
+              </button>
+              {faceScanPassed ? <span className="text-sm font-semibold text-emerald-200">{t.recoverByFaceScanned}</span> : null}
+            </div>
+            <div className="mt-5 flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                onClick={closeFaceRecoveryModal}
+                disabled={recoveringByFace || faceScanning}
+                className="inline-flex h-10 items-center justify-center rounded-lg border border-slate-500/45 bg-slate-800/70 px-4 text-sm font-semibold text-slate-100 transition hover:bg-slate-700/80 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {t.recoverByFaceCancel}
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleRecoverByFace()}
+                disabled={recoveringByFace || !recoverPassword.trim() || !faceScanPassed}
+                className="inline-flex h-10 items-center justify-center rounded-lg border border-emerald-300/65 bg-gradient-to-r from-emerald-400 to-teal-300 px-4 text-sm font-semibold text-zinc-900 transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {recoveringByFace ? t.recoverByFaceWorking : t.recoverByFaceConfirm}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {showErrorModal && error ? (
         <div
           className={`fixed inset-0 z-[140] flex items-center justify-center px-4 transition-opacity duration-200 ${errorModalClosing ? "bg-black/0 opacity-0" : "bg-black/65 opacity-100"}`}
@@ -704,15 +1005,25 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
               </div>
               <p className="rounded-xl border border-rose-300/30 bg-rose-500/12 px-3 py-3 text-sm leading-relaxed text-rose-100">{error}</p>
               <div className="mt-4 flex flex-wrap justify-end gap-2">
-                {pendingDeleteRecovery ? (
-                  <button
-                    type="button"
-                    onClick={handleSendRecoveryLink}
-                    disabled={sendingRecoveryLink || loading}
-                    className="inline-flex h-10 items-center justify-center rounded-full border border-sky-300/65 bg-gradient-to-r from-sky-400 to-cyan-300 px-5 text-sm font-semibold text-zinc-900 transition hover:brightness-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {sendingRecoveryLink ? t.recoveryLinkSending : t.recoveryLinkAction}
-                  </button>
+                {pendingDeleteRecovery || emailRateLimited ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={handleSendRecoveryLink}
+                      disabled={sendingRecoveryLink || loading}
+                      className="inline-flex h-10 items-center justify-center rounded-full border border-sky-300/65 bg-gradient-to-r from-sky-400 to-cyan-300 px-5 text-sm font-semibold text-zinc-900 transition hover:brightness-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {sendingRecoveryLink ? t.recoveryLinkSending : t.recoveryLinkAction}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={openFaceRecoveryModal}
+                      disabled={loading}
+                      className="inline-flex h-10 items-center justify-center rounded-full border border-emerald-300/65 bg-gradient-to-r from-emerald-400 to-teal-300 px-5 text-sm font-semibold text-zinc-900 transition hover:brightness-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {t.recoverByFaceAction}
+                    </button>
+                  </>
                 ) : null}
                 <button
                   type="button"

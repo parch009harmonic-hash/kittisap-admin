@@ -181,6 +181,53 @@ async function getCustomerProfileDeletionRow(customerId: string) {
   };
 }
 
+async function resolveCustomerIdByEmail(email: string) {
+  const normalizedEmail = String(email ?? "").trim().toLowerCase();
+  if (!normalizedEmail) {
+    throw new CustomerAccountDeletionError(400, "EMAIL_REQUIRED", "Email is required");
+  }
+
+  const supabase = getSupabaseServiceRoleClient();
+  const byProfile = await supabase
+    .from("customer_profiles")
+    .select("id")
+    .eq("email", normalizedEmail)
+    .maybeSingle();
+
+  if (!byProfile.error && byProfile.data?.id) {
+    return String(byProfile.data.id);
+  }
+
+  const message = normalizeErrorMessage(byProfile.error);
+  const lower = message.toLowerCase();
+  if (byProfile.error && !(
+    lower.includes("column") && lower.includes("email")
+  )) {
+    throw new CustomerAccountDeletionError(500, "DELETION_EMAIL_LOOKUP_FAILED", message || "Failed to resolve user");
+  }
+
+  // Fallback for old rows without `customer_profiles.email` data.
+  let page = 1;
+  const perPage = 200;
+  while (page <= 5) {
+    const listed = await supabase.auth.admin.listUsers({ page, perPage });
+    if (listed.error) {
+      throw new CustomerAccountDeletionError(500, "DELETION_EMAIL_LOOKUP_FAILED", normalizeErrorMessage(listed.error) || "Failed to resolve user");
+    }
+    const users = listed.data?.users ?? [];
+    const found = users.find((item) => String(item.email ?? "").trim().toLowerCase() === normalizedEmail);
+    if (found?.id) {
+      return String(found.id);
+    }
+    if (users.length < perPage) {
+      break;
+    }
+    page += 1;
+  }
+
+  throw new CustomerAccountDeletionError(404, "PROFILE_NOT_FOUND", "Customer profile was not found");
+}
+
 async function ensureNoBlockingOrders(customerId: string) {
   const supabase = getSupabaseServiceRoleClient();
   const { count, error } = await supabase
@@ -418,6 +465,30 @@ export async function recoverCustomerAccountDeletionByEmailLink(input: {
     status: "active" as const,
     recoveredAt: new Date().toISOString(),
   };
+}
+
+export async function recoverCustomerAccountDeletionByCredential(input: {
+  email: string;
+  password: string;
+  faceScanPassed: boolean;
+  faceScanMethod?: string;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+}) {
+  const normalizedEmail = String(input.email ?? "").trim().toLowerCase();
+  if (!normalizedEmail) {
+    throw new CustomerAccountDeletionError(400, "EMAIL_REQUIRED", "Email is required");
+  }
+  const customerId = await resolveCustomerIdByEmail(normalizedEmail);
+  return recoverCustomerAccountDeletion({
+    customerId,
+    email: normalizedEmail,
+    password: input.password,
+    faceScanPassed: input.faceScanPassed,
+    faceScanMethod: input.faceScanMethod,
+    ipAddress: input.ipAddress,
+    userAgent: input.userAgent,
+  });
 }
 
 function isUserNotFoundError(message: string) {

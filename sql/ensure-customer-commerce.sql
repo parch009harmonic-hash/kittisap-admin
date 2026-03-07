@@ -5,6 +5,7 @@ create extension if not exists pgcrypto;
 
 create table if not exists public.customer_profiles (
   id uuid primary key references auth.users(id) on delete cascade,
+  email text not null default '',
   full_name text not null default '',
   phone text not null default '',
   address text not null default '',
@@ -21,6 +22,7 @@ create table if not exists public.customer_profiles (
 );
 
 alter table public.customer_profiles
+  add column if not exists email text not null default '',
   add column if not exists address text not null default '',
   add column if not exists avatar_url text not null default '',
   add column if not exists deletion_status text not null default 'active',
