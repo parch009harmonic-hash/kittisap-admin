@@ -3,8 +3,15 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { getPublicCart, PUBLIC_CART_UPDATED_EVENT } from "../../../lib/storefront/cart";
+import {
+  clearCustomerSessionActivity,
+  isCustomerSessionExpired,
+  markCustomerSessionActive,
+  shouldRefreshCustomerSessionActivity,
+} from "../../../lib/storefront/customer-session";
+import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 
 type AppLocale = "th" | "en" | "lo";
 
@@ -113,6 +120,8 @@ export function MarketingTopNav({ locale, useLocalePrefix, brand, nav, cta }: Ma
   const [isCustomerLoggedIn, setIsCustomerLoggedIn] = useState(false);
   const [customerInitial, setCustomerInitial] = useState("U");
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const [cartQty, setCartQty] = useState(0);
   const [brandOverride, setBrandOverride] = useState<string | null>(null);
   const [callLabelOverride, setCallLabelOverride] = useState<string | null>(null);
@@ -134,7 +143,19 @@ export function MarketingTopNav({ locale, useLocalePrefix, brand, nav, cta }: Ma
   const accountLabel = locale === "th" ? "บัญชีลูกค้า" : locale === "lo" ? "ບັນຊີລູກຄ້າ" : "Customer Account";
   const cartLabel = locale === "th" ? "ตะกร้า" : locale === "lo" ? "ກະຕ່າ" : "Cart";
   const checkoutLabel = locale === "th" ? "ชำระเงิน" : locale === "lo" ? "ຊຳລະເງິນ" : "Checkout";
+  const logoutLabel = locale === "th" ? "ออกจากระบบ" : locale === "lo" ? "ອອກຈາກລະບົບ" : "Log out";
+  const loggingOutLabel = locale === "th" ? "กำลังออกจากระบบ..." : locale === "lo" ? "ກຳລັງອອກຈາກລະບົບ..." : "Signing out...";
+  const logoutConfirmTitle = locale === "th" ? "ยืนยันออกจากระบบ" : locale === "lo" ? "ຢືນຢັນອອກຈາກລະບົບ" : "Confirm sign out";
+  const logoutConfirmDescription =
+    locale === "th"
+      ? "ต้องการออกจากระบบลูกค้าตอนนี้หรือไม่?"
+      : locale === "lo"
+        ? "ທ່ານຕ້ອງການອອກຈາກລະບົບລູກຄ້າຕອນນີ້ບໍ?"
+        : "Do you want to sign out of your customer account now?";
+  const logoutConfirmAction = locale === "th" ? "ยืนยัน" : locale === "lo" ? "ຢືນຢັນ" : "Confirm";
+  const logoutCancelAction = locale === "th" ? "ยกเลิก" : locale === "lo" ? "ຍົກເລີກ" : "Cancel";
   const quickMenuLabel = locale === "th" ? "เมนูลัดลูกค้า" : locale === "lo" ? "ເມນູລັດລູກຄ້າ" : "Customer shortcuts";
+  const languageLabel = locale === "th" ? "ภาษา" : locale === "lo" ? "ພາສາ" : "Language";
   const callPhone = callPhoneOverride ?? cta.phone ?? "+66843374982";
   const callHref = `tel:${callPhone}`;
   const callLabel = localizeStorefrontText(
@@ -147,6 +168,38 @@ export function MarketingTopNav({ locale, useLocalePrefix, brand, nav, cta }: Ma
     setLocaleMenuOpen(false);
     router.push(switchLocalePath(pathname, nextLocale));
   };
+
+  const handleCustomerLogout = useCallback(
+    async (reason: "manual" | "expired" = "manual") => {
+      if (loggingOut) return;
+
+      setLoggingOut(true);
+      setProfileMenuOpen(false);
+      setMobileOpen(false);
+
+      try {
+        await getSupabaseBrowserClient().auth.signOut();
+      } catch {
+        // ignore logout errors and continue with local cleanup
+      } finally {
+        clearCustomerSessionActivity();
+        setIsCustomerLoggedIn(false);
+        setCustomerInitial("U");
+        const target = reason === "expired" ? `${authPath}?error=session_expired` : authPath;
+        router.replace(target);
+        router.refresh();
+        setLoggingOut(false);
+      }
+    },
+    [authPath, loggingOut, router],
+  );
+
+  const requestCustomerLogout = useCallback(() => {
+    if (loggingOut) return;
+    setProfileMenuOpen(false);
+    setMobileOpen(false);
+    setLogoutConfirmOpen(true);
+  }, [loggingOut]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -165,6 +218,20 @@ export function MarketingTopNav({ locale, useLocalePrefix, brand, nav, cta }: Ma
   }, [mobileOpen]);
 
   useEffect(() => {
+    if (!mobileOpen || typeof document === "undefined") return;
+    const html = document.documentElement;
+    const body = document.body;
+    const prevHtmlOverflow = html.style.overflow;
+    const prevBodyOverflow = body.style.overflow;
+    html.style.overflow = "hidden";
+    body.style.overflow = "hidden";
+    return () => {
+      html.style.overflow = prevHtmlOverflow;
+      body.style.overflow = prevBodyOverflow;
+    };
+  }, [mobileOpen]);
+
+  useEffect(() => {
     const onClickOutside = (event: MouseEvent) => {
       if (!localeMenuRef.current?.contains(event.target as Node)) {
         setLocaleMenuOpen(false);
@@ -177,6 +244,7 @@ export function MarketingTopNav({ locale, useLocalePrefix, brand, nav, cta }: Ma
       if (event.key === "Escape") {
         setLocaleMenuOpen(false);
         setProfileMenuOpen(false);
+        setLogoutConfirmOpen(false);
       }
     };
     document.addEventListener("mousedown", onClickOutside);
@@ -240,6 +308,7 @@ export function MarketingTopNav({ locale, useLocalePrefix, brand, nav, cta }: Ma
         if (!response.ok) {
           setIsCustomerLoggedIn(false);
           setCustomerInitial("U");
+          clearCustomerSessionActivity();
           return;
         }
         const payload = (await response.json()) as {
@@ -254,6 +323,7 @@ export function MarketingTopNav({ locale, useLocalePrefix, brand, nav, cta }: Ma
         if (!active) return;
         setIsCustomerLoggedIn(false);
         setCustomerInitial("U");
+        clearCustomerSessionActivity();
       }
     }
 
@@ -262,6 +332,54 @@ export function MarketingTopNav({ locale, useLocalePrefix, brand, nav, cta }: Ma
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !isCustomerLoggedIn) {
+      return;
+    }
+
+    if (isCustomerSessionExpired()) {
+      void handleCustomerLogout("expired");
+      return;
+    }
+
+    markCustomerSessionActive();
+
+    let closed = false;
+    const activityEvents: Array<keyof WindowEventMap> = ["pointerdown", "keydown", "scroll", "touchstart"];
+
+    const onActivity = () => {
+      if (!closed && shouldRefreshCustomerSessionActivity()) {
+        markCustomerSessionActive();
+      }
+    };
+
+    const checkSessionAge = () => {
+      if (!closed && !loggingOut && isCustomerSessionExpired()) {
+        closed = true;
+        void handleCustomerLogout("expired");
+      }
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState !== "visible") {
+        return;
+      }
+      checkSessionAge();
+      onActivity();
+    };
+
+    activityEvents.forEach((eventName) => window.addEventListener(eventName, onActivity, { passive: true }));
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    const intervalId = window.setInterval(checkSessionAge, 60_000);
+
+    return () => {
+      closed = true;
+      window.clearInterval(intervalId);
+      activityEvents.forEach((eventName) => window.removeEventListener(eventName, onActivity));
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [handleCustomerLogout, isCustomerLoggedIn, loggingOut]);
 
   const topMenu = [
     { href: homePath, label: nav.home },
@@ -275,7 +393,8 @@ export function MarketingTopNav({ locale, useLocalePrefix, brand, nav, cta }: Ma
   }
 
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-200 bg-white shadow-sm">
+    <>
+      <header className="sticky top-0 z-[90] border-b border-slate-200 bg-white shadow-sm">
       <div className="mx-auto flex min-h-[64px] w-full max-w-7xl items-center justify-between gap-3 px-4 py-3">
         <Link href={homePath} className="flex items-center gap-3 text-sm font-extrabold tracking-wide text-slate-900" aria-label="Go to home">
           <span className="relative h-9 w-9 overflow-hidden rounded-xl shadow-[0_12px_28px_rgba(15,23,42,0.22)]">
@@ -388,6 +507,14 @@ export function MarketingTopNav({ locale, useLocalePrefix, brand, nav, cta }: Ma
                   >
                     {checkoutLabel}
                   </Link>
+                  <button
+                    type="button"
+                    onClick={requestCustomerLogout}
+                    disabled={loggingOut}
+                    className="block w-full border-t border-slate-200 px-3 py-2 text-left text-sm font-semibold text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {loggingOut ? loggingOutLabel : logoutLabel}
+                  </button>
                 </div>
               ) : null}
             </div>
@@ -416,11 +543,14 @@ export function MarketingTopNav({ locale, useLocalePrefix, brand, nav, cta }: Ma
 
       <div
         id="marketing-top-nav-mobile"
-        className={`overflow-hidden border-t border-slate-200 bg-white transition-all duration-200 md:hidden ${
-          mobileOpen ? "max-h-[420px] opacity-100" : "max-h-0 opacity-0"
+        className={`fixed inset-x-0 top-[65px] z-[95] border-t border-slate-200 bg-white shadow-xl transition-[opacity,transform] duration-200 md:hidden ${
+          mobileOpen ? "pointer-events-auto translate-y-0 opacity-100" : "pointer-events-none -translate-y-1 opacity-0"
         }`}
       >
-        <nav className="mx-auto flex w-full max-w-7xl flex-col gap-1 px-3 py-3" aria-label="Mobile top navigation">
+        <nav
+          className="mx-auto flex max-h-[calc(100dvh-65px)] w-full max-w-7xl flex-col gap-1 overflow-y-auto px-3 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3"
+          aria-label="Mobile top navigation"
+        >
           {topMenu.map((item) => {
             const normalizedHref = normalizePath(item.href);
             const active =
@@ -471,12 +601,20 @@ export function MarketingTopNav({ locale, useLocalePrefix, brand, nav, cta }: Ma
                 >
                   {checkoutLabel}
                 </Link>
+                <button
+                  type="button"
+                  onClick={requestCustomerLogout}
+                  disabled={loggingOut}
+                  className="app-press block w-full rounded-md border border-rose-300/40 bg-rose-500/10 px-3 py-2 text-left text-sm font-semibold text-rose-700 transition hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {loggingOut ? loggingOutLabel : logoutLabel}
+                </button>
               </div>
             </div>
           ) : null}
-          <div className="mt-2 border-t border-slate-200 pt-2">
-            <span className="sr-only">Select language</span>
-            <div id="mobile-locale-select" className="overflow-hidden rounded-lg border border-slate-200">
+          <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-2">
+            <p className="px-1 pb-2 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500">{languageLabel}</p>
+            <div id="mobile-locale-select" className="grid grid-cols-3 gap-2">
               {(["th", "en", "lo"] as AppLocale[]).map((localeKey) => {
                 const optionMeta = localeFlagMap[localeKey];
                 const active = localeKey === locale;
@@ -488,8 +626,10 @@ export function MarketingTopNav({ locale, useLocalePrefix, brand, nav, cta }: Ma
                       onLocaleChange(localeKey);
                       setMobileOpen(false);
                     }}
-                    className={`flex w-full items-center gap-2 px-3 py-2 text-sm font-semibold ${
-                      active ? "bg-blue-600 text-white" : "bg-white text-slate-700 hover:bg-slate-50"
+                    className={`flex w-full items-center justify-center gap-2 rounded-lg border px-2 py-2 text-sm font-semibold transition ${
+                      active
+                        ? "border-blue-600 bg-blue-600 text-white shadow-[0_8px_20px_rgba(37,99,235,0.35)]"
+                        : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-100"
                     }`}
                   >
                     <Image src={optionMeta.flagUrl} alt={optionMeta.alt} width={16} height={16} unoptimized className="h-4 w-4 rounded-full object-cover" />
@@ -501,6 +641,50 @@ export function MarketingTopNav({ locale, useLocalePrefix, brand, nav, cta }: Ma
           </div>
         </nav>
       </div>
-    </header>
+      </header>
+      {mobileOpen ? (
+        <button
+          type="button"
+          aria-label="Close menu backdrop"
+          onClick={() => setMobileOpen(false)}
+          className="fixed inset-x-0 bottom-0 top-[65px] z-[80] bg-slate-900/30 backdrop-blur-[1px] md:hidden"
+        />
+      ) : null}
+      {logoutConfirmOpen ? (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+          <button
+            type="button"
+            aria-label={logoutCancelAction}
+            onClick={() => setLogoutConfirmOpen(false)}
+            className="absolute inset-0 bg-slate-900/60 backdrop-blur-[2px]"
+          />
+          <div role="dialog" aria-modal="true" className="relative w-full max-w-sm rounded-2xl border border-amber-300/35 bg-[#0b0f18] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.55)]">
+            <h2 className="text-lg font-semibold text-amber-200">{logoutConfirmTitle}</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-200/85">{logoutConfirmDescription}</p>
+            <div className="mt-4 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setLogoutConfirmOpen(false)}
+                disabled={loggingOut}
+                className="inline-flex h-10 items-center justify-center rounded-lg border border-slate-500/40 bg-slate-800/70 px-4 text-sm font-semibold text-slate-100 transition hover:bg-slate-700/80 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {logoutCancelAction}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setLogoutConfirmOpen(false);
+                  void handleCustomerLogout("manual");
+                }}
+                disabled={loggingOut}
+                className="inline-flex h-10 items-center justify-center rounded-lg border border-rose-300/50 bg-rose-500/90 px-4 text-sm font-semibold text-white transition hover:bg-rose-400 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {loggingOut ? loggingOutLabel : logoutConfirmAction}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
   );
 }

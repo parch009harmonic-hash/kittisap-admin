@@ -300,6 +300,7 @@ export default function NewsCardsSettingsClient({
                           <Image src={item.imageUrl} alt="" fill className="object-cover" unoptimized />
                         </div>
                       ) : item.mediaType === "youtube" && youtubeId ? (
+                        // eslint-disable-next-line @next/next/no-img-element
                         <img src={`https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg`} alt="" className="h-auto w-full object-cover" />
                       ) : (
                         <div className="grid aspect-[16/8] place-items-center text-xs text-slate-500">{text.preview}</div>

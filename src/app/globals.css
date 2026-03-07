@@ -6,6 +6,10 @@
   --sapphire: #1d4ed8;
   --royal: #1e3a8a;
   --steel: #334155;
+  --font-inter: "Inter", "Segoe UI Variable Text", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-prompt: "Prompt", "Sarabun", "Noto Sans Thai", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-kanit: "Kanit", "Prompt", "Sarabun", "Noto Sans Thai", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-sans-lao: "Noto Sans Lao", "Lao UI", "Phetsarath OT", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
 
   --background: #f7f9fc;
   --foreground: #0f172a;

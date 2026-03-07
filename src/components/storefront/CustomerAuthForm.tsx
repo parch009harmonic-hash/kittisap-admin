@@ -6,6 +6,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import type { AppLocale } from "../../../lib/i18n/locale";
+import { markCustomerSessionActive } from "../../../lib/storefront/customer-session";
 import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 
 type Mode = "login" | "register";
@@ -50,6 +51,7 @@ function text(mode: Mode, locale: AppLocale) {
       resendConfirm: isThai ? "ส่งอีเมลยืนยันใหม่" : isLao ? "ສົ່ງອີເມວຢືນຢັນອີກຄັ້ງ" : "Resend confirmation email",
       resendConfirmSuccess: isThai ? "ส่งอีเมลยืนยันใหม่แล้ว กรุณาตรวจสอบกล่องจดหมาย" : isLao ? "ສົ່ງອີເມວຢືນຢັນແລ້ວ ກະລຸນາກວດກ່ອງຂໍ້ຄວາມ" : "Confirmation email sent. Please check your inbox.",
       resendConfirmNeedEmail: isThai ? "กรุณากรอกอีเมลก่อนส่งอีเมลยืนยัน" : isLao ? "ກະລຸນາກອກອີເມວກ່ອນສົ່ງ" : "Please enter your email first.",
+      sessionExpired: isThai ? "ไม่มีการใช้งานเกิน 24 ชั่วโมง ระบบออกจากระบบอัตโนมัติแล้ว กรุณาเข้าสู่ระบบใหม่" : isLao ? "ບໍ່ມີການໃຊ້ງານເກີນ 24 ຊົ່ວໂມງ ລະບົບໄດ້ອອກຈາກລະບົບອັດຕະໂນມັດ ກະລຸນາເຂົ້າໃໝ່" : "You were signed out after 24 hours of inactivity. Please sign in again.",
       errorPopupTitle: isThai ? "เกิดข้อผิดพลาดในการเข้าสู่ระบบ" : isLao ? "ເກີດຂໍ້ຜິດພາດໃນການເຂົ້າລະບົບ" : "Sign-in error",
       errorPopupClose: isThai ? "ปิด" : isLao ? "ປິດ" : "Close",
     };
@@ -80,6 +82,7 @@ function text(mode: Mode, locale: AppLocale) {
     resendConfirm: isThai ? "ส่งอีเมลยืนยันใหม่" : isLao ? "ສົ່ງອີເມວຢືນຢັນອີກຄັ້ງ" : "Resend confirmation email",
     resendConfirmSuccess: isThai ? "ส่งอีเมลยืนยันใหม่แล้ว กรุณาตรวจสอบกล่องจดหมาย" : isLao ? "ສົ່ງອີເມວຢືນຢັນແລ້ວ ກະລຸນາກວດກ່ອງຂໍ້ຄວາມ" : "Confirmation email sent. Please check your inbox.",
     resendConfirmNeedEmail: isThai ? "กรุณากรอกอีเมลก่อนส่งอีเมลยืนยัน" : isLao ? "ກະລຸນາກອກອີເມວກ່ອນສົ່ງ" : "Please enter your email first.",
+    sessionExpired: isThai ? "ไม่มีการใช้งานเกิน 24 ชั่วโมง ระบบออกจากระบบอัตโนมัติแล้ว กรุณาเข้าสู่ระบบใหม่" : isLao ? "ບໍ່ມີການໃຊ້ງານເກີນ 24 ຊົ່ວໂມງ ລະບົບໄດ້ອອກຈາກລະບົບອັດຕະໂນມັດ ກະລຸນາເຂົ້າໃໝ່" : "You were signed out after 24 hours of inactivity. Please sign in again.",
     errorPopupTitle: isThai ? "เกิดข้อผิดพลาดในการเข้าสู่ระบบ" : isLao ? "ເກີດຂໍ້ຜິດພາດໃນການເຂົ້າລະບົບ" : "Sign-in error",
     errorPopupClose: isThai ? "ปิด" : isLao ? "ປິດ" : "Close",
   };
@@ -110,6 +113,7 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
   const t = useMemo(() => text(mode, locale), [mode, locale]);
 
   const accountPath = withLocale(locale, "/account", useLocalePrefix);
+  const kycPath = withLocale(locale, "/kyc/start", useLocalePrefix);
   const switchPath = withLocale(locale, mode === "register" ? "/auth/login" : "/auth/register", useLocalePrefix);
   const verifyEmailPath = withLocale(locale, "/auth/verify-email", useLocalePrefix);
 
@@ -157,8 +161,12 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
     }
     if (errorCode === "oauth_code_missing") {
       setError("ไม่พบ OAuth code ใน callback");
+      return;
     }
-  }, [email]);
+    if (errorCode === "session_expired") {
+      setError(t.sessionExpired);
+    }
+  }, [email, t.sessionExpired]);
 
   useEffect(() => {
     return () => {
@@ -216,6 +224,19 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
     }, 220);
   }
 
+  async function resolveCustomerPostAuthPath() {
+    try {
+      const response = await fetch("/api/customer/kyc/session", { cache: "no-store" });
+      const payload = (await response.json().catch(() => null)) as { ok?: boolean; data?: { kycStatus?: string } } | null;
+      if (!response.ok || !payload?.ok) {
+        return accountPath;
+      }
+      return String(payload.data?.kycStatus ?? "").trim().toLowerCase() === "approved" ? accountPath : kycPath;
+    } catch {
+      return accountPath;
+    }
+  }
+
   async function handlePasswordAuth(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
@@ -270,8 +291,10 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
       }
 
       await upsertProfile({ fullName, phone });
+      markCustomerSessionActive();
       setMessage(t.success);
-      router.replace(accountPath);
+      const targetPath = await resolveCustomerPostAuthPath();
+      router.replace(targetPath);
       router.refresh();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Authentication failed");

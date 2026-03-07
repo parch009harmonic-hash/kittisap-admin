@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import type { AppLocale } from "../../../lib/i18n/locale";
 import {
@@ -435,6 +435,7 @@ export function CheckoutClient({
     address: "",
     phone: "",
   });
+  const createOrderRequestKeyRef = useRef<string | null>(null);
   const [shippingGuardOpen, setShippingGuardOpen] = useState(false);
   const [shippingGuardMounted, setShippingGuardMounted] = useState(false);
   const [shippingGuardVisible, setShippingGuardVisible] = useState(false);
@@ -466,6 +467,13 @@ export function CheckoutClient({
   const hasShippingInfo = fullName.trim().length > 0 && address.trim().length > 0 && phone.trim().length > 0;
   const canCreateOrder = !orderNo && selectedItems.length > 0 && hasShippingInfo;
   const canSelectItems = !orderNo;
+  const createOrderFingerprint = useMemo(() => {
+    const items = [...selectedItems]
+      .map((item) => `${item.productId}:${item.qty}`)
+      .sort()
+      .join("|");
+    return [items, fullName.trim(), address.trim(), phone.trim(), note.trim(), couponCode.trim()].join("||");
+  }, [address, couponCode, fullName, note, phone, selectedItems]);
   const allSelected = cartItems.length > 0 && selectedIds.length === cartItems.length;
   const missingShippingFields = useMemo(() => {
     const missing: string[] = [];
@@ -494,6 +502,11 @@ export function CheckoutClient({
     const timer = window.setTimeout(() => setToast(null), 2200);
     return () => window.clearTimeout(timer);
   }, [toast]);
+
+  useEffect(() => {
+    if (orderNo) return;
+    createOrderRequestKeyRef.current = null;
+  }, [createOrderFingerprint, orderNo]);
 
   useEffect(() => {
     if (hasShippingInfo && shippingGuardOpen) {
@@ -574,8 +587,8 @@ export function CheckoutClient({
           setPaymentMode("promptpay");
           setPromptpayUrl(loadedPromptpayLink);
         }
-        if (loadedPromptpayPhone && !bankAccountNo) {
-          setBankAccountNo(loadedPromptpayPhone);
+        if (loadedPromptpayPhone) {
+          setBankAccountNo((prev) => prev || loadedPromptpayPhone);
         }
         setFullName((prev) => prev || loadedFullName);
         setPhone((prev) => prev || loadedPhone);
@@ -613,6 +626,18 @@ export function CheckoutClient({
       setShippingGuardOpen(false);
       setError(null);
     }
+  }
+
+  function getCreateOrderRequestKey() {
+    if (createOrderRequestKeyRef.current) {
+      return createOrderRequestKeyRef.current;
+    }
+
+    const fallback = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const key =
+      typeof crypto !== "undefined" && typeof crypto.randomUUID === "function" ? crypto.randomUUID() : fallback;
+    createOrderRequestKeyRef.current = key;
+    return key;
   }
 
   async function onApplyCoupon(event: FormEvent<HTMLFormElement>) {
@@ -662,7 +687,10 @@ export function CheckoutClient({
 
       const response = await fetch("/api/public/orders/create", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-idempotency-key": getCreateOrderRequestKey(),
+        },
         body: JSON.stringify({
           items: selectedItems.map((item) => ({ product_id: item.productId, qty: item.qty })),
           customer: {
@@ -689,6 +717,7 @@ export function CheckoutClient({
       if (Number.isFinite(Number(payload.data.final_amount ?? 0)) && Number(payload.data.final_amount) > 0) {
         setOrderGrandTotal(Number(payload.data.final_amount));
       }
+      createOrderRequestKeyRef.current = null;
       setCreatedItems(selectedItems);
       setToast(text.successOrder);
 

@@ -555,7 +555,8 @@ export async function updateWebBannerSettingsApi(input: unknown) {
     .single();
 
   if (error && isMissingBannerThaiScaleColumn(error)) {
-    const { banner_title_font_scale_thai_percent: _ignored, ...fallbackPayload } = payload;
+    const { banner_title_font_scale_thai_percent, ...fallbackPayload } = payload;
+    void banner_title_font_scale_thai_percent;
     const retry = await supabase
       .from("web_settings")
       .upsert(fallbackPayload, { onConflict: "id" })

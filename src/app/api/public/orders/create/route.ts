@@ -15,7 +15,8 @@ function mapAuthStatus(message: string) {
 export async function POST(request: NextRequest) {
   try {
     const payload = await request.json();
-    const data = await createPublicOrder(payload);
+    const idempotencyKey = request.headers.get("x-idempotency-key");
+    const data = await createPublicOrder(payload, { idempotencyKey });
     return NextResponse.json({ ok: true, data }, { status: 201 });
   } catch (error) {
     if (error instanceof ZodError) {

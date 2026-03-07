@@ -72,6 +72,7 @@ export function ActivitiesNewsGrid({ items, placeholderTitle, placeholderMeta }:
               className="overflow-hidden rounded-2xl border border-slate-400/20 bg-slate-950/85 text-left shadow-[0_14px_50px_rgba(0,0,0,0.28)] transition hover:-translate-y-0.5 hover:border-amber-400/40"
             >
               <div className="relative aspect-[16/10] w-full bg-[linear-gradient(135deg,rgba(245,158,11,0.22),rgba(59,130,246,0.12))]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 {thumbnail ? <img src={thumbnail} alt="" className="h-full w-full object-cover" /> : null}
                 {item.mediaType === "youtube" ? (
                   <span className="absolute right-3 top-3 rounded-full border border-white/35 bg-black/55 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white">
@@ -104,6 +105,7 @@ export function ActivitiesNewsGrid({ items, placeholderTitle, placeholderMeta }:
                   className="h-full w-full"
                 />
               ) : active.imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
                 <img src={active.imageUrl} alt="" className="h-full w-full object-cover" />
               ) : null}
             </div>

@@ -3,8 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "dev:reset": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$ErrorActionPreference='SilentlyContinue'; Remove-Item -Recurse -Force .next\\dev; $pids = netstat -ano | Select-String ':3000' | ForEach-Object { ($_ -split '\\s+')[-1] } | Select-Object -Unique; foreach ($pid in $pids) { Stop-Process -Id $pid -Force }; exit 0\" && next dev",
+    "dev": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$ErrorActionPreference='SilentlyContinue'; $pids = @(netstat -ano | Select-String 'LISTENING' | Select-String ':3000\\s|:3003\\s' | ForEach-Object { [int](($_ -split '\\s+')[-1]) } | Sort-Object -Unique); foreach ($procId in $pids) { if ($procId -gt 0) { Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue } }; Start-Sleep -Milliseconds 500; exit 0\" && next dev --webpack -p 3000",
+    "dev:turbo": "next dev",
+    "dev:reset": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$ErrorActionPreference='SilentlyContinue'; $pids = @(netstat -ano | Select-String 'LISTENING' | Select-String ':3000\\s|:3003\\s' | ForEach-Object { [int](($_ -split '\\s+')[-1]) } | Sort-Object -Unique); foreach ($procId in $pids) { if ($procId -gt 0) { Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue } }; Start-Sleep -Milliseconds 800; Remove-Item -Recurse -Force .next; exit 0\" && next dev --webpack -p 3000",
     "build": "next build",
     "start": "next start",
     "start:bg": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$log='.next/start-3105.log'; New-Item -ItemType Directory -Force .next | Out-Null; $p=Start-Process -FilePath 'cmd.exe' -ArgumentList '/c npx next start -p 3105' -PassThru -WindowStyle Hidden -RedirectStandardOutput $log -RedirectStandardError $log; Set-Content .next/start-3105.pid $p.Id; Write-Output ('Started PID=' + $p.Id)\"",

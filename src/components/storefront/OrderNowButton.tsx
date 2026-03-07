@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { AppLocale } from "../../../lib/i18n/locale";
 
 type OrderNowButtonProps = {
@@ -62,6 +62,23 @@ async function loadProfile() {
 
 export function OrderNowButton({ productId, disabled = false, className = "", label, locale }: OrderNowButtonProps) {
   const [loading, setLoading] = useState(false);
+  const requestKeyRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    requestKeyRef.current = null;
+  }, [productId]);
+
+  function getRequestKey() {
+    if (requestKeyRef.current) {
+      return requestKeyRef.current;
+    }
+
+    const fallback = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const key =
+      typeof crypto !== "undefined" && typeof crypto.randomUUID === "function" ? crypto.randomUUID() : fallback;
+    requestKeyRef.current = key;
+    return key;
+  }
 
   const onClick = async () => {
     if (disabled || loading) {
@@ -93,7 +110,10 @@ export function OrderNowButton({ productId, disabled = false, className = "", la
 
       const response = await fetch("/api/public/orders/create", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-idempotency-key": getRequestKey(),
+        },
         body: JSON.stringify({
           items: [{ product_id: productId, qty: 1 }],
           customer: {

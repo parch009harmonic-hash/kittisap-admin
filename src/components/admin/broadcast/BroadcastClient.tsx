@@ -552,6 +552,7 @@ export default function BroadcastClient({ locale, initialSubscribers, bootstrapE
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">{text.preview}</p>
             <p className="mt-2 text-base font-bold text-slate-900">{headline}</p>
             <p className="mt-1 whitespace-pre-line text-sm text-slate-600">{message}</p>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             {imageUrl ? <img src={imageUrl} alt="Preview" className="mt-3 w-full rounded-lg border border-slate-200 object-cover" /> : null}
           </div>
 

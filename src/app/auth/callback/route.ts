@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/auth-helpers-nextjs";
 import type { User } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServiceRoleClient } from "../../../../lib/supabase/service";
+import { ensureCustomerKycProfile } from "../../../../lib/db/customer-kyc";
 
 function getSupabaseEnv() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -52,6 +53,15 @@ function normalizeLocale(raw: string | null): "th" | "en" | "lo" {
 function customerPath(locale: "th" | "en" | "lo", path: string) {
   if (locale === "th") return path;
   return `/${locale}${path}`;
+}
+
+function isKycSchemaMissingError(error: unknown) {
+  const message = error instanceof Error ? error.message.toLowerCase() : String(error ?? "").toLowerCase();
+  return message.includes("kyc") && message.includes("run sql/ensure-customer-kyc.sql");
+}
+
+function isCustomerKycEnforced() {
+  return (process.env.CUSTOMER_KYC_ENFORCE ?? "1").trim() !== "0";
 }
 
 function guessFullName(user: User) {
@@ -200,7 +210,25 @@ export async function GET(request: NextRequest) {
       break;
     }
 
-    const res = NextResponse.redirect(new URL(customerPath(locale, "/account"), request.url));
+    let nextCustomerPath = "/account";
+    if (isCustomerKycEnforced()) {
+      try {
+        const kycProfile = await ensureCustomerKycProfile(user.id);
+        if (kycProfile.kycStatus !== "approved") {
+          nextCustomerPath = "/kyc/start";
+        }
+      } catch (error) {
+        if (isTransientNetworkError(error)) {
+          const res = NextResponse.redirect(new URL(`${customerPath(locale, "/auth/login")}?error=network_unstable`, request.url));
+          return withCookies(cookieResponse, res);
+        }
+        if (!isKycSchemaMissingError(error)) {
+          console.error("[auth/callback] failed to resolve customer kyc profile", error);
+        }
+      }
+    }
+
+    const res = NextResponse.redirect(new URL(customerPath(locale, nextCustomerPath), request.url));
     return withCookies(cookieResponse, res);
   }
 

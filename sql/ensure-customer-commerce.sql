@@ -8,6 +8,12 @@ create table if not exists public.customer_profiles (
   full_name text not null default '',
   phone text not null default '',
   address text not null default '',
+  avatar_url text not null default '',
+  deletion_status text not null default 'active',
+  deletion_requested_at timestamptz,
+  deletion_scheduled_for timestamptz,
+  deletion_reason text,
+  recovered_at timestamptz,
   line_id text,
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
@@ -15,7 +21,47 @@ create table if not exists public.customer_profiles (
 );
 
 alter table public.customer_profiles
-  add column if not exists address text not null default '';
+  add column if not exists address text not null default '',
+  add column if not exists avatar_url text not null default '',
+  add column if not exists deletion_status text not null default 'active',
+  add column if not exists deletion_requested_at timestamptz,
+  add column if not exists deletion_scheduled_for timestamptz,
+  add column if not exists deletion_reason text,
+  add column if not exists recovered_at timestamptz;
+
+do $$
+begin
+  if exists (
+    select 1
+    from pg_constraint
+    where conname = 'customer_profiles_deletion_status_check'
+      and conrelid = 'public.customer_profiles'::regclass
+  ) then
+    alter table public.customer_profiles drop constraint customer_profiles_deletion_status_check;
+  end if;
+end $$;
+
+alter table public.customer_profiles
+  add constraint customer_profiles_deletion_status_check
+  check (deletion_status in ('active', 'pending_delete', 'purged'));
+
+create index if not exists customer_profiles_deletion_status_idx
+  on public.customer_profiles (deletion_status, deletion_scheduled_for);
+
+create table if not exists public.customer_account_deletion_logs (
+  id uuid primary key default gen_random_uuid(),
+  customer_id uuid not null,
+  action text not null,
+  reason text,
+  actor_user_id uuid,
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  constraint customer_account_deletion_logs_action_check
+    check (action in ('request', 'recover', 'finalize', 'blocked_pending_orders'))
+);
+
+create index if not exists customer_account_deletion_logs_customer_idx
+  on public.customer_account_deletion_logs (customer_id, created_at desc);
 
 create table if not exists public.payment_settings (
   id text primary key default 'default',
@@ -75,10 +121,14 @@ insert into storage.buckets (id, name, public)
 values ('payment-slips', 'payment-slips', false)
 on conflict (id) do nothing;
 
+insert into storage.buckets (id, name, public)
+values ('profile-avatars', 'profile-avatars', true)
+on conflict (id) do nothing;
+
 create table if not exists public.orders (
   id uuid primary key default gen_random_uuid(),
   order_no text not null unique,
-  customer_id uuid not null references public.customer_profiles(id) on delete restrict,
+  customer_id uuid references public.customer_profiles(id) on delete set null,
   status text not null default 'pending_payment',
   payment_status text not null default 'unpaid',
   payment_method text not null default 'promptpay_transfer',
@@ -188,7 +238,7 @@ create table if not exists public.payment_slips (
   id uuid primary key default gen_random_uuid(),
   order_id uuid not null references public.orders(id) on delete cascade,
   order_no text not null,
-  customer_id uuid not null references public.customer_profiles(id) on delete restrict,
+  customer_id uuid references public.customer_profiles(id) on delete set null,
   file_path text not null,
   file_url text,
   status text not null default 'pending_review',
@@ -203,6 +253,30 @@ create index if not exists payment_slips_order_id_idx
 
 create index if not exists payment_slips_customer_id_idx
   on public.payment_slips (customer_id, uploaded_at desc);
+
+alter table public.orders
+  drop constraint if exists orders_customer_id_fkey;
+
+alter table public.orders
+  alter column customer_id drop not null;
+
+alter table public.orders
+  add constraint orders_customer_id_fkey
+  foreign key (customer_id)
+  references public.customer_profiles(id)
+  on delete set null;
+
+alter table public.payment_slips
+  drop constraint if exists payment_slips_customer_id_fkey;
+
+alter table public.payment_slips
+  alter column customer_id drop not null;
+
+alter table public.payment_slips
+  add constraint payment_slips_customer_id_fkey
+  foreign key (customer_id)
+  references public.customer_profiles(id)
+  on delete set null;
 
 alter table public.payment_slips enable row level security;
 

@@ -1,6 +1,10 @@
 {
   "crons": [
     {
+      "path": "/api/cron/customer-account-purge",
+      "schedule": "15 2 * * *"
+    },
+    {
       "path": "/api/cron/newsletter-purge",
       "schedule": "0 3 30 * *"
     }

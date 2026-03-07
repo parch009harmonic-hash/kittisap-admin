@@ -11,6 +11,23 @@ import { CustomerOrderCreateInput } from "../../../../../lib/types/commerce";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+const QUERY_RETRIES = 1;
+
+function isTransientNetworkError(error: unknown) {
+  const message = error instanceof Error ? error.message.toLowerCase() : String(error ?? "").toLowerCase();
+  return (
+    message.includes("timed out")
+    || message.includes("enotfound")
+    || message.includes("eai_again")
+    || message.includes("fetch failed")
+    || message.includes("connect timeout")
+    || message.includes("und_err_connect_timeout")
+  );
+}
+
+async function sleep(ms: number) {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 function unauthorized(message: string) {
   if (message === "Unauthorized") {
@@ -26,14 +43,34 @@ export async function GET() {
   try {
     const actor = await requireCustomerApi();
     const supabase = await getSupabaseServerClient();
-    const { data, error } = await supabase
-      .from("orders")
-      .select("id,order_no,status,payment_status,payment_method,sub_total,discount_total,shipping_fee,grand_total,created_at")
-      .eq("customer_id", actor.user.id)
-      .order("created_at", { ascending: false })
-      .limit(50);
+
+    let data: unknown[] = [];
+    let error: { message?: string } | null = null;
+
+    for (let attempt = 0; attempt <= QUERY_RETRIES; attempt += 1) {
+      const result = await supabase
+        .from("orders")
+        .select("id,order_no,status,payment_status,payment_method,sub_total,discount_total,shipping_fee,grand_total,created_at")
+        .eq("customer_id", actor.user.id)
+        .order("created_at", { ascending: false })
+        .limit(50);
+
+      data = result.data ?? [];
+      error = (result.error as { message?: string } | null) ?? null;
+
+      if (!error) {
+        break;
+      }
+      if (!isTransientNetworkError(error) || attempt >= QUERY_RETRIES) {
+        break;
+      }
+      await sleep(220 * (attempt + 1));
+    }
 
     if (error) {
+      if (isTransientNetworkError(error)) {
+        return NextResponse.json({ ok: false, code: "NETWORK_UNSTABLE", error: "Network unstable" }, { status: 503 });
+      }
       return NextResponse.json({ ok: false, code: "ORDERS_FETCH_FAILED", error: error.message }, { status: 500 });
     }
 

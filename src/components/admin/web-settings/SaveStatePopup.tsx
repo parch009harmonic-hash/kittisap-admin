@@ -1,5 +1,9 @@
 "use client";
 
+import { useEffect, useRef } from "react";
+
+import { emitStorefrontUpdateSignal } from "../../../../lib/storefront-sync";
+
 type SaveStatePopupProps = {
   isSaving: boolean;
   isSuccess: boolean;
@@ -13,6 +17,27 @@ export default function SaveStatePopup({
   savingText,
   successText,
 }: SaveStatePopupProps) {
+  const successSignalSentRef = useRef(false);
+
+  useEffect(() => {
+    if (isSaving) {
+      successSignalSentRef.current = false;
+      return;
+    }
+
+    if (!isSuccess) {
+      successSignalSentRef.current = false;
+      return;
+    }
+
+    if (successSignalSentRef.current) {
+      return;
+    }
+
+    successSignalSentRef.current = true;
+    emitStorefrontUpdateSignal();
+  }, [isSaving, isSuccess]);
+
   if (!isSaving && !isSuccess) {
     return null;
   }
@@ -29,7 +54,7 @@ export default function SaveStatePopup({
           {isSaving ? (
             <span className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-blue-300 border-t-blue-700" />
           ) : (
-            <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-600 text-xs font-bold text-white">✓</span>
+            <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-600 text-xs font-bold text-white">OK</span>
           )}
           <p className="text-sm font-semibold">{label}</p>
         </div>

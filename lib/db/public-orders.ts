@@ -53,6 +53,17 @@ type PreparedLineItem = {
   lineTotal: number;
 };
 
+type CreatePublicOrderResult = {
+  order_no: string;
+  promptpay_url: string;
+  payment_mode: "promptpay" | "bank_qr";
+  qr_image_url: string;
+  bank_name: string;
+  bank_account_no: string;
+  bank_account_name: string;
+  final_amount: number;
+};
+
 function uniq<T>(values: T[]) {
   return [...new Set(values)];
 }
@@ -159,169 +170,244 @@ async function getPromptpayConfig() {
   }
 }
 
-export async function createPublicOrder(input: unknown) {
+const CREATE_ORDER_IDEMPOTENCY_TTL_MS = 5 * 60 * 1000;
+const createOrderInFlightByKey = new Map<string, Promise<CreatePublicOrderResult>>();
+const createOrderCachedByKey = new Map<string, { expiresAt: number; result: CreatePublicOrderResult }>();
+
+function normalizeIdempotencyKey(value: string | null | undefined) {
+  const raw = String(value ?? "").trim();
+  if (!raw) {
+    return null;
+  }
+
+  const normalized = raw.replace(/[^a-zA-Z0-9:_-]/g, "");
+  if (normalized.length < 8 || normalized.length > 120) {
+    return null;
+  }
+  return normalized;
+}
+
+function pruneCreateOrderResultCache() {
+  const now = Date.now();
+  for (const [key, entry] of createOrderCachedByKey.entries()) {
+    if (entry.expiresAt <= now) {
+      createOrderCachedByKey.delete(key);
+    }
+  }
+}
+
+function readCachedCreateOrderResult(scopedKey: string) {
+  const cached = createOrderCachedByKey.get(scopedKey);
+  if (!cached) {
+    return null;
+  }
+  if (cached.expiresAt <= Date.now()) {
+    createOrderCachedByKey.delete(scopedKey);
+    return null;
+  }
+  return cached.result;
+}
+
+export async function createPublicOrder(input: unknown, options?: { idempotencyKey?: string | null }) {
   const actor = await requireCustomerApi();
   const payload = PublicOrderCreateSchema.parse(input);
   const customerId = actor.user.id;
-  const supabase = await getSupabaseServerClient();
-  const serviceSupabase = getSupabaseServiceRoleClient();
 
-  await ensureCustomerProfile(supabase, customerId, payload.customer.full_name, payload.customer.phone);
+  const normalizedIdempotencyKey = normalizeIdempotencyKey(options?.idempotencyKey);
+  const scopedIdempotencyKey = normalizedIdempotencyKey ? `${customerId}:${normalizedIdempotencyKey}` : null;
 
-  const productIds = uniq(payload.items.map((item) => item.product_id));
+  const executeCreate = async (): Promise<CreatePublicOrderResult> => {
+    const supabase = await getSupabaseServerClient();
+    const serviceSupabase = getSupabaseServiceRoleClient();
 
-  const { data: productRows, error: productsError } = await serviceSupabase
-    .from("products")
-    .select("id,sku,title_th,price,stock,status")
-    .in("id", productIds);
+    await ensureCustomerProfile(supabase, customerId, payload.customer.full_name, payload.customer.phone);
 
-  if (productsError) {
-    throw new PublicOrderError(500, "PRODUCTS_FETCH_FAILED", productsError.message);
+    const productIds = uniq(payload.items.map((item) => item.product_id));
+
+    const { data: productRows, error: productsError } = await serviceSupabase
+      .from("products")
+      .select("id,sku,title_th,price,stock,status")
+      .in("id", productIds);
+
+    if (productsError) {
+      throw new PublicOrderError(500, "PRODUCTS_FETCH_FAILED", productsError.message);
+    }
+
+    const products = new Map((productRows ?? []).map((row) => [String(row.id), row as Record<string, unknown>]));
+
+    for (const productId of productIds) {
+      if (!products.has(productId)) {
+        throw new PublicOrderError(404, "PRODUCT_NOT_FOUND", `Product not found: ${productId}`);
+      }
+    }
+
+    const lines: PreparedLineItem[] = payload.items.map((item) => {
+      const row = products.get(item.product_id)!;
+      const status = String(row.status ?? "inactive");
+      const unitPrice = Number(row.price ?? 0);
+      const stock = Number(row.stock ?? 0);
+
+      if (status !== "active") {
+        throw new PublicOrderError(400, "PRODUCT_INACTIVE", `Product inactive: ${item.product_id}`);
+      }
+      if (item.qty > stock) {
+        throw new PublicOrderError(409, "INSUFFICIENT_STOCK", `Insufficient stock: ${item.product_id}`);
+      }
+
+      const lineTotal = Number((unitPrice * item.qty).toFixed(2));
+      return {
+        productId: item.product_id,
+        skuSnapshot: String(row.sku ?? ""),
+        nameSnapshot: String(row.title_th ?? ""),
+        unitPrice,
+        qty: item.qty,
+        lineTotal,
+      };
+    });
+
+    const subTotal = Number(lines.reduce((sum, line) => sum + line.lineTotal, 0).toFixed(2));
+
+    let couponDiscount = 0;
+    let couponCode = "";
+    if (payload.coupon) {
+      const result = await validatePublicCoupon({ code: payload.coupon, subtotal: subTotal });
+      if (!result.valid) {
+        throw new PublicOrderError(400, "COUPON_INVALID", result.message);
+      }
+      couponDiscount = result.discountAmount;
+      couponCode = result.code;
+    }
+
+    const pointsDiscount = payload.use_points ? 0 : 0;
+    const discountTotal = Number((couponDiscount + pointsDiscount).toFixed(2));
+    const shippingFee = 0;
+    const finalAmount = Number(Math.max(0, subTotal - discountTotal + shippingFee).toFixed(2));
+
+    const promptpayConfig = await getPromptpayConfig();
+    const promptpayPhone = promptpayConfig.phone;
+    const base = `${promptpayConfig.baseUrl.replace(/\/+$/, "")}/`;
+    const promptpayUrl = `${base}${encodeURIComponent(promptpayPhone)}/${encodeURIComponent(formatPromptpayAmount(finalAmount))}`;
+    const isBankQrMode = promptpayConfig.activeQrMode === "bank_qr";
+    const paymentMethod = isBankQrMode ? "bank_transfer_qr" : "promptpay_transfer";
+    const paymentQrImageUrl = isBankQrMode
+      ? promptpayConfig.bankQrImageUrl
+      : `https://api.qrserver.com/v1/create-qr-code/?size=480x480&data=${encodeURIComponent(promptpayUrl)}`;
+
+    if (!isBankQrMode && !promptpayPhone) {
+      throw new PublicOrderError(500, "PAYMENT_CONFIG_MISSING", "PromptPay phone is not configured");
+    }
+    if (isBankQrMode && !promptpayConfig.bankQrImageUrl) {
+      throw new PublicOrderError(500, "PAYMENT_CONFIG_MISSING", "Bank QR image is not configured");
+    }
+
+    const reserved: Array<{ productId: string; qty: number }> = [];
+
+    try {
+      for (const line of lines) {
+        await reserveStock(supabase, line.productId, line.qty);
+        reserved.push({ productId: line.productId, qty: line.qty });
+      }
+
+      const orderNo = await generateUniqueOrderNo(supabase);
+      const { data: orderRow, error: orderError } = await supabase
+        .from("orders")
+        .insert({
+          order_no: orderNo,
+          customer_id: customerId,
+          status: "pending_payment",
+          payment_status: "unpaid",
+          payment_method: paymentMethod,
+          sub_total: subTotal,
+          discount_total: discountTotal,
+          shipping_fee: shippingFee,
+          grand_total: finalAmount,
+          coupon_code_snapshot: couponCode || null,
+          promptpay_phone_snapshot: promptpayPhone || "",
+          promptpay_link_snapshot: isBankQrMode ? promptpayConfig.bankQrImageUrl : promptpayUrl,
+          bank_name_snapshot: promptpayConfig.bankName,
+          bank_account_no_snapshot: promptpayConfig.bankAccountNo,
+          bank_account_name_snapshot: promptpayConfig.bankAccountName,
+          customer_name_snapshot: payload.customer.full_name,
+          customer_phone_snapshot: payload.customer.phone,
+          customer_email_snapshot: payload.customer.email ?? actor.user.email ?? null,
+          note: payload.customer.note ?? null,
+        })
+        .select("id,order_no")
+        .single();
+
+      if (orderError || !orderRow) {
+        throw new PublicOrderError(500, "ORDER_CREATE_FAILED", orderError?.message ?? "Unknown error");
+      }
+
+      const itemRows = lines.map((line) => ({
+        order_id: String(orderRow.id),
+        product_id: line.productId,
+        sku_snapshot: line.skuSnapshot,
+        name_snapshot: line.nameSnapshot,
+        unit_price_snapshot: line.unitPrice,
+        qty: line.qty,
+        line_total: line.lineTotal,
+      }));
+
+      const { error: itemError } = await supabase.from("order_items").insert(itemRows);
+      if (itemError) {
+        throw new PublicOrderError(500, "ORDER_ITEMS_CREATE_FAILED", itemError.message);
+      }
+
+      return {
+        order_no: String(orderRow.order_no),
+        promptpay_url: isBankQrMode ? "" : promptpayUrl,
+        payment_mode: isBankQrMode ? "bank_qr" : "promptpay",
+        qr_image_url: paymentQrImageUrl,
+        bank_name: promptpayConfig.bankName,
+        bank_account_no: promptpayConfig.bankAccountNo,
+        bank_account_name: promptpayConfig.bankAccountName,
+        final_amount: finalAmount,
+      };
+    } catch (error) {
+      for (const line of reserved) {
+        await releaseStock(supabase, line.productId, line.qty);
+      }
+
+      if (error instanceof PublicOrderError) {
+        throw error;
+      }
+
+      const message = error instanceof Error ? error.message : "Failed to create order";
+      throw new PublicOrderError(500, "ORDER_CREATE_FAILED", message);
+    }
+  };
+
+  if (!scopedIdempotencyKey) {
+    return executeCreate();
   }
 
-  const products = new Map((productRows ?? []).map((row) => [String(row.id), row as Record<string, unknown>]));
+  pruneCreateOrderResultCache();
 
-  for (const productId of productIds) {
-    if (!products.has(productId)) {
-      throw new PublicOrderError(404, "PRODUCT_NOT_FOUND", `Product not found: ${productId}`);
-    }
+  const cached = readCachedCreateOrderResult(scopedIdempotencyKey);
+  if (cached) {
+    return cached;
   }
 
-  const lines: PreparedLineItem[] = payload.items.map((item) => {
-    const row = products.get(item.product_id)!;
-    const status = String(row.status ?? "inactive");
-    const unitPrice = Number(row.price ?? 0);
-    const stock = Number(row.stock ?? 0);
-
-    if (status !== "active") {
-      throw new PublicOrderError(400, "PRODUCT_INACTIVE", `Product inactive: ${item.product_id}`);
-    }
-    if (item.qty > stock) {
-      throw new PublicOrderError(409, "INSUFFICIENT_STOCK", `Insufficient stock: ${item.product_id}`);
-    }
-
-    const lineTotal = Number((unitPrice * item.qty).toFixed(2));
-    return {
-      productId: item.product_id,
-      skuSnapshot: String(row.sku ?? ""),
-      nameSnapshot: String(row.title_th ?? ""),
-      unitPrice,
-      qty: item.qty,
-      lineTotal,
-    };
-  });
-
-  const subTotal = Number(lines.reduce((sum, line) => sum + line.lineTotal, 0).toFixed(2));
-
-  let couponDiscount = 0;
-  let couponCode = "";
-  if (payload.coupon) {
-    const result = await validatePublicCoupon({ code: payload.coupon, subtotal: subTotal });
-    if (!result.valid) {
-      throw new PublicOrderError(400, "COUPON_INVALID", result.message);
-    }
-    couponDiscount = result.discountAmount;
-    couponCode = result.code;
+  const inFlight = createOrderInFlightByKey.get(scopedIdempotencyKey);
+  if (inFlight) {
+    return inFlight;
   }
 
-  const pointsDiscount = payload.use_points ? 0 : 0;
-  const discountTotal = Number((couponDiscount + pointsDiscount).toFixed(2));
-  const shippingFee = 0;
-  const finalAmount = Number(Math.max(0, subTotal - discountTotal + shippingFee).toFixed(2));
+  const requestPromise = executeCreate()
+    .then((result) => {
+      createOrderCachedByKey.set(scopedIdempotencyKey, {
+        result,
+        expiresAt: Date.now() + CREATE_ORDER_IDEMPOTENCY_TTL_MS,
+      });
+      return result;
+    })
+    .finally(() => {
+      createOrderInFlightByKey.delete(scopedIdempotencyKey);
+    });
 
-  const promptpayConfig = await getPromptpayConfig();
-  const promptpayPhone = promptpayConfig.phone;
-  const base = `${promptpayConfig.baseUrl.replace(/\/+$/, "")}/`;
-  const promptpayUrl = `${base}${encodeURIComponent(promptpayPhone)}/${encodeURIComponent(formatPromptpayAmount(finalAmount))}`;
-  const isBankQrMode = promptpayConfig.activeQrMode === "bank_qr";
-  const paymentMethod = isBankQrMode ? "bank_transfer_qr" : "promptpay_transfer";
-  const paymentQrImageUrl = isBankQrMode
-    ? promptpayConfig.bankQrImageUrl
-    : `https://api.qrserver.com/v1/create-qr-code/?size=480x480&data=${encodeURIComponent(promptpayUrl)}`;
-
-  if (!isBankQrMode && !promptpayPhone) {
-    throw new PublicOrderError(500, "PAYMENT_CONFIG_MISSING", "PromptPay phone is not configured");
-  }
-  if (isBankQrMode && !promptpayConfig.bankQrImageUrl) {
-    throw new PublicOrderError(500, "PAYMENT_CONFIG_MISSING", "Bank QR image is not configured");
-  }
-
-  const reserved: Array<{ productId: string; qty: number }> = [];
-
-  try {
-    for (const line of lines) {
-      await reserveStock(supabase, line.productId, line.qty);
-      reserved.push({ productId: line.productId, qty: line.qty });
-    }
-
-    const orderNo = await generateUniqueOrderNo(supabase);
-    const { data: orderRow, error: orderError } = await supabase
-      .from("orders")
-      .insert({
-        order_no: orderNo,
-        customer_id: customerId,
-        status: "pending_payment",
-        payment_status: "unpaid",
-        payment_method: paymentMethod,
-        sub_total: subTotal,
-        discount_total: discountTotal,
-        shipping_fee: shippingFee,
-        grand_total: finalAmount,
-        coupon_code_snapshot: couponCode || null,
-        promptpay_phone_snapshot: promptpayPhone || "",
-        promptpay_link_snapshot: isBankQrMode ? promptpayConfig.bankQrImageUrl : promptpayUrl,
-        bank_name_snapshot: promptpayConfig.bankName,
-        bank_account_no_snapshot: promptpayConfig.bankAccountNo,
-        bank_account_name_snapshot: promptpayConfig.bankAccountName,
-        customer_name_snapshot: payload.customer.full_name,
-        customer_phone_snapshot: payload.customer.phone,
-        customer_email_snapshot: payload.customer.email ?? actor.user.email ?? null,
-        note: payload.customer.note ?? null,
-      })
-      .select("id,order_no")
-      .single();
-
-    if (orderError || !orderRow) {
-      throw new PublicOrderError(500, "ORDER_CREATE_FAILED", orderError?.message ?? "Unknown error");
-    }
-
-    const itemRows = lines.map((line) => ({
-      order_id: String(orderRow.id),
-      product_id: line.productId,
-      sku_snapshot: line.skuSnapshot,
-      name_snapshot: line.nameSnapshot,
-      unit_price_snapshot: line.unitPrice,
-      qty: line.qty,
-      line_total: line.lineTotal,
-    }));
-
-    const { error: itemError } = await supabase.from("order_items").insert(itemRows);
-    if (itemError) {
-      throw new PublicOrderError(500, "ORDER_ITEMS_CREATE_FAILED", itemError.message);
-    }
-
-    return {
-      order_no: String(orderRow.order_no),
-      promptpay_url: isBankQrMode ? "" : promptpayUrl,
-      payment_mode: isBankQrMode ? "bank_qr" : "promptpay",
-      qr_image_url: paymentQrImageUrl,
-      bank_name: promptpayConfig.bankName,
-      bank_account_no: promptpayConfig.bankAccountNo,
-      bank_account_name: promptpayConfig.bankAccountName,
-      final_amount: finalAmount,
-    };
-  } catch (error) {
-    for (const line of reserved) {
-      await releaseStock(supabase, line.productId, line.qty);
-    }
-
-    if (error instanceof PublicOrderError) {
-      throw error;
-    }
-
-    const message = error instanceof Error ? error.message : "Failed to create order";
-    throw new PublicOrderError(500, "ORDER_CREATE_FAILED", message);
-  }
+  createOrderInFlightByKey.set(scopedIdempotencyKey, requestPromise);
+  return requestPromise;
 }
 
 export async function uploadPublicOrderSlip(orderNo: string, file: File) {
