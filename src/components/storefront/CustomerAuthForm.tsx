@@ -235,6 +235,7 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
   const [faceScanMethod, setFaceScanMethod] = useState("");
   const [faceScanning, setFaceScanning] = useState(false);
   const [recoveringByFace, setRecoveringByFace] = useState(false);
+  const [faceRecoveryError, setFaceRecoveryError] = useState<string | null>(null);
   const [showGooglePendingModal, setShowGooglePendingModal] = useState(false);
   const [googlePendingClosing, setGooglePendingClosing] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
@@ -537,6 +538,9 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
     setRecoverPassword(password);
     setFaceScanPassed(false);
     setFaceScanMethod("");
+    setFaceRecoveryError(null);
+    setErrorModalClosing(false);
+    setShowErrorModal(false);
     setShowFaceRecoveryModal(true);
   }
 
@@ -544,6 +548,7 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
     if (recoveringByFace || faceScanning) {
       return;
     }
+    setFaceRecoveryError(null);
     setShowFaceRecoveryModal(false);
   }
 
@@ -552,12 +557,12 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
       return;
     }
     if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
-      setError(t.recoverByFaceNoCamera);
+      setFaceRecoveryError(t.recoverByFaceNoCamera);
       return;
     }
 
     setFaceScanning(true);
-    setError(null);
+    setFaceRecoveryError(null);
     let stream: MediaStream | null = null;
 
     try {
@@ -620,7 +625,8 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
     } catch (caught) {
       setFaceScanPassed(false);
       setFaceScanMethod("");
-      setError(caught instanceof Error ? caught.message : t.recoverByFaceFailed);
+      const message = caught instanceof Error ? caught.message : t.recoverByFaceFailed;
+      setFaceRecoveryError(message);
     } finally {
       if (stream) {
         for (const track of stream.getTracks()) {
@@ -635,20 +641,20 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
     const normalizedEmail = email.trim();
     const normalizedPassword = recoverPassword.trim();
     if (!normalizedEmail) {
-      setError(t.recoveryNeedEmail);
+      setFaceRecoveryError(t.recoveryNeedEmail);
       return;
     }
     if (!normalizedPassword) {
-      setError(t.unauthorized);
+      setFaceRecoveryError(t.unauthorized);
       return;
     }
     if (!faceScanPassed) {
-      setError(t.recoverByFaceNeedScan);
+      setFaceRecoveryError(t.recoverByFaceNeedScan);
       return;
     }
 
     setRecoveringByFace(true);
-    setError(null);
+    setFaceRecoveryError(null);
     setMessage(null);
 
     try {
@@ -696,7 +702,7 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
       router.refresh();
     } catch (caught) {
       const fallback = caught instanceof Error ? caught.message : t.recoveryFailed;
-      setError(mapAuthErrorMessage(fallback, locale, t));
+      setFaceRecoveryError(mapAuthErrorMessage(fallback, locale, t));
     } finally {
       setRecoveringByFace(false);
     }
@@ -906,7 +912,7 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
 
       {showFaceRecoveryModal ? (
         <div
-          className="fixed inset-0 z-[130] flex items-center justify-center bg-black/65 px-4"
+          className="fixed inset-0 z-[150] flex items-center justify-center bg-black/65 px-4"
           onClick={closeFaceRecoveryModal}
           role="dialog"
           aria-modal="true"
@@ -917,6 +923,11 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
           >
             <h2 className="text-lg font-semibold text-emerald-200">{t.recoverByFaceTitle}</h2>
             <p className="mt-2 text-sm text-emerald-100/85">{t.accountDeletePending}</p>
+            {faceRecoveryError ? (
+              <p className="mt-3 rounded-xl border border-rose-300/40 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">
+                {faceRecoveryError}
+              </p>
+            ) : null}
             <div className="mt-4 space-y-3">
               <label className="block">
                 <span className="mb-1.5 block text-sm font-medium text-emerald-100/90">{t.emailPlaceholder}</span>
