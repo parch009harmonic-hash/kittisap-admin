@@ -54,6 +54,16 @@ function text(mode: Mode, locale: AppLocale) {
       sessionExpired: isThai ? "ไม่มีการใช้งานเกิน 24 ชั่วโมง ระบบออกจากระบบอัตโนมัติแล้ว กรุณาเข้าสู่ระบบใหม่" : isLao ? "ບໍ່ມີການໃຊ້ງານເກີນ 24 ຊົ່ວໂມງ ລະບົບໄດ້ອອກຈາກລະບົບອັດຕະໂນມັດ ກະລຸນາເຂົ້າໃໝ່" : "You were signed out after 24 hours of inactivity. Please sign in again.",
       errorPopupTitle: isThai ? "เกิดข้อผิดพลาดในการเข้าสู่ระบบ" : isLao ? "ເກີດຂໍ້ຜິດພາດໃນການເຂົ້າລະບົບ" : "Sign-in error",
       errorPopupClose: isThai ? "ปิด" : isLao ? "ປິດ" : "Close",
+      accountDeletePending: isThai ? "กำลังดำเนินการลบบัญชีผู้ใช้ โปรดกู้คืนบัญชีผู้ใช้ก่อนแก้ไขโปรไฟล์" : isLao ? "ບັນຊີຢູ່ລະຫວ່າງລໍລົບ ກະລຸນາກູ້ຄືນກ່ອນແກ້ໄຂໂປຣໄຟລ໌" : "Account deletion is pending. Recover your account before editing profile.",
+      recoveryLinkAction: isThai ? "กู้คืนบัญชีทางอีเมล" : isLao ? "ກູ້ບັນຊີຜ່ານອີເມວ" : "Recover via Email",
+      recoveryLinkSending: isThai ? "กำลังส่งลิงก์กู้คืน..." : isLao ? "ກຳລັງສົ່ງລິ້ງກູ້ຄືນ..." : "Sending recovery link...",
+      recoveryLinkSent: isThai ? "ส่งลิงก์กู้คืนบัญชีแล้ว กรุณาตรวจสอบอีเมลของคุณ" : isLao ? "ສົ່ງລິ້ງກູ້ຄືນແລ້ວ ກະລຸນາກວດອີເມວ" : "Recovery link sent. Please check your email.",
+      recoveryNeedEmail: isThai ? "กรุณากรอกอีเมลก่อนส่งลิงก์กู้คืนบัญชี" : isLao ? "ກະລຸນາກອກອີເມວກ່ອນສົ່ງລິ້ງກູ້ຄືນ" : "Please enter your email before sending recovery link.",
+      recoveryExpired: isThai ? "หมดเวลาการกู้คืนบัญชี (เกิน 3 วัน)" : isLao ? "ໝົດເວລາກູ້ຄືນບັນຊີ (ເກີນ 3 ມື້)" : "Recovery window has expired (over 3 days).",
+      recoveryFailed: isThai ? "กู้คืนบัญชีไม่สำเร็จ กรุณาลองอีกครั้ง" : isLao ? "ກູ້ຄືນບັນຊີບໍ່ສຳເລັດ ກະລຸນາລອງໃໝ່" : "Account recovery failed. Please try again.",
+      accountRecovered: isThai ? "กู้คืนบัญชีสำเร็จแล้ว สามารถใช้งานต่อได้ทันที" : isLao ? "ກູ້ຄືນບັນຊີສຳເລັດແລ້ວ" : "Account recovered successfully.",
+      unauthorized: isThai ? "อีเมลหรือรหัสผ่านไม่ถูกต้อง" : isLao ? "ອີເມວ ຫຼື ລະຫັດຜ່ານບໍ່ຖືກຕ້ອງ" : "Invalid email or password.",
+      networkUnstable: isThai ? "เครือข่ายไม่เสถียร กรุณาลองใหม่" : isLao ? "ເຄືອຂ່າຍບໍ່ສະຖຽນ ກະລຸນາລອງໃໝ່" : "Network unstable. Please try again.",
     };
   }
 
@@ -85,7 +95,63 @@ function text(mode: Mode, locale: AppLocale) {
     sessionExpired: isThai ? "ไม่มีการใช้งานเกิน 24 ชั่วโมง ระบบออกจากระบบอัตโนมัติแล้ว กรุณาเข้าสู่ระบบใหม่" : isLao ? "ບໍ່ມີການໃຊ້ງານເກີນ 24 ຊົ່ວໂມງ ລະບົບໄດ້ອອກຈາກລະບົບອັດຕະໂນມັດ ກະລຸນາເຂົ້າໃໝ່" : "You were signed out after 24 hours of inactivity. Please sign in again.",
     errorPopupTitle: isThai ? "เกิดข้อผิดพลาดในการเข้าสู่ระบบ" : isLao ? "ເກີດຂໍ້ຜິດພາດໃນການເຂົ້າລະບົບ" : "Sign-in error",
     errorPopupClose: isThai ? "ปิด" : isLao ? "ປິດ" : "Close",
+    accountDeletePending: isThai ? "กำลังดำเนินการลบบัญชีผู้ใช้ โปรดกู้คืนบัญชีผู้ใช้ก่อนแก้ไขโปรไฟล์" : isLao ? "ບັນຊີຢູ່ລະຫວ່າງລໍລົບ ກະລຸນາກູ້ຄືນກ່ອນແກ້ໄຂໂປຣໄຟລ໌" : "Account deletion is pending. Recover your account before editing profile.",
+    recoveryLinkAction: isThai ? "กู้คืนบัญชีทางอีเมล" : isLao ? "ກູ້ບັນຊີຜ່ານອີເມວ" : "Recover via Email",
+    recoveryLinkSending: isThai ? "กำลังส่งลิงก์กู้คืน..." : isLao ? "ກຳລັງສົ່ງລິ້ງກູ້ຄືນ..." : "Sending recovery link...",
+    recoveryLinkSent: isThai ? "ส่งลิงก์กู้คืนบัญชีแล้ว กรุณาตรวจสอบอีเมลของคุณ" : isLao ? "ສົ່ງລິ້ງກູ້ຄືນແລ້ວ ກະລຸນາກວດອີເມວ" : "Recovery link sent. Please check your email.",
+    recoveryNeedEmail: isThai ? "กรุณากรอกอีเมลก่อนส่งลิงก์กู้คืนบัญชี" : isLao ? "ກະລຸນາກອກອີເມວກ່ອນສົ່ງລິ້ງກູ້ຄືນ" : "Please enter your email before sending recovery link.",
+    recoveryExpired: isThai ? "หมดเวลาการกู้คืนบัญชี (เกิน 3 วัน)" : isLao ? "ໝົດເວລາກູ້ຄືນບັນຊີ (ເກີນ 3 ມື້)" : "Recovery window has expired (over 3 days).",
+    recoveryFailed: isThai ? "กู้คืนบัญชีไม่สำเร็จ กรุณาลองอีกครั้ง" : isLao ? "ກູ້ຄືນບັນຊີບໍ່ສຳເລັດ ກະລຸນາລອງໃໝ່" : "Account recovery failed. Please try again.",
+    accountRecovered: isThai ? "กู้คืนบัญชีสำเร็จแล้ว สามารถใช้งานต่อได้ทันที" : isLao ? "ກູ້ຄືນບັນຊີສຳເລັດແລ້ວ" : "Account recovered successfully.",
+    unauthorized: isThai ? "อีเมลหรือรหัสผ่านไม่ถูกต้อง" : isLao ? "ອີເມວ ຫຼື ລະຫັດຜ່ານບໍ່ຖືກຕ້ອງ" : "Invalid email or password.",
+    networkUnstable: isThai ? "เครือข่ายไม่เสถียร กรุณาลองใหม่" : isLao ? "ເຄືອຂ່າຍບໍ່ສະຖຽນ ກະລຸນາລອງໃໝ່" : "Network unstable. Please try again.",
   };
+}
+
+class CustomerAuthFlowError extends Error {
+  readonly code: string;
+
+  constructor(code: string, message: string) {
+    super(message);
+    this.name = "CustomerAuthFlowError";
+    this.code = code;
+  }
+}
+
+function mapAuthErrorMessage(message: string, locale: AppLocale, textCopy: ReturnType<typeof text>) {
+  const lower = message.toLowerCase();
+
+  if (
+    lower.includes("unauthorized")
+    || lower.includes("invalid login credentials")
+    || lower.includes("invalid credentials")
+  ) {
+    return textCopy.unauthorized;
+  }
+
+  if (
+    lower.includes("network unstable")
+    || lower.includes("timed out")
+    || lower.includes("fetch failed")
+    || lower.includes("connect timeout")
+    || lower.includes("und_err_connect_timeout")
+  ) {
+    return textCopy.networkUnstable;
+  }
+
+  if (lower.includes("account deletion is pending")) {
+    return textCopy.accountDeletePending;
+  }
+
+  if (locale === "th" && lower.includes("unable to resend confirmation email")) {
+    return "ส่งอีเมลยืนยันไม่สำเร็จ กรุณาลองใหม่";
+  }
+
+  if (locale === "lo" && lower.includes("unable to resend confirmation email")) {
+    return "ສົ່ງອີເມວຢືນຢັນບໍ່ສຳເລັດ ກະລຸນາລອງໃໝ່";
+  }
+
+  return message;
 }
 
 async function upsertProfile(input: { fullName?: string; phone?: string }) {
@@ -96,8 +162,8 @@ async function upsertProfile(input: { fullName?: string; phone?: string }) {
   });
 
   if (!response.ok) {
-    const payload = (await response.json().catch(() => null)) as { error?: string } | null;
-    throw new Error(payload?.error ?? "Failed to update profile");
+    const payload = (await response.json().catch(() => null)) as { code?: string; error?: string } | null;
+    throw new CustomerAuthFlowError(payload?.code ?? "PROFILE_UPDATE_FAILED", payload?.error ?? "Failed to update profile");
   }
 }
 
@@ -123,7 +189,9 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [resendingConfirm, setResendingConfirm] = useState(false);
+  const [sendingRecoveryLink, setSendingRecoveryLink] = useState(false);
   const [pendingConfirmEmail, setPendingConfirmEmail] = useState<string | null>(null);
+  const [pendingDeleteRecovery, setPendingDeleteRecovery] = useState(false);
   const [showGooglePendingModal, setShowGooglePendingModal] = useState(false);
   const [googlePendingClosing, setGooglePendingClosing] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
@@ -144,29 +212,42 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
       setEmail(emailFromQuery);
       setPendingConfirmEmail(emailFromQuery);
     }
+
+    if (params.get("account_recovered") === "1") {
+      setMessage(t.accountRecovered);
+    }
+
     const errorCode = params.get("error");
     if (!errorCode) return;
 
     if (errorCode === "network_unstable") {
-      setError("เครือข่ายไปยัง Supabase ไม่เสถียร กรุณาลองใหม่");
+      setError(t.networkUnstable);
       return;
     }
     if (errorCode === "oauth_failed") {
-      setError("เข้าสู่ระบบด้วย Google ไม่สำเร็จ");
+      setError(mode === "register" ? "สมัครสมาชิกด้วย Google ไม่สำเร็จ" : "เข้าสู่ระบบด้วย Google ไม่สำเร็จ");
       return;
     }
     if (errorCode === "profile_upsert_failed") {
-      setError("เข้าสู่ระบบสำเร็จ แต่บันทึกข้อมูลลูกค้าไม่สำเร็จ กรุณาลองใหม่");
+      setError(locale === "th" ? "เข้าสู่ระบบสำเร็จ แต่บันทึกข้อมูลลูกค้าไม่สำเร็จ กรุณาลองใหม่" : "Profile update after sign-in failed. Please try again.");
       return;
     }
     if (errorCode === "oauth_code_missing") {
-      setError("ไม่พบ OAuth code ใน callback");
+      setError(locale === "th" ? "ไม่พบโค้ดยืนยันจากระบบเข้าสู่ระบบ" : "Missing OAuth callback code.");
+      return;
+    }
+    if (errorCode === "account_recovery_expired") {
+      setError(t.recoveryExpired);
+      return;
+    }
+    if (errorCode === "account_recovery_failed") {
+      setError(t.recoveryFailed);
       return;
     }
     if (errorCode === "session_expired") {
       setError(t.sessionExpired);
     }
-  }, [email, t.sessionExpired]);
+  }, [email, locale, mode, t.accountRecovered, t.networkUnstable, t.recoveryExpired, t.recoveryFailed, t.sessionExpired]);
 
   useEffect(() => {
     return () => {
@@ -243,6 +324,7 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
     setError(null);
     setMessage(null);
     setPendingConfirmEmail(null);
+    setPendingDeleteRecovery(false);
 
     try {
       const supabase = getSupabaseBrowserClient();
@@ -266,7 +348,7 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
         });
 
         if (signUpError) {
-          setError(signUpError.message);
+          setError(mapAuthErrorMessage(signUpError.message, locale, t));
           return;
         }
 
@@ -283,8 +365,11 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
           if (isEmailNotConfirmedError(signInError.message)) {
             setError(t.emailNotConfirmed);
             setPendingConfirmEmail(email.trim());
+          } else if (signInError.message.toLowerCase().includes("account deletion is pending")) {
+            setPendingDeleteRecovery(true);
+            setError(t.accountDeletePending);
           } else {
-            setError(signInError.message);
+            setError(mapAuthErrorMessage(signInError.message, locale, t));
           }
           return;
         }
@@ -297,7 +382,13 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
       router.replace(targetPath);
       router.refresh();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Authentication failed");
+      if (caught instanceof CustomerAuthFlowError && caught.code === "ACCOUNT_DELETE_PENDING") {
+        setPendingDeleteRecovery(true);
+        setError(t.accountDeletePending);
+      } else {
+        const fallback = caught instanceof Error ? caught.message : "Authentication failed";
+        setError(mapAuthErrorMessage(fallback, locale, t));
+      }
     } finally {
       setLoading(false);
     }
@@ -331,16 +422,57 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
       });
 
       if (resendError) {
-        setError(resendError.message);
+        setError(mapAuthErrorMessage(resendError.message, locale, t));
         return;
       }
 
       setMessage(t.resendConfirmSuccess);
       setPendingConfirmEmail(normalizedEmail);
     } catch {
-      setError("Unable to resend confirmation email");
+      setError(mapAuthErrorMessage("Unable to resend confirmation email", locale, t));
     } finally {
       setResendingConfirm(false);
+    }
+  }
+
+  async function handleSendRecoveryLink() {
+    const normalizedEmail = email.trim();
+    if (!normalizedEmail) {
+      setError(t.recoveryNeedEmail);
+      return;
+    }
+
+    setSendingRecoveryLink(true);
+    setError(null);
+    setMessage(null);
+
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+      if (!siteUrl) {
+        setError("Missing NEXT_PUBLIC_SITE_URL");
+        return;
+      }
+
+      const { error: otpError } = await supabase.auth.signInWithOtp({
+        email: normalizedEmail,
+        options: {
+          shouldCreateUser: false,
+          emailRedirectTo: `${siteUrl}/auth/callback?intent=customer&locale=${locale}&recover_account=1`,
+        },
+      });
+
+      if (otpError) {
+        setError(mapAuthErrorMessage(otpError.message, locale, t));
+        return;
+      }
+
+      setMessage(t.recoveryLinkSent);
+    } catch (caught) {
+      const fallback = caught instanceof Error ? caught.message : t.recoveryFailed;
+      setError(mapAuthErrorMessage(fallback, locale, t));
+    } finally {
+      setSendingRecoveryLink(false);
     }
   }
 
@@ -370,10 +502,10 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
       });
 
       if (oauthError) {
-        setError(oauthError.message);
+        setError(mapAuthErrorMessage(oauthError.message, locale, t));
       }
     } catch {
-      setError("Unable to continue with Google");
+      setError(locale === "th" ? "ไม่สามารถใช้งาน Google เพื่อเข้าสู่ระบบได้ในขณะนี้" : "Unable to continue with Google");
     } finally {
       setLoading(false);
     }
@@ -407,6 +539,16 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
             className="mt-3 inline-flex w-full items-center justify-center rounded-xl border border-amber-400/50 bg-amber-500/10 px-3 py-2 text-sm font-semibold text-amber-200 transition hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {resendingConfirm ? "Sending..." : t.resendConfirm}
+          </button>
+        ) : null}
+        {pendingDeleteRecovery ? (
+          <button
+            type="button"
+            onClick={handleSendRecoveryLink}
+            disabled={sendingRecoveryLink || loading}
+            className="mt-3 inline-flex w-full items-center justify-center rounded-xl border border-sky-400/55 bg-sky-500/10 px-3 py-2 text-sm font-semibold text-sky-200 transition hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {sendingRecoveryLink ? t.recoveryLinkSending : t.recoveryLinkAction}
           </button>
         ) : null}
         {message ? <p className="mt-4 rounded-xl border border-emerald-400/35 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">{message}</p> : null}
@@ -560,7 +702,17 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
                 </div>
               </div>
               <p className="rounded-xl border border-rose-300/30 bg-rose-500/12 px-3 py-3 text-sm leading-relaxed text-rose-100">{error}</p>
-              <div className="mt-4 flex justify-end">
+              <div className="mt-4 flex flex-wrap justify-end gap-2">
+                {pendingDeleteRecovery ? (
+                  <button
+                    type="button"
+                    onClick={handleSendRecoveryLink}
+                    disabled={sendingRecoveryLink || loading}
+                    className="inline-flex h-10 items-center justify-center rounded-full border border-sky-300/65 bg-gradient-to-r from-sky-400 to-cyan-300 px-5 text-sm font-semibold text-zinc-900 transition hover:brightness-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {sendingRecoveryLink ? t.recoveryLinkSending : t.recoveryLinkAction}
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   onClick={closeErrorModal}

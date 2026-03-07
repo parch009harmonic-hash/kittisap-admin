@@ -356,6 +356,70 @@ export async function recoverCustomerAccountDeletion(input: {
   };
 }
 
+export async function recoverCustomerAccountDeletionByEmailLink(input: {
+  customerId: string;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+}) {
+  const customerId = input.customerId.trim();
+  if (!customerId) {
+    throw new CustomerAccountDeletionError(400, "INVALID_CUSTOMER_ID", "Customer id is required");
+  }
+
+  const profileRow = await getCustomerProfileDeletionRow(customerId);
+  const status = String(profileRow.deletion_status ?? "active").trim().toLowerCase();
+  if (status !== "pending_delete") {
+    throw new CustomerAccountDeletionError(409, "DELETION_NOT_PENDING", "Account deletion is not pending");
+  }
+
+  const scheduledFor = profileRow.deletion_scheduled_for ? Date.parse(profileRow.deletion_scheduled_for) : Number.NaN;
+  if (Number.isFinite(scheduledFor) && scheduledFor <= Date.now()) {
+    throw new CustomerAccountDeletionError(410, "DELETION_RECOVERY_EXPIRED", "Recovery window has expired");
+  }
+
+  const supabase = getSupabaseServiceRoleClient();
+  const { error: updateError } = await supabase
+    .from("customer_profiles")
+    .update({
+      deletion_status: "active",
+      deletion_requested_at: null,
+      deletion_scheduled_for: null,
+      deletion_reason: null,
+      recovered_at: new Date().toISOString(),
+      is_active: true,
+    })
+    .eq("id", customerId);
+
+  if (updateError) {
+    const message = normalizeErrorMessage(updateError);
+    if (isMissingDeletionSchemaError(updateError)) {
+      throw new CustomerAccountDeletionError(
+        503,
+        "DELETION_SCHEMA_MISSING",
+        "Missing deletion columns. Run sql/ensure-customer-account-deletion.sql first.",
+      );
+    }
+    throw new CustomerAccountDeletionError(500, "DELETION_RECOVER_FAILED", message || "Failed to recover account");
+  }
+
+  await appendDeletionLog({
+    customerId,
+    action: "recover",
+    actorUserId: customerId,
+    metadata: {
+      recoveryMethod: "email_link",
+      scheduledFor: profileRow.deletion_scheduled_for ?? null,
+      ip: input.ipAddress ?? null,
+      userAgent: input.userAgent ?? null,
+    },
+  });
+
+  return {
+    status: "active" as const,
+    recoveredAt: new Date().toISOString(),
+  };
+}
+
 function isUserNotFoundError(message: string) {
   const normalized = message.toLowerCase();
   return normalized.includes("user not found") || normalized.includes("not found");

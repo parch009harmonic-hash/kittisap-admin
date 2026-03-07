@@ -3,6 +3,10 @@ import type { User } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServiceRoleClient } from "../../../../lib/supabase/service";
 import { ensureCustomerKycProfile } from "../../../../lib/db/customer-kyc";
+import {
+  CustomerAccountDeletionError,
+  recoverCustomerAccountDeletionByEmailLink,
+} from "../../../../lib/db/customer-account-deletion";
 
 function getSupabaseEnv() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -131,6 +135,7 @@ export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get("code");
   const intent = normalizeIntent(request.nextUrl.searchParams.get("intent"));
   const locale = normalizeLocale(request.nextUrl.searchParams.get("locale"));
+  const recoverAccount = request.nextUrl.searchParams.get("recover_account") === "1";
 
   if (!code) {
     const target = intent === "customer"
@@ -210,6 +215,37 @@ export async function GET(request: NextRequest) {
       break;
     }
 
+    let recoveredFromPendingDelete = false;
+    if (recoverAccount) {
+      try {
+        await recoverCustomerAccountDeletionByEmailLink({
+          customerId: user.id,
+          ipAddress: request.headers.get("x-forwarded-for"),
+          userAgent: request.headers.get("user-agent"),
+        });
+        recoveredFromPendingDelete = true;
+      } catch (error) {
+        if (error instanceof CustomerAccountDeletionError) {
+          if (error.code === "DELETION_NOT_PENDING") {
+            recoveredFromPendingDelete = false;
+          } else if (error.code === "DELETION_RECOVERY_EXPIRED") {
+            const res = NextResponse.redirect(new URL(`${customerPath(locale, "/auth/login")}?error=account_recovery_expired`, request.url));
+            return withCookies(cookieResponse, res);
+          } else {
+            const code = error.code === "DELETION_SCHEMA_MISSING" ? "profile_upsert_failed" : "account_recovery_failed";
+            const res = NextResponse.redirect(new URL(`${customerPath(locale, "/auth/login")}?error=${code}`, request.url));
+            return withCookies(cookieResponse, res);
+          }
+        } else if (isTransientNetworkError(error)) {
+          const res = NextResponse.redirect(new URL(`${customerPath(locale, "/auth/login")}?error=network_unstable`, request.url));
+          return withCookies(cookieResponse, res);
+        } else {
+          const res = NextResponse.redirect(new URL(`${customerPath(locale, "/auth/login")}?error=account_recovery_failed`, request.url));
+          return withCookies(cookieResponse, res);
+        }
+      }
+    }
+
     let nextCustomerPath = "/account";
     if (isCustomerKycEnforced()) {
       try {
@@ -226,6 +262,13 @@ export async function GET(request: NextRequest) {
           console.error("[auth/callback] failed to resolve customer kyc profile", error);
         }
       }
+    }
+
+    if (recoveredFromPendingDelete) {
+      const recoveredUrl = new URL(customerPath(locale, "/account"), request.url);
+      recoveredUrl.searchParams.set("account_recovered", "1");
+      const res = NextResponse.redirect(recoveredUrl);
+      return withCookies(cookieResponse, res);
     }
 
     const res = NextResponse.redirect(new URL(customerPath(locale, nextCustomerPath), request.url));
