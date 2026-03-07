@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { buildAdminAuthCallbackUrl } from "../../../lib/storefront/auth-redirect-url";
 import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 
 export default function LoginPage() {
@@ -60,15 +61,15 @@ export default function LoginPage() {
 
     try {
       const supabase = getSupabaseBrowserClient();
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
-      if (!siteUrl) {
-        setError("Missing NEXT_PUBLIC_SITE_URL");
+      const redirectTo = buildAdminAuthCallbackUrl();
+      if (!redirectTo) {
+        setError("Missing callback redirect URL");
         return;
       }
 
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: { redirectTo: `${siteUrl}/auth/callback?intent=admin` },
+        options: { redirectTo },
       });
 
       if (oauthError) {

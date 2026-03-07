@@ -6,6 +6,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import type { AppLocale } from "../../../lib/i18n/locale";
+import { buildCustomerAuthCallbackUrl } from "../../../lib/storefront/auth-redirect-url";
 import { markCustomerSessionActive } from "../../../lib/storefront/customer-session";
 import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 
@@ -330,16 +331,16 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
       const supabase = getSupabaseBrowserClient();
 
       if (mode === "register") {
-        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
-        if (!siteUrl) {
-          setError("Missing NEXT_PUBLIC_SITE_URL");
+        const emailRedirectTo = buildCustomerAuthCallbackUrl(locale);
+        if (!emailRedirectTo) {
+          setError(locale === "th" ? "ไม่พบโดเมนสำหรับยืนยันอีเมล" : "Missing callback redirect URL");
           return;
         }
         const { data, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
           options: {
-            emailRedirectTo: `${siteUrl}/auth/callback?intent=customer&locale=${locale}`,
+            emailRedirectTo,
             data: {
               full_name: fullName,
               phone,
@@ -407,9 +408,9 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
 
     try {
       const supabase = getSupabaseBrowserClient();
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
-      if (!siteUrl) {
-        setError("Missing NEXT_PUBLIC_SITE_URL");
+      const emailRedirectTo = buildCustomerAuthCallbackUrl(locale);
+      if (!emailRedirectTo) {
+        setError(locale === "th" ? "ไม่พบโดเมนสำหรับยืนยันอีเมล" : "Missing callback redirect URL");
         return;
       }
 
@@ -417,7 +418,7 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
         type: "signup",
         email: normalizedEmail,
         options: {
-          emailRedirectTo: `${siteUrl}/auth/callback?intent=customer&locale=${locale}`,
+          emailRedirectTo,
         },
       });
 
@@ -448,9 +449,9 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
 
     try {
       const supabase = getSupabaseBrowserClient();
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
-      if (!siteUrl) {
-        setError("Missing NEXT_PUBLIC_SITE_URL");
+      const emailRedirectTo = buildCustomerAuthCallbackUrl(locale, { recoverAccount: true });
+      if (!emailRedirectTo) {
+        setError(locale === "th" ? "ไม่พบโดเมนสำหรับกู้คืนบัญชี" : "Missing recovery redirect URL");
         return;
       }
 
@@ -458,7 +459,7 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
         email: normalizedEmail,
         options: {
           shouldCreateUser: false,
-          emailRedirectTo: `${siteUrl}/auth/callback?intent=customer&locale=${locale}&recover_account=1`,
+          emailRedirectTo,
         },
       });
 
@@ -488,16 +489,16 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
 
     try {
       const supabase = getSupabaseBrowserClient();
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
-      if (!siteUrl) {
-        setError("Missing NEXT_PUBLIC_SITE_URL");
+      const redirectTo = buildCustomerAuthCallbackUrl(locale);
+      if (!redirectTo) {
+        setError(locale === "th" ? "ไม่พบโดเมนสำหรับเข้าสู่ระบบ" : "Missing callback redirect URL");
         return;
       }
 
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${siteUrl}/auth/callback?intent=customer&locale=${locale}`,
+          redirectTo,
         },
       });
 

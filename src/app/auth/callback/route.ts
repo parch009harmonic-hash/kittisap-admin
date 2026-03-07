@@ -43,7 +43,10 @@ function asString(value: unknown) {
 }
 
 function normalizeIntent(raw: string | null): "admin" | "customer" {
-  return raw?.toLowerCase() === "customer" ? "customer" : "admin";
+  if (raw?.toLowerCase() === "admin") {
+    return "admin";
+  }
+  return "customer";
 }
 
 function normalizeLocale(raw: string | null): "th" | "en" | "lo" {

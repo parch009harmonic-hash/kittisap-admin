@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 
 import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 import type { AppLocale } from "../../../lib/i18n/locale";
+import { buildCustomerAuthCallbackUrl } from "../../../lib/storefront/auth-redirect-url";
 
 type EmailVerifyPendingCardProps = {
   locale: AppLocale;
@@ -40,9 +41,9 @@ export function EmailVerifyPendingCard({ locale, useLocalePrefix = false }: Emai
 
     try {
       const supabase = getSupabaseBrowserClient();
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
-      if (!siteUrl) {
-        setError("Missing NEXT_PUBLIC_SITE_URL");
+      const emailRedirectTo = buildCustomerAuthCallbackUrl(locale);
+      if (!emailRedirectTo) {
+        setError(locale === "th" ? "ไม่พบโดเมนสำหรับยืนยันอีเมล" : "Missing callback redirect URL");
         return;
       }
 
@@ -50,7 +51,7 @@ export function EmailVerifyPendingCard({ locale, useLocalePrefix = false }: Emai
         type: "signup",
         email,
         options: {
-          emailRedirectTo: `${siteUrl}/auth/callback?intent=customer&locale=${locale}`,
+          emailRedirectTo,
         },
       });
 
