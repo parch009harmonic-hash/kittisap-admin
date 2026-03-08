@@ -112,6 +112,7 @@ function copy(locale: AccountLocale) {
       faceScanReady: "Face scan verified.",
       faceScanFailed: "Face scan failed. Try again with better lighting.",
       faceScanNotSupported: "Camera is not available on this device.",
+      faceScanPermissionDenied: "Camera permission denied. Please allow camera access in your browser.",
       faceScanRequired: "Please scan your face before recovering.",
       recoverAction: "Confirm Recover",
       recovering: "Recovering...",
@@ -205,6 +206,7 @@ function copy(locale: AccountLocale) {
       faceScanReady: "ຢືນຢັນໃບໜ້າແລ້ວ",
       faceScanFailed: "ສະແກນໃບໜ້າບໍ່ສຳເລັດ ກະລຸນາລອງໃໝ່",
       faceScanNotSupported: "ອຸປະກອນນີ້ບໍ່ຮອງຮັບກ້ອງ",
+      faceScanPermissionDenied: "ບໍ່ໄດ້ຮັບອະນຸຍາດໃຊ້ກ້ອງ ກະລຸນາອະນຸຍາດກ້ອງໃນເບຣາວເຊີ",
       faceScanRequired: "ກະລຸນາສະແກນໃບໜ້າກ່ອນກູ້ບັນຊີ",
       recoverAction: "ຢືນຢັນກູ້",
       recovering: "ກຳລັງກູ້...",
@@ -297,6 +299,7 @@ function copy(locale: AccountLocale) {
     faceScanReady: "ยืนยันใบหน้าแล้ว",
     faceScanFailed: "สแกนใบหน้าไม่สำเร็จ กรุณาลองใหม่ในที่แสงพอ",
     faceScanNotSupported: "อุปกรณ์นี้ไม่รองรับการเปิดกล้อง",
+    faceScanPermissionDenied: "ไม่ได้รับสิทธิ์ใช้งานกล้อง กรุณาอนุญาตกล้องในเบราว์เซอร์",
     faceScanRequired: "กรุณาสแกนใบหน้าก่อนกู้คืนบัญชี",
     recoverAction: "ยืนยันกู้คืน",
     recovering: "กำลังกู้คืน...",
@@ -747,7 +750,39 @@ export function CustomerAccountClient() {
     }
   }
 
+  function mapFaceScanError(caught: unknown) {
+    const name = typeof caught === "object" && caught && "name" in caught
+      ? String((caught as { name?: unknown }).name ?? "").trim().toLowerCase()
+      : "";
+    const message = caught instanceof Error ? caught.message : "";
+    const lower = message.toLowerCase();
+
+    if (
+      name === "notallowederror"
+      || name === "permissiondeniederror"
+      || lower.includes("permission denied")
+      || lower.includes("permissiondenied")
+      || lower.includes("notallowederror")
+    ) {
+      return t.faceScanPermissionDenied;
+    }
+
+    if (name === "notfounderror" || name === "notreadableerror") {
+      return t.faceScanNotSupported;
+    }
+
+    if (lower.includes("could not start video") || lower.includes("could not access video stream")) {
+      return t.faceScanNotSupported;
+    }
+
+    return message || t.faceScanFailed;
+  }
+
   async function performFaceScan() {
+    if (faceScanning) {
+      return;
+    }
+
     setFaceScanning(true);
     setError(null);
     setMessage(null);
@@ -802,7 +837,7 @@ export function CustomerAccountClient() {
     } catch (caught) {
       setFaceScanPassed(false);
       setFaceScanMethod("");
-      setError(caught instanceof Error ? caught.message : t.faceScanFailed);
+      setError(mapFaceScanError(caught));
     } finally {
       if (stream) {
         for (const track of stream.getTracks()) {
