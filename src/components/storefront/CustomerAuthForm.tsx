@@ -18,7 +18,8 @@ type CustomerAuthFormProps = {
   useLocalePrefix?: boolean;
 };
 
-const EMAIL_RECOVERY_OTP_LENGTH = 6;
+const EMAIL_RECOVERY_OTP_MIN_LENGTH = 6;
+const EMAIL_RECOVERY_OTP_LENGTH = 8;
 
 function createEmptyEmailRecoveryOtp() {
   return Array.from({ length: EMAIL_RECOVERY_OTP_LENGTH }, () => "");
@@ -70,10 +71,10 @@ function text(mode: Mode, locale: AppLocale) {
       recoveryLinkSending: isThai ? "กำลังส่ง OTP..." : isLao ? "ກຳລັງສົ່ງ OTP..." : "Sending OTP...",
       recoveryLinkSent: isThai ? "ส่งรหัส OTP แล้ว กรุณาตรวจสอบอีเมลและกรอกรหัสด้านล่าง" : isLao ? "ສົ່ງລະຫັດ OTP ແລ້ວ ກະລຸນາກວດອີເມວ" : "OTP sent. Please check your email and enter the code below.",
       recoveryNeedEmail: isThai ? "กรุณากรอกอีเมลก่อนส่ง OTP กู้คืนบัญชี" : isLao ? "ກະລຸນາກອກອີເມວກ່ອນສົ່ງ OTP ກູ້ຄືນ" : "Please enter your email before sending recovery OTP.",
-      recoveryOtpPlaceholder: isThai ? "รหัส OTP 6 หลัก" : isLao ? "ລະຫັດ OTP 6 ຫຼັກ" : "6-digit OTP",
+      recoveryOtpPlaceholder: isThai ? "รหัส OTP 6-8 หลัก" : isLao ? "ລະຫັດ OTP 6-8 ຫຼັກ" : "6-8 digit OTP",
       recoveryOtpAction: isThai ? "ยืนยัน OTP และกู้คืนบัญชี" : isLao ? "ຢືນຢັນ OTP ແລະ ກູ້ຄືນບັນຊີ" : "Verify OTP & Recover",
       recoveryOtpWorking: isThai ? "กำลังยืนยัน OTP..." : isLao ? "ກຳລັງຢືນຢັນ OTP..." : "Verifying OTP...",
-      recoveryOtpNeed: isThai ? "กรุณากรอกรหัส OTP ให้ครบ" : isLao ? "ກະລຸນາກອກ OTP ໃຫ້ຄົບ" : "Please enter a valid OTP.",
+      recoveryOtpNeed: isThai ? "กรุณากรอกรหัส OTP อย่างน้อย 6 หลัก" : isLao ? "ກະລຸນາກອກ OTP ຢ່າງນ້ອຍ 6 ຫຼັກ" : "Please enter at least 6 OTP digits.",
       recoveryOtpInvalid: isThai ? "รหัส OTP ไม่ถูกต้องหรือหมดอายุ กรุณาขอรหัสใหม่" : isLao ? "OTP ບໍ່ຖືກ ຫຼື ໝົດອາຍຸ ກະລຸນາຂໍໃໝ່" : "OTP is invalid or expired. Request a new code.",
       recoveryExpired: isThai ? "หมดเวลาการกู้คืนบัญชี (เกิน 3 วัน)" : isLao ? "ໝົດເວລາກູ້ຄືນບັນຊີ (ເກີນ 3 ມື້)" : "Recovery window has expired (over 3 days).",
       recoveryFailed: isThai ? "กู้คืนบัญชีไม่สำเร็จ กรุณาลองอีกครั้ง" : isLao ? "ກູ້ຄືນບັນຊີບໍ່ສຳເລັດ ກະລຸນາລອງໃໝ່" : "Account recovery failed. Please try again.",
@@ -141,10 +142,10 @@ function text(mode: Mode, locale: AppLocale) {
     recoveryLinkSending: isThai ? "กำลังส่ง OTP..." : isLao ? "ກຳລັງສົ່ງ OTP..." : "Sending OTP...",
     recoveryLinkSent: isThai ? "ส่งรหัส OTP แล้ว กรุณาตรวจสอบอีเมลและกรอกรหัสด้านล่าง" : isLao ? "ສົ່ງລະຫັດ OTP ແລ້ວ ກະລຸນາກວດອີເມວ" : "OTP sent. Please check your email and enter the code below.",
     recoveryNeedEmail: isThai ? "กรุณากรอกอีเมลก่อนส่ง OTP กู้คืนบัญชี" : isLao ? "ກະລຸນາກອກອີເມວກ່ອນສົ່ງ OTP ກູ້ຄືນ" : "Please enter your email before sending recovery OTP.",
-    recoveryOtpPlaceholder: isThai ? "รหัส OTP 6 หลัก" : isLao ? "ລະຫັດ OTP 6 ຫຼັກ" : "6-digit OTP",
+    recoveryOtpPlaceholder: isThai ? "รหัส OTP 6-8 หลัก" : isLao ? "ລະຫັດ OTP 6-8 ຫຼັກ" : "6-8 digit OTP",
     recoveryOtpAction: isThai ? "ยืนยัน OTP และกู้คืนบัญชี" : isLao ? "ຢືນຢັນ OTP ແລະ ກູ້ຄືນບັນຊີ" : "Verify OTP & Recover",
     recoveryOtpWorking: isThai ? "กำลังยืนยัน OTP..." : isLao ? "ກຳລັງຢືນຢັນ OTP..." : "Verifying OTP...",
-    recoveryOtpNeed: isThai ? "กรุณากรอกรหัส OTP ให้ครบ" : isLao ? "ກະລຸນາກອກ OTP ໃຫ້ຄົບ" : "Please enter a valid OTP.",
+    recoveryOtpNeed: isThai ? "กรุณากรอกรหัส OTP อย่างน้อย 6 หลัก" : isLao ? "ກະລຸນາກອກ OTP ຢ່າງນ້ອຍ 6 ຫຼັກ" : "Please enter at least 6 OTP digits.",
     recoveryOtpInvalid: isThai ? "รหัส OTP ไม่ถูกต้องหรือหมดอายุ กรุณาขอรหัสใหม่" : isLao ? "OTP ບໍ່ຖືກ ຫຼື ໝົດອາຍຸ ກະລຸນາຂໍໃໝ່" : "OTP is invalid or expired. Request a new code.",
     recoveryExpired: isThai ? "หมดเวลาการกู้คืนบัญชี (เกิน 3 วัน)" : isLao ? "ໝົດເວລາກູ້ຄືນບັນຊີ (ເກີນ 3 ມື້)" : "Recovery window has expired (over 3 days).",
     recoveryFailed: isThai ? "กู้คืนบัญชีไม่สำเร็จ กรุณาลองอีกครั้ง" : isLao ? "ກູ້ຄືນບັນຊີບໍ່ສຳເລັດ ກະລຸນາລອງໃໝ່" : "Account recovery failed. Please try again.",
@@ -298,8 +299,13 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
   const errorModalCloseTimer = useRef<NodeJS.Timeout | null>(null);
   const emailRecoveryOtpRefs = useRef<Array<HTMLInputElement | null>>([]);
 
-  const emailRecoveryOtpValue = emailRecoveryOtp.join("");
-  const isEmailRecoveryOtpComplete = emailRecoveryOtp.every((digit) => digit.length === 1);
+  const firstEmailOtpEmptyIndex = emailRecoveryOtp.findIndex((digit) => digit.length === 0);
+  const emailRecoveryOtpFilledLength =
+    firstEmailOtpEmptyIndex === -1 ? EMAIL_RECOVERY_OTP_LENGTH : firstEmailOtpEmptyIndex;
+  const hasEmailOtpGap =
+    firstEmailOtpEmptyIndex >= 0 && emailRecoveryOtp.slice(firstEmailOtpEmptyIndex + 1).some((digit) => digit.length > 0);
+  const emailRecoveryOtpValue = emailRecoveryOtp.slice(0, emailRecoveryOtpFilledLength).join("");
+  const isEmailRecoveryOtpComplete = !hasEmailOtpGap && emailRecoveryOtpFilledLength >= EMAIL_RECOVERY_OTP_MIN_LENGTH;
 
   function isEmailNotConfirmedError(input: string) {
     return input.toLowerCase().includes("email not confirmed");
@@ -701,7 +707,7 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
       setError(t.recoveryNeedEmail);
       return;
     }
-    if (normalizedOtp.length !== EMAIL_RECOVERY_OTP_LENGTH) {
+    if (normalizedOtp.length < EMAIL_RECOVERY_OTP_MIN_LENGTH) {
       setError(t.recoveryOtpNeed);
       return;
     }
@@ -1141,7 +1147,7 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
             </div>
             {emailRecoveryOtpSent ? (
               <div className="space-y-2">
-                <div className="grid grid-cols-6 gap-2">
+                <div className="grid grid-cols-8 gap-1.5 sm:gap-2">
                   {Array.from({ length: EMAIL_RECOVERY_OTP_LENGTH }, (_, index) => (
                     <input
                       key={`email-recovery-otp-${index}`}
@@ -1171,7 +1177,7 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
                       maxLength={EMAIL_RECOVERY_OTP_LENGTH}
                       autoComplete={index === 0 ? "one-time-code" : "off"}
                       aria-label={`${t.recoveryOtpPlaceholder} ${index + 1}`}
-                      className="h-12 w-full rounded-xl border border-sky-300/40 bg-black/45 px-0 text-center text-lg font-semibold tracking-[0.1em] text-sky-100 outline-none transition focus:border-sky-200 focus:ring-2 focus:ring-sky-200/20"
+                      className="h-11 w-full rounded-xl border border-sky-300/40 bg-black/45 px-0 text-center text-base font-semibold tracking-[0.08em] text-sky-100 outline-none transition focus:border-sky-200 focus:ring-2 focus:ring-sky-200/20 sm:h-12 sm:text-lg"
                     />
                   ))}
                 </div>
