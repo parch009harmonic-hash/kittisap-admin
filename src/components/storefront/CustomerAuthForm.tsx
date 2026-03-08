@@ -18,6 +18,16 @@ type CustomerAuthFormProps = {
   useLocalePrefix?: boolean;
 };
 
+const EMAIL_RECOVERY_OTP_LENGTH = 6;
+
+function createEmptyEmailRecoveryOtp() {
+  return Array.from({ length: EMAIL_RECOVERY_OTP_LENGTH }, () => "");
+}
+
+function normalizeOtpDigits(value: string) {
+  return value.replace(/\D/g, "").slice(0, EMAIL_RECOVERY_OTP_LENGTH);
+}
+
 function text(mode: Mode, locale: AppLocale) {
   const isThai = locale === "th";
   const isLao = locale === "lo";
@@ -56,16 +66,21 @@ function text(mode: Mode, locale: AppLocale) {
       errorPopupTitle: isThai ? "เกิดข้อผิดพลาดในการเข้าสู่ระบบ" : isLao ? "ເກີດຂໍ້ຜິດພາດໃນການເຂົ້າລະບົບ" : "Sign-in error",
       errorPopupClose: isThai ? "ปิด" : isLao ? "ປິດ" : "Close",
       accountDeletePending: isThai ? "กำลังดำเนินการลบบัญชีผู้ใช้ โปรดกู้คืนบัญชีผู้ใช้ก่อนแก้ไขโปรไฟล์" : isLao ? "ບັນຊີຢູ່ລະຫວ່າງລໍລົບ ກະລຸນາກູ້ຄືນກ່ອນແກ້ໄຂໂປຣໄຟລ໌" : "Account deletion is pending. Recover your account before editing profile.",
-      recoveryLinkAction: isThai ? "กู้คืนบัญชีทางอีเมล" : isLao ? "ກູ້ບັນຊີຜ່ານອີເມວ" : "Recover via Email",
-      recoveryLinkSending: isThai ? "กำลังส่งลิงก์กู้คืน..." : isLao ? "ກຳລັງສົ່ງລິ້ງກູ້ຄືນ..." : "Sending recovery link...",
-      recoveryLinkSent: isThai ? "ส่งลิงก์กู้คืนบัญชีแล้ว กรุณาตรวจสอบอีเมลของคุณ" : isLao ? "ສົ່ງລິ້ງກູ້ຄືນແລ້ວ ກະລຸນາກວດອີເມວ" : "Recovery link sent. Please check your email.",
-      recoveryNeedEmail: isThai ? "กรุณากรอกอีเมลก่อนส่งลิงก์กู้คืนบัญชี" : isLao ? "ກະລຸນາກອກອີເມວກ່ອນສົ່ງລິ້ງກູ້ຄືນ" : "Please enter your email before sending recovery link.",
+      recoveryLinkAction: isThai ? "ส่ง OTP ทางอีเมล" : isLao ? "ສົ່ງ OTP ທາງອີເມວ" : "Send Email OTP",
+      recoveryLinkSending: isThai ? "กำลังส่ง OTP..." : isLao ? "ກຳລັງສົ່ງ OTP..." : "Sending OTP...",
+      recoveryLinkSent: isThai ? "ส่งรหัส OTP แล้ว กรุณาตรวจสอบอีเมลและกรอกรหัสด้านล่าง" : isLao ? "ສົ່ງລະຫັດ OTP ແລ້ວ ກະລຸນາກວດອີເມວ" : "OTP sent. Please check your email and enter the code below.",
+      recoveryNeedEmail: isThai ? "กรุณากรอกอีเมลก่อนส่ง OTP กู้คืนบัญชี" : isLao ? "ກະລຸນາກອກອີເມວກ່ອນສົ່ງ OTP ກູ້ຄືນ" : "Please enter your email before sending recovery OTP.",
+      recoveryOtpPlaceholder: isThai ? "รหัส OTP 6 หลัก" : isLao ? "ລະຫັດ OTP 6 ຫຼັກ" : "6-digit OTP",
+      recoveryOtpAction: isThai ? "ยืนยัน OTP และกู้คืนบัญชี" : isLao ? "ຢືນຢັນ OTP ແລະ ກູ້ຄືນບັນຊີ" : "Verify OTP & Recover",
+      recoveryOtpWorking: isThai ? "กำลังยืนยัน OTP..." : isLao ? "ກຳລັງຢືນຢັນ OTP..." : "Verifying OTP...",
+      recoveryOtpNeed: isThai ? "กรุณากรอกรหัส OTP ให้ครบ" : isLao ? "ກະລຸນາກອກ OTP ໃຫ້ຄົບ" : "Please enter a valid OTP.",
+      recoveryOtpInvalid: isThai ? "รหัส OTP ไม่ถูกต้องหรือหมดอายุ กรุณาขอรหัสใหม่" : isLao ? "OTP ບໍ່ຖືກ ຫຼື ໝົດອາຍຸ ກະລຸນາຂໍໃໝ່" : "OTP is invalid or expired. Request a new code.",
       recoveryExpired: isThai ? "หมดเวลาการกู้คืนบัญชี (เกิน 3 วัน)" : isLao ? "ໝົດເວລາກູ້ຄືນບັນຊີ (ເກີນ 3 ມື້)" : "Recovery window has expired (over 3 days).",
       recoveryFailed: isThai ? "กู้คืนบัญชีไม่สำเร็จ กรุณาลองอีกครั้ง" : isLao ? "ກູ້ຄືນບັນຊີບໍ່ສຳເລັດ ກະລຸນາລອງໃໝ່" : "Account recovery failed. Please try again.",
       accountRecovered: isThai ? "กู้คืนบัญชีสำเร็จแล้ว สามารถใช้งานต่อได้ทันที" : isLao ? "ກູ້ຄືນບັນຊີສຳເລັດແລ້ວ" : "Account recovered successfully.",
       unauthorized: isThai ? "อีเมลหรือรหัสผ่านไม่ถูกต้อง" : isLao ? "ອີເມວ ຫຼື ລະຫັດຜ່ານບໍ່ຖືກຕ້ອງ" : "Invalid email or password.",
       networkUnstable: isThai ? "เครือข่ายไม่เสถียร กรุณาลองใหม่" : isLao ? "ເຄືອຂ່າຍບໍ່ສະຖຽນ ກະລຸນາລອງໃໝ່" : "Network unstable. Please try again.",
-      emailRateLimit: isThai ? "ส่งอีเมลบ่อยเกินไป กรุณารอสักครู่ หรือกู้คืนด้วยการสแกนหน้า" : isLao ? "ສົ່ງອີເມວຖີ່ເກີນໄປ ກະລຸນາລໍຖ້າ ຫຼື ກູ້ຄືນດ້ວຍການສະແກນໃບໜ້າ" : "Email rate limit exceeded. Please wait or recover with face scan.",
+      emailRateLimit: isThai ? "ส่งอีเมลบ่อยเกินไป กรุณารอสักครู่ หรือกู้คืนด้วยสแกนหน้า/ข้อมูลคำสั่งซื้อ" : isLao ? "ສົ່ງອີເມວຖີ່ເກີນໄປ ກະລຸນາລໍຖ້າ ຫຼື ກູ້ຄືນດ້ວຍສະແກນໃບໜ້າ/ຂໍ້ມູນອໍເດີ" : "Email rate limit exceeded. Please wait or recover with face scan/order info.",
       recoverByFaceAction: isThai ? "กู้คืนด้วยสแกนหน้า" : isLao ? "ກູ້ຄືນດ້ວຍສະແກນໃບໜ້າ" : "Recover by Face Scan",
       recoverByFaceTitle: isThai ? "กู้คืนบัญชีด้วยสแกนหน้า" : isLao ? "ກູ້ຄືນບັນຊີດ້ວຍສະແກນໃບໜ້າ" : "Recover Account by Face Scan",
       recoverByFacePassword: isThai ? "รหัสผ่านยืนยัน" : isLao ? "ລະຫັດຜ່ານຢືນຢັນ" : "Confirm password",
@@ -78,6 +93,18 @@ function text(mode: Mode, locale: AppLocale) {
       recoverByFaceWorking: isThai ? "กำลังกู้คืน..." : isLao ? "ກຳລັງກູ້ຄືນ..." : "Recovering...",
       recoverByFaceNoCamera: isThai ? "อุปกรณ์นี้ไม่รองรับกล้อง" : isLao ? "ອຸປະກອນນີ້ບໍ່ຮອງຮັບກ້ອງ" : "Camera is not available on this device.",
       recoverByFaceFailed: isThai ? "สแกนใบหน้าไม่สำเร็จ กรุณาลองใหม่ในที่แสงพอ" : isLao ? "ສະແກນໃບໜ້າບໍ່ສຳເລັດ ກະລຸນາລອງໃໝ່" : "Face scan failed. Please try again.",
+      recoverByFacePermissionDenied: isThai ? "ไม่ได้รับสิทธิ์ใช้งานกล้อง กรุณาอนุญาตกล้องในเบราว์เซอร์ หรือใช้การกู้คืนทางเลือก" : isLao ? "ບໍ່ໄດ້ຮັບສິດໃຊ້ກ້ອງ ກະລຸນາອະນຸຍາດກ້ອງ ຫຼື ໃຊ້ວິທີກູ້ຄືນອື່ນ" : "Camera permission denied. Allow camera access or use alternative recovery.",
+      recoverByOrderAction: isThai ? "กู้คืนด้วยข้อมูลคำสั่งซื้อ" : isLao ? "ກູ້ຄືນດ້ວຍຂໍ້ມູນອໍເດີ" : "Recover by Order Info",
+      recoverByOrderTitle: isThai ? "กู้คืนบัญชีด้วยข้อมูลคำสั่งซื้อ" : isLao ? "ກູ້ຄືນບັນຊີດ້ວຍຂໍ້ມູນອໍເດີ" : "Recover Account by Order",
+      recoverByOrderHint: isThai ? "กรอกเบอร์โทร 4 ตัวท้ายและเลขออเดอร์ล่าสุดของบัญชีนี้" : isLao ? "ກອກເບີໂທ 4 ຕົວທ້າຍ ແລະ ເລກອໍເດີຫຼ້າສຸດ" : "Enter your phone last 4 digits and your latest order number.",
+      recoverByOrderPhoneLast4: isThai ? "เบอร์โทร 4 ตัวท้าย" : isLao ? "4 ຕົວທ້າຍເບີໂທ" : "Phone last 4 digits",
+      recoverByOrderOrderNo: isThai ? "เลขออเดอร์ล่าสุด" : isLao ? "ເລກອໍເດີຫຼ້າສຸດ" : "Latest order number",
+      recoverByOrderNeedPhone: isThai ? "กรุณากรอกเบอร์โทร 4 ตัวท้าย" : isLao ? "ກະລຸນາກອກເບີໂທ 4 ຕົວທ້າຍ" : "Please enter your phone last 4 digits.",
+      recoverByOrderNeedOrderNo: isThai ? "กรุณากรอกเลขออเดอร์ล่าสุด" : isLao ? "ກະລຸນາກອກເລກອໍເດີຫຼ້າສຸດ" : "Please enter your latest order number.",
+      recoverByOrderInvalidProof: isThai ? "ข้อมูลยืนยันไม่ตรงกับบัญชีนี้ กรุณาตรวจสอบอีกครั้ง" : isLao ? "ຂໍ້ມູນຢືນຢັນບໍ່ຕົງກັບບັນຊີນີ້" : "Recovery proof does not match this account.",
+      recoverByOrderConfirm: isThai ? "ยืนยันกู้คืนด้วยข้อมูลออเดอร์" : isLao ? "ຢືນຢັນກູ້ຄືນດ້ວຍຂໍ້ມູນອໍເດີ" : "Confirm order recovery",
+      recoverByOrderWorking: isThai ? "กำลังกู้คืน..." : isLao ? "ກຳລັງກູ້ຄືນ..." : "Recovering...",
+      recoverByOrderRateLimit: isThai ? "พยายามกู้คืนบ่อยเกินไป กรุณารอแล้วลองใหม่" : isLao ? "ພະຍາຍາມກູ້ຄືນຫຼາຍເກີນໄປ ກະລຸນາລໍຖ້າ" : "Too many recovery attempts. Please try again later.",
     };
   }
 
@@ -110,16 +137,21 @@ function text(mode: Mode, locale: AppLocale) {
     errorPopupTitle: isThai ? "เกิดข้อผิดพลาดในการเข้าสู่ระบบ" : isLao ? "ເກີດຂໍ້ຜິດພາດໃນການເຂົ້າລະບົບ" : "Sign-in error",
     errorPopupClose: isThai ? "ปิด" : isLao ? "ປິດ" : "Close",
     accountDeletePending: isThai ? "กำลังดำเนินการลบบัญชีผู้ใช้ โปรดกู้คืนบัญชีผู้ใช้ก่อนแก้ไขโปรไฟล์" : isLao ? "ບັນຊີຢູ່ລະຫວ່າງລໍລົບ ກະລຸນາກູ້ຄືນກ່ອນແກ້ໄຂໂປຣໄຟລ໌" : "Account deletion is pending. Recover your account before editing profile.",
-    recoveryLinkAction: isThai ? "กู้คืนบัญชีทางอีเมล" : isLao ? "ກູ້ບັນຊີຜ່ານອີເມວ" : "Recover via Email",
-    recoveryLinkSending: isThai ? "กำลังส่งลิงก์กู้คืน..." : isLao ? "ກຳລັງສົ່ງລິ້ງກູ້ຄືນ..." : "Sending recovery link...",
-    recoveryLinkSent: isThai ? "ส่งลิงก์กู้คืนบัญชีแล้ว กรุณาตรวจสอบอีเมลของคุณ" : isLao ? "ສົ່ງລິ້ງກູ້ຄືນແລ້ວ ກະລຸນາກວດອີເມວ" : "Recovery link sent. Please check your email.",
-    recoveryNeedEmail: isThai ? "กรุณากรอกอีเมลก่อนส่งลิงก์กู้คืนบัญชี" : isLao ? "ກະລຸນາກອກອີເມວກ່ອນສົ່ງລິ້ງກູ້ຄືນ" : "Please enter your email before sending recovery link.",
+    recoveryLinkAction: isThai ? "ส่ง OTP ทางอีเมล" : isLao ? "ສົ່ງ OTP ທາງອີເມວ" : "Send Email OTP",
+    recoveryLinkSending: isThai ? "กำลังส่ง OTP..." : isLao ? "ກຳລັງສົ່ງ OTP..." : "Sending OTP...",
+    recoveryLinkSent: isThai ? "ส่งรหัส OTP แล้ว กรุณาตรวจสอบอีเมลและกรอกรหัสด้านล่าง" : isLao ? "ສົ່ງລະຫັດ OTP ແລ້ວ ກະລຸນາກວດອີເມວ" : "OTP sent. Please check your email and enter the code below.",
+    recoveryNeedEmail: isThai ? "กรุณากรอกอีเมลก่อนส่ง OTP กู้คืนบัญชี" : isLao ? "ກະລຸນາກອກອີເມວກ່ອນສົ່ງ OTP ກູ້ຄືນ" : "Please enter your email before sending recovery OTP.",
+    recoveryOtpPlaceholder: isThai ? "รหัส OTP 6 หลัก" : isLao ? "ລະຫັດ OTP 6 ຫຼັກ" : "6-digit OTP",
+    recoveryOtpAction: isThai ? "ยืนยัน OTP และกู้คืนบัญชี" : isLao ? "ຢືນຢັນ OTP ແລະ ກູ້ຄືນບັນຊີ" : "Verify OTP & Recover",
+    recoveryOtpWorking: isThai ? "กำลังยืนยัน OTP..." : isLao ? "ກຳລັງຢືນຢັນ OTP..." : "Verifying OTP...",
+    recoveryOtpNeed: isThai ? "กรุณากรอกรหัส OTP ให้ครบ" : isLao ? "ກະລຸນາກອກ OTP ໃຫ້ຄົບ" : "Please enter a valid OTP.",
+    recoveryOtpInvalid: isThai ? "รหัส OTP ไม่ถูกต้องหรือหมดอายุ กรุณาขอรหัสใหม่" : isLao ? "OTP ບໍ່ຖືກ ຫຼື ໝົດອາຍຸ ກະລຸນາຂໍໃໝ່" : "OTP is invalid or expired. Request a new code.",
     recoveryExpired: isThai ? "หมดเวลาการกู้คืนบัญชี (เกิน 3 วัน)" : isLao ? "ໝົດເວລາກູ້ຄືນບັນຊີ (ເກີນ 3 ມື້)" : "Recovery window has expired (over 3 days).",
     recoveryFailed: isThai ? "กู้คืนบัญชีไม่สำเร็จ กรุณาลองอีกครั้ง" : isLao ? "ກູ້ຄືນບັນຊີບໍ່ສຳເລັດ ກະລຸນາລອງໃໝ່" : "Account recovery failed. Please try again.",
     accountRecovered: isThai ? "กู้คืนบัญชีสำเร็จแล้ว สามารถใช้งานต่อได้ทันที" : isLao ? "ກູ້ຄືນບັນຊີສຳເລັດແລ້ວ" : "Account recovered successfully.",
     unauthorized: isThai ? "อีเมลหรือรหัสผ่านไม่ถูกต้อง" : isLao ? "ອີເມວ ຫຼື ລະຫັດຜ່ານບໍ່ຖືກຕ້ອງ" : "Invalid email or password.",
     networkUnstable: isThai ? "เครือข่ายไม่เสถียร กรุณาลองใหม่" : isLao ? "ເຄືອຂ່າຍບໍ່ສະຖຽນ ກະລຸນາລອງໃໝ່" : "Network unstable. Please try again.",
-    emailRateLimit: isThai ? "ส่งอีเมลบ่อยเกินไป กรุณารอสักครู่ หรือกู้คืนด้วยการสแกนหน้า" : isLao ? "ສົ່ງອີເມວຖີ່ເກີນໄປ ກະລຸນາລໍຖ້າ ຫຼື ກູ້ຄືນດ້ວຍການສະແກນໃບໜ້າ" : "Email rate limit exceeded. Please wait or recover with face scan.",
+    emailRateLimit: isThai ? "ส่งอีเมลบ่อยเกินไป กรุณารอสักครู่ หรือกู้คืนด้วยสแกนหน้า/ข้อมูลคำสั่งซื้อ" : isLao ? "ສົ່ງອີເມວຖີ່ເກີນໄປ ກະລຸນາລໍຖ້າ ຫຼື ກູ້ຄືນດ້ວຍສະແກນໃບໜ້າ/ຂໍ້ມູນອໍເດີ" : "Email rate limit exceeded. Please wait or recover with face scan/order info.",
     recoverByFaceAction: isThai ? "กู้คืนด้วยสแกนหน้า" : isLao ? "ກູ້ຄືນດ້ວຍສະແກນໃບໜ້າ" : "Recover by Face Scan",
     recoverByFaceTitle: isThai ? "กู้คืนบัญชีด้วยสแกนหน้า" : isLao ? "ກູ້ຄືນບັນຊີດ້ວຍສະແກນໃບໜ້າ" : "Recover Account by Face Scan",
     recoverByFacePassword: isThai ? "รหัสผ่านยืนยัน" : isLao ? "ລະຫັດຜ່ານຢືນຢັນ" : "Confirm password",
@@ -132,6 +164,18 @@ function text(mode: Mode, locale: AppLocale) {
     recoverByFaceWorking: isThai ? "กำลังกู้คืน..." : isLao ? "ກຳລັງກູ້ຄືນ..." : "Recovering...",
     recoverByFaceNoCamera: isThai ? "อุปกรณ์นี้ไม่รองรับกล้อง" : isLao ? "ອຸປະກອນນີ້ບໍ່ຮອງຮັບກ້ອງ" : "Camera is not available on this device.",
     recoverByFaceFailed: isThai ? "สแกนใบหน้าไม่สำเร็จ กรุณาลองใหม่ในที่แสงพอ" : isLao ? "ສະແກນໃບໜ້າບໍ່ສຳເລັດ ກະລຸນາລອງໃໝ່" : "Face scan failed. Please try again.",
+    recoverByFacePermissionDenied: isThai ? "ไม่ได้รับสิทธิ์ใช้งานกล้อง กรุณาอนุญาตกล้องในเบราว์เซอร์ หรือใช้การกู้คืนทางเลือก" : isLao ? "ບໍ່ໄດ້ຮັບສິດໃຊ້ກ້ອງ ກະລຸນາອະນຸຍາດກ້ອງ ຫຼື ໃຊ້ວິທີກູ້ຄືນອື່ນ" : "Camera permission denied. Allow camera access or use alternative recovery.",
+    recoverByOrderAction: isThai ? "กู้คืนด้วยข้อมูลคำสั่งซื้อ" : isLao ? "ກູ້ຄືນດ້ວຍຂໍ້ມູນອໍເດີ" : "Recover by Order Info",
+    recoverByOrderTitle: isThai ? "กู้คืนบัญชีด้วยข้อมูลคำสั่งซื้อ" : isLao ? "ກູ້ຄືນບັນຊີດ້ວຍຂໍ້ມູນອໍເດີ" : "Recover Account by Order",
+    recoverByOrderHint: isThai ? "กรอกเบอร์โทร 4 ตัวท้ายและเลขออเดอร์ล่าสุดของบัญชีนี้" : isLao ? "ກອກເບີໂທ 4 ຕົວທ້າຍ ແລະ ເລກອໍເດີຫຼ້າສຸດ" : "Enter your phone last 4 digits and your latest order number.",
+    recoverByOrderPhoneLast4: isThai ? "เบอร์โทร 4 ตัวท้าย" : isLao ? "4 ຕົວທ້າຍເບີໂທ" : "Phone last 4 digits",
+    recoverByOrderOrderNo: isThai ? "เลขออเดอร์ล่าสุด" : isLao ? "ເລກອໍເດີຫຼ້າສຸດ" : "Latest order number",
+    recoverByOrderNeedPhone: isThai ? "กรุณากรอกเบอร์โทร 4 ตัวท้าย" : isLao ? "ກະລຸນາກອກເບີໂທ 4 ຕົວທ້າຍ" : "Please enter your phone last 4 digits.",
+    recoverByOrderNeedOrderNo: isThai ? "กรุณากรอกเลขออเดอร์ล่าสุด" : isLao ? "ກະລຸນາກອກເລກອໍເດີຫຼ້າສຸດ" : "Please enter your latest order number.",
+    recoverByOrderInvalidProof: isThai ? "ข้อมูลยืนยันไม่ตรงกับบัญชีนี้ กรุณาตรวจสอบอีกครั้ง" : isLao ? "ຂໍ້ມູນຢືນຢັນບໍ່ຕົງກັບບັນຊີນີ້" : "Recovery proof does not match this account.",
+    recoverByOrderConfirm: isThai ? "ยืนยันกู้คืนด้วยข้อมูลออเดอร์" : isLao ? "ຢືນຢັນກູ້ຄືນດ້ວຍຂໍ້ມູນອໍເດີ" : "Confirm order recovery",
+    recoverByOrderWorking: isThai ? "กำลังกู้คืน..." : isLao ? "ກຳລັງກູ້ຄືນ..." : "Recovering...",
+    recoverByOrderRateLimit: isThai ? "พยายามกู้คืนบ่อยเกินไป กรุณารอแล้วลองใหม่" : isLao ? "ພະຍາຍາມກູ້ຄືນຫຼາຍເກີນໄປ ກະລຸນາລໍຖ້າ" : "Too many recovery attempts. Please try again later.",
   };
 }
 
@@ -226,16 +270,24 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
   const [loading, setLoading] = useState(false);
   const [resendingConfirm, setResendingConfirm] = useState(false);
   const [sendingRecoveryLink, setSendingRecoveryLink] = useState(false);
+  const [emailRecoveryOtp, setEmailRecoveryOtp] = useState<string[]>(createEmptyEmailRecoveryOtp);
+  const [emailRecoveryOtpSent, setEmailRecoveryOtpSent] = useState(false);
+  const [recoveringByEmailOtp, setRecoveringByEmailOtp] = useState(false);
   const [pendingConfirmEmail, setPendingConfirmEmail] = useState<string | null>(null);
   const [pendingDeleteRecovery, setPendingDeleteRecovery] = useState(false);
   const [emailRateLimited, setEmailRateLimited] = useState(false);
   const [showFaceRecoveryModal, setShowFaceRecoveryModal] = useState(false);
+  const [showOrderRecoveryModal, setShowOrderRecoveryModal] = useState(false);
   const [recoverPassword, setRecoverPassword] = useState("");
+  const [recoverPhoneLast4, setRecoverPhoneLast4] = useState("");
+  const [recoverOrderNo, setRecoverOrderNo] = useState("");
   const [faceScanPassed, setFaceScanPassed] = useState(false);
   const [faceScanMethod, setFaceScanMethod] = useState("");
   const [faceScanning, setFaceScanning] = useState(false);
   const [recoveringByFace, setRecoveringByFace] = useState(false);
+  const [recoveringByOrder, setRecoveringByOrder] = useState(false);
   const [faceRecoveryError, setFaceRecoveryError] = useState<string | null>(null);
+  const [orderRecoveryError, setOrderRecoveryError] = useState<string | null>(null);
   const [showGooglePendingModal, setShowGooglePendingModal] = useState(false);
   const [googlePendingClosing, setGooglePendingClosing] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
@@ -244,9 +296,109 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
   const [message, setMessage] = useState<string | null>(null);
   const googlePendingCloseTimer = useRef<NodeJS.Timeout | null>(null);
   const errorModalCloseTimer = useRef<NodeJS.Timeout | null>(null);
+  const emailRecoveryOtpRefs = useRef<Array<HTMLInputElement | null>>([]);
+
+  const emailRecoveryOtpValue = emailRecoveryOtp.join("");
+  const isEmailRecoveryOtpComplete = emailRecoveryOtp.every((digit) => digit.length === 1);
 
   function isEmailNotConfirmedError(input: string) {
     return input.toLowerCase().includes("email not confirmed");
+  }
+
+  function focusEmailRecoveryOtpCell(index: number) {
+    const bounded = Math.max(0, Math.min(EMAIL_RECOVERY_OTP_LENGTH - 1, index));
+    const target = emailRecoveryOtpRefs.current[bounded];
+    if (!target) {
+      return;
+    }
+    target.focus();
+    target.select();
+  }
+
+  function handleEmailRecoveryOtpChange(index: number, raw: string) {
+    const digits = normalizeOtpDigits(raw);
+    if (!digits) {
+      setEmailRecoveryOtp((previous) => {
+        const next = [...previous];
+        next[index] = "";
+        return next;
+      });
+      return;
+    }
+
+    setEmailRecoveryOtp((previous) => {
+      const next = [...previous];
+      let cursor = index;
+      for (const digit of digits) {
+        if (cursor >= EMAIL_RECOVERY_OTP_LENGTH) {
+          break;
+        }
+        next[cursor] = digit;
+        cursor += 1;
+      }
+      return next;
+    });
+
+    requestAnimationFrame(() => {
+      const nextIndex = Math.min(index + digits.length, EMAIL_RECOVERY_OTP_LENGTH - 1);
+      focusEmailRecoveryOtpCell(nextIndex);
+    });
+  }
+
+  function handleEmailRecoveryOtpKeyDown(index: number, key: string) {
+    if (key === "Backspace") {
+      if (emailRecoveryOtp[index]) {
+        setEmailRecoveryOtp((previous) => {
+          const next = [...previous];
+          next[index] = "";
+          return next;
+        });
+        return;
+      }
+      if (index > 0) {
+        setEmailRecoveryOtp((previous) => {
+          const next = [...previous];
+          next[index - 1] = "";
+          return next;
+        });
+        requestAnimationFrame(() => focusEmailRecoveryOtpCell(index - 1));
+      }
+      return;
+    }
+
+    if (key === "ArrowLeft" && index > 0) {
+      requestAnimationFrame(() => focusEmailRecoveryOtpCell(index - 1));
+      return;
+    }
+
+    if (key === "ArrowRight" && index < EMAIL_RECOVERY_OTP_LENGTH - 1) {
+      requestAnimationFrame(() => focusEmailRecoveryOtpCell(index + 1));
+    }
+  }
+
+  function handleEmailRecoveryOtpPaste(index: number, pastedText: string) {
+    const digits = normalizeOtpDigits(pastedText);
+    if (!digits) {
+      return;
+    }
+
+    setEmailRecoveryOtp((previous) => {
+      const next = [...previous];
+      let cursor = index;
+      for (const digit of digits) {
+        if (cursor >= EMAIL_RECOVERY_OTP_LENGTH) {
+          break;
+        }
+        next[cursor] = digit;
+        cursor += 1;
+      }
+      return next;
+    });
+
+    requestAnimationFrame(() => {
+      const nextIndex = Math.min(index + digits.length, EMAIL_RECOVERY_OTP_LENGTH - 1);
+      focusEmailRecoveryOtpCell(nextIndex);
+    });
   }
 
   useEffect(() => {
@@ -322,6 +474,13 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
     setShowErrorModal(true);
   }, [error]);
 
+  useEffect(() => {
+    if (!emailRecoveryOtpSent) {
+      return;
+    }
+    requestAnimationFrame(() => focusEmailRecoveryOtpCell(0));
+  }, [emailRecoveryOtpSent]);
+
   function openGooglePendingModal() {
     if (googlePendingCloseTimer.current) {
       clearTimeout(googlePendingCloseTimer.current);
@@ -370,6 +529,8 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
     setPendingConfirmEmail(null);
     setPendingDeleteRecovery(false);
     setEmailRateLimited(false);
+    setEmailRecoveryOtp(createEmptyEmailRecoveryOtp());
+    setEmailRecoveryOtpSent(false);
 
     try {
       const supabase = getSupabaseBrowserClient();
@@ -497,20 +658,17 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
     setError(null);
     setMessage(null);
     setEmailRateLimited(false);
+    setEmailRecoveryOtp(createEmptyEmailRecoveryOtp());
 
     try {
       const supabase = getSupabaseBrowserClient();
       const emailRedirectTo = buildCustomerAuthCallbackUrl(locale, { recoverAccount: true });
-      if (!emailRedirectTo) {
-        setError(locale === "th" ? "ไม่พบโดเมนสำหรับกู้คืนบัญชี" : "Missing recovery redirect URL");
-        return;
-      }
 
       const { error: otpError } = await supabase.auth.signInWithOtp({
         email: normalizedEmail,
         options: {
           shouldCreateUser: false,
-          emailRedirectTo,
+          ...(emailRedirectTo ? { emailRedirectTo } : {}),
         },
       });
 
@@ -525,12 +683,76 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
         return;
       }
 
+      setPendingDeleteRecovery(true);
+      setEmailRecoveryOtpSent(true);
       setMessage(t.recoveryLinkSent);
     } catch (caught) {
       const fallback = caught instanceof Error ? caught.message : t.recoveryFailed;
       setError(mapAuthErrorMessage(fallback, locale, t));
     } finally {
       setSendingRecoveryLink(false);
+    }
+  }
+
+  async function handleRecoverByEmailOtp() {
+    const normalizedEmail = email.trim();
+    const normalizedOtp = emailRecoveryOtpValue;
+    if (!normalizedEmail) {
+      setError(t.recoveryNeedEmail);
+      return;
+    }
+    if (normalizedOtp.length !== EMAIL_RECOVERY_OTP_LENGTH) {
+      setError(t.recoveryOtpNeed);
+      return;
+    }
+
+    setRecoveringByEmailOtp(true);
+    setError(null);
+    setMessage(null);
+
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { error: verifyError } = await supabase.auth.verifyOtp({
+        email: normalizedEmail,
+        token: normalizedOtp,
+        type: "email",
+      });
+
+      if (verifyError) {
+        const lower = verifyError.message.toLowerCase();
+        if (lower.includes("token") || lower.includes("otp") || lower.includes("expired")) {
+          throw new Error(t.recoveryOtpInvalid);
+        }
+        throw new Error(mapAuthErrorMessage(verifyError.message, locale, t));
+      }
+
+      const response = await fetch("/api/customer/account-delete/recover-email-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      const payload = (await response.json().catch(() => null)) as { ok?: boolean; code?: string; error?: string } | null;
+      if (!response.ok || !payload?.ok) {
+        if (payload?.code === "DELETION_RECOVERY_EXPIRED") {
+          throw new Error(t.recoveryExpired);
+        }
+        throw new Error(mapAuthErrorMessage(payload?.error ?? t.recoveryFailed, locale, t));
+      }
+
+      markCustomerSessionActive();
+      setPendingDeleteRecovery(false);
+      setEmailRateLimited(false);
+      setEmailRecoveryOtpSent(false);
+      setEmailRecoveryOtp(createEmptyEmailRecoveryOtp());
+      setError(null);
+      setMessage(t.accountRecovered);
+      router.replace(accountPath);
+      router.refresh();
+    } catch (caught) {
+      const fallback = caught instanceof Error ? caught.message : t.recoveryFailed;
+      setError(mapAuthErrorMessage(fallback, locale, t));
+    } finally {
+      setRecoveringByEmailOtp(false);
     }
   }
 
@@ -544,12 +766,57 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
     setShowFaceRecoveryModal(true);
   }
 
+  function openOrderRecoveryModal() {
+    setRecoverPhoneLast4("");
+    setRecoverOrderNo("");
+    setOrderRecoveryError(null);
+    setErrorModalClosing(false);
+    setShowErrorModal(false);
+    setShowOrderRecoveryModal(true);
+  }
+
   function closeFaceRecoveryModal() {
     if (recoveringByFace || faceScanning) {
       return;
     }
     setFaceRecoveryError(null);
     setShowFaceRecoveryModal(false);
+  }
+
+  function closeOrderRecoveryModal() {
+    if (recoveringByOrder) {
+      return;
+    }
+    setOrderRecoveryError(null);
+    setShowOrderRecoveryModal(false);
+  }
+
+  function mapFaceScanError(caught: unknown) {
+    const name = typeof caught === "object" && caught && "name" in caught
+      ? String((caught as { name?: unknown }).name ?? "").trim().toLowerCase()
+      : "";
+    const message = caught instanceof Error ? caught.message : "";
+    const lower = message.toLowerCase();
+
+    if (
+      name === "notallowederror"
+      || name === "permissiondeniederror"
+      || lower.includes("permission denied")
+      || lower.includes("permissiondenied")
+      || lower.includes("notallowederror")
+    ) {
+      return t.recoverByFacePermissionDenied;
+    }
+
+    if (name === "notfounderror" || name === "notreadableerror") {
+      return t.recoverByFaceNoCamera;
+    }
+
+    if (lower.includes("could not start video") || lower.includes("could not access video stream")) {
+      return t.recoverByFaceNoCamera;
+    }
+
+    return message || t.recoverByFaceFailed;
   }
 
   async function handleFaceScan() {
@@ -625,8 +892,7 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
     } catch (caught) {
       setFaceScanPassed(false);
       setFaceScanMethod("");
-      const message = caught instanceof Error ? caught.message : t.recoverByFaceFailed;
-      setFaceRecoveryError(message);
+      setFaceRecoveryError(mapFaceScanError(caught));
     } finally {
       if (stream) {
         for (const track of stream.getTracks()) {
@@ -690,12 +956,22 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
       });
 
       if (signInError) {
+        setPendingDeleteRecovery(false);
+        setEmailRateLimited(false);
+        setEmailRecoveryOtpSent(false);
+        setEmailRecoveryOtp(createEmptyEmailRecoveryOtp());
+        setError(null);
         setMessage(t.accountRecovered);
         setShowFaceRecoveryModal(false);
         return;
       }
 
       markCustomerSessionActive();
+      setPendingDeleteRecovery(false);
+      setEmailRateLimited(false);
+      setEmailRecoveryOtpSent(false);
+      setEmailRecoveryOtp(createEmptyEmailRecoveryOtp());
+      setError(null);
       setMessage(t.accountRecovered);
       setShowFaceRecoveryModal(false);
       router.replace(accountPath);
@@ -705,6 +981,68 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
       setFaceRecoveryError(mapAuthErrorMessage(fallback, locale, t));
     } finally {
       setRecoveringByFace(false);
+    }
+  }
+
+  async function handleRecoverByOrder() {
+    const normalizedEmail = email.trim();
+    const normalizedPhoneLast4 = recoverPhoneLast4.replace(/\D/g, "").slice(-4);
+    const normalizedOrderNo = recoverOrderNo.trim().toUpperCase();
+
+    if (!normalizedEmail) {
+      setOrderRecoveryError(t.recoveryNeedEmail);
+      return;
+    }
+    if (normalizedPhoneLast4.length !== 4) {
+      setOrderRecoveryError(t.recoverByOrderNeedPhone);
+      return;
+    }
+    if (!normalizedOrderNo) {
+      setOrderRecoveryError(t.recoverByOrderNeedOrderNo);
+      return;
+    }
+
+    setRecoveringByOrder(true);
+    setOrderRecoveryError(null);
+    setMessage(null);
+
+    try {
+      const response = await fetch("/api/customer/account-delete/recover-order-proof", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: normalizedEmail,
+          phoneLast4: normalizedPhoneLast4,
+          lastOrderNo: normalizedOrderNo,
+        }),
+      });
+
+      const payload = (await response.json().catch(() => null)) as { ok?: boolean; code?: string; error?: string } | null;
+      if (!response.ok || !payload?.ok) {
+        if (payload?.code === "DELETION_RECOVERY_EXPIRED") {
+          throw new Error(t.recoveryExpired);
+        }
+        if (payload?.code === "RECOVERY_PROOF_INVALID") {
+          throw new Error(t.recoverByOrderInvalidProof);
+        }
+        if (payload?.code === "RATE_LIMITED") {
+          throw new Error(t.recoverByOrderRateLimit);
+        }
+        throw new Error(mapAuthErrorMessage(payload?.error ?? t.recoveryFailed, locale, t));
+      }
+
+      setPendingDeleteRecovery(false);
+      setEmailRateLimited(false);
+      setEmailRecoveryOtpSent(false);
+      setEmailRecoveryOtp(createEmptyEmailRecoveryOtp());
+      setError(null);
+      setMessage(t.accountRecovered);
+      setShowOrderRecoveryModal(false);
+    } catch (caught) {
+      const fallback = caught instanceof Error ? caught.message : t.recoveryFailed;
+      setOrderRecoveryError(mapAuthErrorMessage(fallback, locale, t));
+    } finally {
+      setRecoveringByOrder(false);
     }
   }
 
@@ -774,23 +1112,79 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
           </button>
         ) : null}
         {pendingDeleteRecovery || emailRateLimited ? (
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
-            <button
-              type="button"
-              onClick={handleSendRecoveryLink}
-              disabled={sendingRecoveryLink || loading}
-              className="inline-flex w-full items-center justify-center rounded-xl border border-sky-400/55 bg-sky-500/10 px-3 py-2 text-sm font-semibold text-sky-200 transition hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {sendingRecoveryLink ? t.recoveryLinkSending : t.recoveryLinkAction}
-            </button>
-            <button
-              type="button"
-              onClick={openFaceRecoveryModal}
-              disabled={loading}
-              className="inline-flex w-full items-center justify-center rounded-xl border border-emerald-400/55 bg-emerald-500/10 px-3 py-2 text-sm font-semibold text-emerald-200 transition hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {t.recoverByFaceAction}
-            </button>
+          <div className="mt-3 space-y-2">
+            <div className="grid gap-2 sm:grid-cols-3">
+              <button
+                type="button"
+                onClick={handleSendRecoveryLink}
+                disabled={sendingRecoveryLink || loading || recoveringByEmailOtp}
+                className="inline-flex w-full items-center justify-center rounded-xl border border-sky-400/55 bg-sky-500/10 px-3 py-2 text-sm font-semibold text-sky-200 transition hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {sendingRecoveryLink ? t.recoveryLinkSending : t.recoveryLinkAction}
+              </button>
+              <button
+                type="button"
+                onClick={openFaceRecoveryModal}
+                disabled={loading || recoveringByEmailOtp}
+                className="inline-flex w-full items-center justify-center rounded-xl border border-emerald-400/55 bg-emerald-500/10 px-3 py-2 text-sm font-semibold text-emerald-200 transition hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {t.recoverByFaceAction}
+              </button>
+              <button
+                type="button"
+                onClick={openOrderRecoveryModal}
+                disabled={loading || recoveringByEmailOtp}
+                className="inline-flex w-full items-center justify-center rounded-xl border border-amber-400/55 bg-amber-500/10 px-3 py-2 text-sm font-semibold text-amber-200 transition hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {t.recoverByOrderAction}
+              </button>
+            </div>
+            {emailRecoveryOtpSent ? (
+              <div className="space-y-2">
+                <div className="grid grid-cols-6 gap-2">
+                  {Array.from({ length: EMAIL_RECOVERY_OTP_LENGTH }, (_, index) => (
+                    <input
+                      key={`email-recovery-otp-${index}`}
+                      ref={(node) => {
+                        emailRecoveryOtpRefs.current[index] = node;
+                      }}
+                      value={emailRecoveryOtp[index] ?? ""}
+                      onChange={(event) => handleEmailRecoveryOtpChange(index, event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Backspace" || event.key === "ArrowLeft" || event.key === "ArrowRight") {
+                          event.preventDefault();
+                          handleEmailRecoveryOtpKeyDown(index, event.key);
+                          return;
+                        }
+                        if (event.key.length === 1 && !/[0-9]/.test(event.key)) {
+                          event.preventDefault();
+                          return;
+                        }
+                      }}
+                      onFocus={(event) => event.currentTarget.select()}
+                      onPaste={(event) => {
+                        event.preventDefault();
+                        handleEmailRecoveryOtpPaste(index, event.clipboardData.getData("text"));
+                      }}
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={EMAIL_RECOVERY_OTP_LENGTH}
+                      autoComplete={index === 0 ? "one-time-code" : "off"}
+                      aria-label={`${t.recoveryOtpPlaceholder} ${index + 1}`}
+                      className="h-12 w-full rounded-xl border border-sky-300/40 bg-black/45 px-0 text-center text-lg font-semibold tracking-[0.1em] text-sky-100 outline-none transition focus:border-sky-200 focus:ring-2 focus:ring-sky-200/20"
+                    />
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void handleRecoverByEmailOtp()}
+                  disabled={recoveringByEmailOtp || !isEmailRecoveryOtpComplete}
+                  className="inline-flex h-11 w-full items-center justify-center rounded-xl border border-cyan-300/60 bg-gradient-to-r from-cyan-400 to-sky-300 px-4 text-sm font-semibold text-zinc-900 transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {recoveringByEmailOtp ? t.recoveryOtpWorking : t.recoveryOtpAction}
+                </button>
+              </div>
+            ) : null}
           </div>
         ) : null}
         {message ? <p className="mt-4 rounded-xl border border-emerald-400/35 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">{message}</p> : null}
@@ -959,6 +1353,17 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
               </button>
               {faceScanPassed ? <span className="text-sm font-semibold text-emerald-200">{t.recoverByFaceScanned}</span> : null}
             </div>
+            <button
+              type="button"
+              onClick={() => {
+                setShowFaceRecoveryModal(false);
+                openOrderRecoveryModal();
+              }}
+              disabled={faceScanning || recoveringByFace}
+              className="mt-3 inline-flex h-9 items-center justify-center rounded-lg border border-amber-300/55 bg-amber-500/10 px-3 text-xs font-semibold text-amber-100 transition hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {t.recoverByOrderAction}
+            </button>
             <div className="mt-5 flex flex-wrap justify-end gap-2">
               <button
                 type="button"
@@ -975,6 +1380,77 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
                 className="inline-flex h-10 items-center justify-center rounded-lg border border-emerald-300/65 bg-gradient-to-r from-emerald-400 to-teal-300 px-4 text-sm font-semibold text-zinc-900 transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {recoveringByFace ? t.recoverByFaceWorking : t.recoverByFaceConfirm}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {showOrderRecoveryModal ? (
+        <div
+          className="fixed inset-0 z-[151] flex items-center justify-center bg-black/65 px-4"
+          onClick={closeOrderRecoveryModal}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="w-full max-w-md rounded-2xl border border-amber-400/40 bg-[radial-gradient(circle_at_top,_rgba(251,191,36,0.18)_0%,_rgba(22,14,4,0.94)_48%,_#080807_100%)] p-5 text-amber-50 shadow-[0_24px_80px_rgba(0,0,0,0.56)]"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h2 className="text-lg font-semibold text-amber-200">{t.recoverByOrderTitle}</h2>
+            <p className="mt-2 text-sm text-amber-100/85">{t.recoverByOrderHint}</p>
+            {orderRecoveryError ? (
+              <p className="mt-3 rounded-xl border border-rose-300/40 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">
+                {orderRecoveryError}
+              </p>
+            ) : null}
+            <div className="mt-4 space-y-3">
+              <label className="block">
+                <span className="mb-1.5 block text-sm font-medium text-amber-100/90">{t.emailPlaceholder}</span>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  className="h-11 w-full rounded-xl border border-amber-300/35 bg-black/35 px-3 text-sm text-amber-50 outline-none transition focus:border-amber-200 focus:ring-2 focus:ring-amber-200/20"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1.5 block text-sm font-medium text-amber-100/90">{t.recoverByOrderPhoneLast4}</span>
+                <input
+                  value={recoverPhoneLast4}
+                  onChange={(event) => setRecoverPhoneLast4(event.target.value.replace(/\D/g, "").slice(-4))}
+                  inputMode="numeric"
+                  maxLength={4}
+                  placeholder="1234"
+                  className="h-11 w-full rounded-xl border border-amber-300/35 bg-black/35 px-3 text-sm text-amber-50 outline-none transition focus:border-amber-200 focus:ring-2 focus:ring-amber-200/20"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1.5 block text-sm font-medium text-amber-100/90">{t.recoverByOrderOrderNo}</span>
+                <input
+                  value={recoverOrderNo}
+                  onChange={(event) => setRecoverOrderNo(event.target.value)}
+                  placeholder="ORD-20260308-1234"
+                  className="h-11 w-full rounded-xl border border-amber-300/35 bg-black/35 px-3 text-sm text-amber-50 outline-none transition focus:border-amber-200 focus:ring-2 focus:ring-amber-200/20"
+                />
+              </label>
+            </div>
+            <div className="mt-5 flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                onClick={closeOrderRecoveryModal}
+                disabled={recoveringByOrder}
+                className="inline-flex h-10 items-center justify-center rounded-lg border border-slate-500/45 bg-slate-800/70 px-4 text-sm font-semibold text-slate-100 transition hover:bg-slate-700/80 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {t.recoverByFaceCancel}
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleRecoverByOrder()}
+                disabled={recoveringByOrder}
+                className="inline-flex h-10 items-center justify-center rounded-lg border border-amber-300/65 bg-gradient-to-r from-amber-400 to-yellow-300 px-4 text-sm font-semibold text-zinc-900 transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {recoveringByOrder ? t.recoverByOrderWorking : t.recoverByOrderConfirm}
               </button>
             </div>
           </div>
@@ -1033,6 +1509,14 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
                       className="inline-flex h-10 items-center justify-center rounded-full border border-emerald-300/65 bg-gradient-to-r from-emerald-400 to-teal-300 px-5 text-sm font-semibold text-zinc-900 transition hover:brightness-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {t.recoverByFaceAction}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={openOrderRecoveryModal}
+                      disabled={loading}
+                      className="inline-flex h-10 items-center justify-center rounded-full border border-amber-300/65 bg-gradient-to-r from-amber-400 to-yellow-300 px-5 text-sm font-semibold text-zinc-900 transition hover:brightness-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {t.recoverByOrderAction}
                     </button>
                   </>
                 ) : null}

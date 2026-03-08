@@ -16,6 +16,10 @@ export function resolveAuthRedirectBaseUrl() {
   const runtimeUrl =
     typeof window !== "undefined" ? normalizeBaseUrl(window.location.origin) : "";
 
+  if (envUrl && !LOCALHOST_URL_PATTERN.test(envUrl)) {
+    return envUrl;
+  }
+
   if (runtimeUrl && LOCALHOST_URL_PATTERN.test(runtimeUrl) && envUrl && !LOCALHOST_URL_PATTERN.test(envUrl)) {
     return envUrl;
   }

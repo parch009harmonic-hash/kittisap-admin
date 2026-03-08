@@ -28,6 +28,10 @@ function normalizeErrorMessage(error: unknown) {
   return String(error ?? "").trim();
 }
 
+function digitsOnly(value: string) {
+  return String(value ?? "").replace(/\D/g, "");
+}
+
 function isMissingColumnErrorMessage(message: string) {
   const lower = message.toLowerCase();
   return lower.includes("column")
@@ -226,6 +230,54 @@ async function resolveCustomerIdByEmail(email: string) {
   }
 
   throw new CustomerAccountDeletionError(404, "PROFILE_NOT_FOUND", "Customer profile was not found");
+}
+
+async function verifyOrderRecoveryProof(input: {
+  customerId: string;
+  phoneLast4: string;
+  lastOrderNo: string;
+}) {
+  const normalizedPhoneLast4 = digitsOnly(input.phoneLast4).slice(-4);
+  if (normalizedPhoneLast4.length !== 4) {
+    throw new CustomerAccountDeletionError(400, "PHONE_LAST4_REQUIRED", "Phone last 4 digits are required");
+  }
+
+  const normalizedOrderNo = String(input.lastOrderNo ?? "").trim().toUpperCase();
+  if (!normalizedOrderNo) {
+    throw new CustomerAccountDeletionError(400, "ORDER_NO_REQUIRED", "Order number is required");
+  }
+
+  const supabase = getSupabaseServiceRoleClient();
+  const { data: profileRow, error: profileError } = await supabase
+    .from("customer_profiles")
+    .select("phone")
+    .eq("id", input.customerId)
+    .maybeSingle();
+
+  if (profileError) {
+    throw new CustomerAccountDeletionError(500, "PROFILE_FETCH_FAILED", normalizeErrorMessage(profileError) || "Failed to load profile");
+  }
+
+  const phoneDigits = digitsOnly(String(profileRow?.phone ?? ""));
+  if (!phoneDigits || !phoneDigits.endsWith(normalizedPhoneLast4)) {
+    throw new CustomerAccountDeletionError(401, "RECOVERY_PROOF_INVALID", "Recovery proof does not match");
+  }
+
+  const { data: orderRow, error: orderError } = await supabase
+    .from("orders")
+    .select("id")
+    .eq("customer_id", input.customerId)
+    .eq("order_no", normalizedOrderNo)
+    .maybeSingle();
+
+  if (orderError) {
+    throw new CustomerAccountDeletionError(500, "ORDER_CHECK_FAILED", normalizeErrorMessage(orderError) || "Failed to verify order");
+  }
+  if (!orderRow?.id) {
+    throw new CustomerAccountDeletionError(401, "RECOVERY_PROOF_INVALID", "Recovery proof does not match");
+  }
+
+  return { normalizedPhoneLast4, normalizedOrderNo };
 }
 
 async function ensureNoBlockingOrders(customerId: string) {
@@ -489,6 +541,81 @@ export async function recoverCustomerAccountDeletionByCredential(input: {
     ipAddress: input.ipAddress,
     userAgent: input.userAgent,
   });
+}
+
+export async function recoverCustomerAccountDeletionByOrderProof(input: {
+  email: string;
+  phoneLast4: string;
+  lastOrderNo: string;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+}) {
+  const normalizedEmail = String(input.email ?? "").trim().toLowerCase();
+  if (!normalizedEmail) {
+    throw new CustomerAccountDeletionError(400, "EMAIL_REQUIRED", "Email is required");
+  }
+
+  const customerId = await resolveCustomerIdByEmail(normalizedEmail);
+  const profileRow = await getCustomerProfileDeletionRow(customerId);
+  const status = String(profileRow.deletion_status ?? "active").trim().toLowerCase();
+  if (status !== "pending_delete") {
+    throw new CustomerAccountDeletionError(409, "DELETION_NOT_PENDING", "Account deletion is not pending");
+  }
+
+  const scheduledFor = profileRow.deletion_scheduled_for ? Date.parse(profileRow.deletion_scheduled_for) : Number.NaN;
+  if (Number.isFinite(scheduledFor) && scheduledFor <= Date.now()) {
+    throw new CustomerAccountDeletionError(410, "DELETION_RECOVERY_EXPIRED", "Recovery window has expired");
+  }
+
+  const proof = await verifyOrderRecoveryProof({
+    customerId,
+    phoneLast4: input.phoneLast4,
+    lastOrderNo: input.lastOrderNo,
+  });
+
+  const supabase = getSupabaseServiceRoleClient();
+  const { error: updateError } = await supabase
+    .from("customer_profiles")
+    .update({
+      deletion_status: "active",
+      deletion_requested_at: null,
+      deletion_scheduled_for: null,
+      deletion_reason: null,
+      recovered_at: new Date().toISOString(),
+      is_active: true,
+    })
+    .eq("id", customerId);
+
+  if (updateError) {
+    const message = normalizeErrorMessage(updateError);
+    if (isMissingDeletionSchemaError(updateError)) {
+      throw new CustomerAccountDeletionError(
+        503,
+        "DELETION_SCHEMA_MISSING",
+        "Missing deletion columns. Run sql/ensure-customer-account-deletion.sql first.",
+      );
+    }
+    throw new CustomerAccountDeletionError(500, "DELETION_RECOVER_FAILED", message || "Failed to recover account");
+  }
+
+  await appendDeletionLog({
+    customerId,
+    action: "recover",
+    actorUserId: customerId,
+    metadata: {
+      recoveryMethod: "order_proof",
+      phoneLast4: proof.normalizedPhoneLast4,
+      orderNo: proof.normalizedOrderNo,
+      scheduledFor: profileRow.deletion_scheduled_for ?? null,
+      ip: input.ipAddress ?? null,
+      userAgent: input.userAgent ?? null,
+    },
+  });
+
+  return {
+    status: "active" as const,
+    recoveredAt: new Date().toISOString(),
+  };
 }
 
 function isUserNotFoundError(message: string) {
