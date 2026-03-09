@@ -1287,7 +1287,6 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
         open={showForgotPasswordModal}
         locale={locale}
         initialEmail={email}
-        signOutAfterSuccess={mode === "login"}
         onClose={() => setShowForgotPasswordModal(false)}
         onSuccess={(successMessage) => {
           setShowForgotPasswordModal(false);
@@ -1298,6 +1297,9 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
           setEmailRateLimited(false);
           setEmailRecoveryOtpSent(false);
           setEmailRecoveryOtp(createEmptyEmailRecoveryOtp());
+          markCustomerSessionActive();
+          router.replace(accountPath);
+          router.refresh();
         }}
       />
 

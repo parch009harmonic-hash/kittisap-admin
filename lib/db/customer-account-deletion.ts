@@ -185,7 +185,7 @@ async function getCustomerProfileDeletionRow(customerId: string) {
   };
 }
 
-async function resolveCustomerIdByEmail(email: string) {
+export async function resolveCustomerIdByEmail(email: string) {
   const normalizedEmail = String(email ?? "").trim().toLowerCase();
   if (!normalizedEmail) {
     throw new CustomerAccountDeletionError(400, "EMAIL_REQUIRED", "Email is required");

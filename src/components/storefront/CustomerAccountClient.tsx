@@ -1380,6 +1380,7 @@ export function CustomerAccountClient() {
         open={showForgotPasswordModal}
         locale={locale}
         initialEmail={customerEmail}
+        lockEmail
         onClose={() => setShowForgotPasswordModal(false)}
         onSuccess={(successMessage) => {
           setShowForgotPasswordModal(false);

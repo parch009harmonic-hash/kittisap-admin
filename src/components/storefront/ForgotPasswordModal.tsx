@@ -10,7 +10,7 @@ type ForgotPasswordModalProps = {
   open: boolean;
   locale: CustomerLocale;
   initialEmail?: string;
-  signOutAfterSuccess?: boolean;
+  lockEmail?: boolean;
   onClose: () => void;
   onSuccess?: (message: string) => void;
 };
@@ -28,96 +28,114 @@ function normalizeOtpDigits(value: string) {
 function copy(locale: CustomerLocale) {
   if (locale === "en") {
     return {
-      action: "Forgot password",
       title: "Reset Password",
-      subtitle: "Scan face, verify OTP from email, then set a new password.",
+      subtitle: "Enter email, verify OTP, scan face, and set a new password.",
       emailLabel: "Email",
-      scanFace: "Scan Face",
-      scanning: "Scanning...",
-      scanReady: "Face scan verified.",
       sendOtp: "Send OTP",
       sendingOtp: "Sending OTP...",
-      otpHint: "OTP sent. Enter 6 digits from your email.",
       otpLabel: "OTP Code",
+      verifyOtp: "Verify OTP",
+      verifyingOtp: "Verifying OTP...",
+      otpSent: "OTP sent. Please enter 6 digits from email.",
+      otpVerified: "OTP verified successfully.",
+      scanFace: "Scan Face",
+      scanningFace: "Scanning...",
+      faceReady: "Face scan verified.",
       passwordLabel: "New password",
       confirmPasswordLabel: "Confirm new password",
       save: "Save New Password",
       saving: "Saving...",
       cancel: "Cancel",
       needEmail: "Please enter your email.",
-      needFaceScan: "Please scan your face first.",
+      emailNotFound: "This email is not registered in the system.",
       needOtp: "Please enter 6 OTP digits.",
+      needOtpVerify: "Please verify OTP before face scan.",
+      otpInvalid: "OTP is invalid or expired. Request a new code.",
+      needFaceScan: "Please scan your face before setting a new password.",
       needPassword: "Please enter a new password.",
       passwordTooShort: "Password must be at least 6 characters.",
       passwordMismatch: "Passwords do not match.",
-      otpInvalid: "OTP is invalid or expired. Please request a new code.",
-      noCamera: "Camera is not available on this device.",
       permissionDenied: "Camera permission denied. Please allow camera access in your browser.",
+      noCamera: "Camera is not available on this device.",
       scanFailed: "Face scan failed. Please try again.",
-      resetSuccess: "Password reset completed. Please sign in with your new password.",
+      rateLimited: "Too many requests. Please try again later.",
+      faceReferenceMissing: "This account has no approved KYC face profile yet.",
+      resetSuccess: "Password reset successful. Redirecting to your account...",
     };
   }
 
   if (locale === "lo") {
     return {
-      action: "ລືມລະຫັດຜ່ານ",
       title: "ຕັ້ງລະຫັດຜ່ານໃໝ່",
-      subtitle: "ສະແກນໃບໜ້າ, ຢືນຢັນ OTP ຈາກອີເມວ, ແລ້ວຕັ້ງລະຫັດຜ່ານໃໝ່.",
+      subtitle: "ກອກອີເມວ, ຢືນຢັນ OTP, ສະແກນໃບໜ້າ ແລ້ວຕັ້ງລະຫັດໃໝ່.",
       emailLabel: "ອີເມວ",
-      scanFace: "ສະແກນໃບໜ້າ",
-      scanning: "ກຳລັງສະແກນ...",
-      scanReady: "ຢືນຢັນໃບໜ້າສຳເລັດ",
       sendOtp: "ສົ່ງ OTP",
       sendingOtp: "ກຳລັງສົ່ງ OTP...",
-      otpHint: "ສົ່ງ OTP ແລ້ວ. ກະລຸນາກອກ 6 ຕົວເລກຈາກອີເມວ.",
       otpLabel: "ລະຫັດ OTP",
+      verifyOtp: "ຢືນຢັນ OTP",
+      verifyingOtp: "ກຳລັງຢືນຢັນ OTP...",
+      otpSent: "ສົ່ງ OTP ແລ້ວ. ກະລຸນາກອກ 6 ຕົວເລກຈາກອີເມວ.",
+      otpVerified: "ຢືນຢັນ OTP ສຳເລັດ.",
+      scanFace: "ສະແກນໃບໜ້າ",
+      scanningFace: "ກຳລັງສະແກນ...",
+      faceReady: "ຢືນຢັນໃບໜ້າສຳເລັດ.",
       passwordLabel: "ລະຫັດຜ່ານໃໝ່",
       confirmPasswordLabel: "ຢືນຢັນລະຫັດຜ່ານໃໝ່",
       save: "ບັນທຶກລະຫັດໃໝ່",
       saving: "ກຳລັງບັນທຶກ...",
       cancel: "ຍົກເລີກ",
       needEmail: "ກະລຸນາກອກອີເມວ.",
-      needFaceScan: "ກະລຸນາສະແກນໃບໜ້າກ່ອນ.",
+      emailNotFound: "ອີເມວນີ້ບໍ່ຢູ່ໃນລະບົບ.",
       needOtp: "ກະລຸນາກອກ OTP 6 ຕົວເລກ.",
+      needOtpVerify: "ກະລຸນາຢືນຢັນ OTP ກ່ອນສະແກນໃບໜ້າ.",
+      otpInvalid: "OTP ບໍ່ຖືກ ຫຼື ໝົດອາຍຸ.",
+      needFaceScan: "ກະລຸນາສະແກນໃບໜ້າກ່ອນຕັ້ງລະຫັດໃໝ່.",
       needPassword: "ກະລຸນາກອກລະຫັດຜ່ານໃໝ່.",
-      passwordTooShort: "ລະຫັດຜ່ານຕ້ອງຢ່າງໜ້ອຍ 6 ຕົວອັກສອນ.",
+      passwordTooShort: "ລະຫັດຜ່ານຕ້ອງຢ່າງໜ້ອຍ 6 ຕົວ.",
       passwordMismatch: "ລະຫັດຜ່ານບໍ່ຕົງກັນ.",
-      otpInvalid: "OTP ບໍ່ຖືກ ຫຼື ໝົດອາຍຸ. ກະລຸນາຂໍໃໝ່.",
+      permissionDenied: "ບໍ່ໄດ້ຮັບອະນຸຍາດໃຊ້ກ້ອງ.",
       noCamera: "ອຸປະກອນນີ້ບໍ່ຮອງຮັບກ້ອງ.",
-      permissionDenied: "ບໍ່ໄດ້ຮັບອະນຸຍາດໃຊ້ກ້ອງ. ກະລຸນາອະນຸຍາດກ້ອງໃນເບຣາວເຊີ.",
-      scanFailed: "ສະແກນໃບໜ້າບໍ່ສຳເລັດ. ກະລຸນາລອງໃໝ່.",
-      resetSuccess: "ຕັ້ງລະຫັດຜ່ານໃໝ່ສຳເລັດ. ກະລຸນາເຂົ້າລະບົບດ້ວຍລະຫັດໃໝ່.",
+      scanFailed: "ສະແກນໃບໜ້າບໍ່ສຳເລັດ.",
+      rateLimited: "ຮ້ອງຂໍຖີ່ເກີນໄປ. ກະລຸນາລໍຖ້າ.",
+      faceReferenceMissing: "ບັນຊີນີ້ຍັງບໍ່ມີໃບໜ້າ KYC ທີ່ອະນຸມັດ.",
+      resetSuccess: "ຕັ້ງລະຫັດໃໝ່ສຳເລັດ. ກຳລັງໄປໜ້າບັນຊີ...",
     };
   }
 
   return {
-    action: "ลืมรหัสผ่าน",
     title: "ตั้งรหัสผ่านใหม่",
-    subtitle: "สแกนใบหน้า ยืนยัน OTP ทางอีเมล แล้วตั้งรหัสใหม่",
+    subtitle: "กรอกอีเมล ยืนยัน OTP สแกนใบหน้า แล้วตั้งรหัสผ่านใหม่",
     emailLabel: "อีเมล",
-    scanFace: "สแกนใบหน้า",
-    scanning: "กำลังสแกน...",
-    scanReady: "ยืนยันใบหน้าสำเร็จ",
     sendOtp: "ส่ง OTP",
     sendingOtp: "กำลังส่ง OTP...",
-    otpHint: "ส่ง OTP แล้ว กรุณากรอกรหัส 6 หลักจากอีเมล",
     otpLabel: "รหัส OTP",
+    verifyOtp: "ยืนยัน OTP",
+    verifyingOtp: "กำลังยืนยัน OTP...",
+    otpSent: "ส่ง OTP แล้ว กรุณากรอกรหัส 6 หลักจากอีเมล",
+    otpVerified: "ยืนยัน OTP สำเร็จ",
+    scanFace: "สแกนใบหน้า",
+    scanningFace: "กำลังสแกน...",
+    faceReady: "ยืนยันใบหน้าสำเร็จ",
     passwordLabel: "รหัสผ่านใหม่",
     confirmPasswordLabel: "ยืนยันรหัสผ่านใหม่",
     save: "บันทึกรหัสใหม่",
     saving: "กำลังบันทึก...",
     cancel: "ยกเลิก",
     needEmail: "กรุณากรอกอีเมล",
-    needFaceScan: "กรุณาสแกนใบหน้าก่อน",
+    emailNotFound: "อีเมลนี้ไม่มีบัญชีในระบบ",
     needOtp: "กรุณากรอก OTP 6 หลัก",
+    needOtpVerify: "กรุณายืนยัน OTP ก่อนสแกนใบหน้า",
+    otpInvalid: "OTP ไม่ถูกต้องหรือหมดอายุ กรุณาขอใหม่",
+    needFaceScan: "กรุณาสแกนใบหน้าก่อนตั้งรหัสใหม่",
     needPassword: "กรุณากรอกรหัสผ่านใหม่",
     passwordTooShort: "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร",
     passwordMismatch: "รหัสผ่านไม่ตรงกัน",
-    otpInvalid: "รหัส OTP ไม่ถูกต้องหรือหมดอายุ กรุณาขอรหัสใหม่",
-    noCamera: "อุปกรณ์นี้ไม่รองรับการเปิดกล้อง",
     permissionDenied: "ไม่ได้รับสิทธิ์ใช้งานกล้อง กรุณาอนุญาตกล้องในเบราว์เซอร์",
+    noCamera: "อุปกรณ์นี้ไม่รองรับการเปิดกล้อง",
     scanFailed: "สแกนใบหน้าไม่สำเร็จ กรุณาลองใหม่",
-    resetSuccess: "ตั้งรหัสผ่านใหม่สำเร็จแล้ว กรุณาเข้าสู่ระบบด้วยรหัสใหม่",
+    rateLimited: "ขอรหัสบ่อยเกินไป กรุณารอสักครู่แล้วลองใหม่",
+    faceReferenceMissing: "บัญชีนี้ยังไม่มีข้อมูลใบหน้าที่ผ่าน KYC",
+    resetSuccess: "ตั้งรหัสผ่านใหม่สำเร็จ กำลังพาไปหน้าบัญชีลูกค้า...",
   };
 }
 
@@ -153,17 +171,19 @@ export function ForgotPasswordModal({
   open,
   locale,
   initialEmail = "",
-  signOutAfterSuccess = false,
+  lockEmail = false,
   onClose,
   onSuccess,
 }: ForgotPasswordModalProps) {
   const t = useMemo(() => copy(locale), [locale]);
 
   const [email, setEmail] = useState(initialEmail.trim());
-  const [faceScanning, setFaceScanning] = useState(false);
-  const [faceScanPassed, setFaceScanPassed] = useState(false);
   const [otp, setOtp] = useState<string[]>(createEmptyOtp);
   const [otpSent, setOtpSent] = useState(false);
+  const [otpVerifying, setOtpVerifying] = useState(false);
+  const [otpVerified, setOtpVerified] = useState(false);
+  const [faceScanning, setFaceScanning] = useState(false);
+  const [faceScanPassed, setFaceScanPassed] = useState(false);
   const [sendingOtp, setSendingOtp] = useState(false);
   const [saving, setSaving] = useState(false);
   const [newPassword, setNewPassword] = useState("");
@@ -180,10 +200,12 @@ export function ForgotPasswordModal({
       return;
     }
     setEmail(initialEmail.trim());
-    setFaceScanPassed(false);
-    setFaceScanning(false);
     setOtp(createEmptyOtp());
     setOtpSent(false);
+    setOtpVerifying(false);
+    setOtpVerified(false);
+    setFaceScanning(false);
+    setFaceScanPassed(false);
     setSendingOtp(false);
     setSaving(false);
     setNewPassword("");
@@ -266,12 +288,10 @@ export function ForgotPasswordModal({
       }
       return;
     }
-
     if (key === "ArrowLeft" && index > 0) {
       requestAnimationFrame(() => focusOtpCell(index - 1));
       return;
     }
-
     if (key === "ArrowRight" && index < OTP_LENGTH - 1) {
       requestAnimationFrame(() => focusOtpCell(index + 1));
     }
@@ -300,8 +320,102 @@ export function ForgotPasswordModal({
     });
   }
 
+  async function handleSendOtp() {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) {
+      setError(t.needEmail);
+      return;
+    }
+
+    setSendingOtp(true);
+    setError(null);
+    setMessage(null);
+    setOtp(createEmptyOtp());
+    setOtpVerified(false);
+    setFaceScanPassed(false);
+
+    try {
+      const response = await fetch("/api/customer/auth/forgot-password/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: normalizedEmail }),
+      });
+
+      const payload = (await response.json().catch(() => null)) as { ok?: boolean; code?: string; error?: string } | null;
+      if (!response.ok || !payload?.ok) {
+        if (payload?.code === "EMAIL_NOT_FOUND") {
+          throw new Error(t.emailNotFound);
+        }
+        if (payload?.code === "RATE_LIMITED") {
+          throw new Error(t.rateLimited);
+        }
+        throw new Error(payload?.error ?? t.otpInvalid);
+      }
+
+      setOtpSent(true);
+      setMessage(t.otpSent);
+    } catch (caught) {
+      const fallback = caught instanceof Error ? caught.message : t.otpInvalid;
+      setError(fallback);
+    } finally {
+      setSendingOtp(false);
+    }
+  }
+
+  async function handleVerifyOtp() {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) {
+      setError(t.needEmail);
+      return;
+    }
+    if (!otpComplete) {
+      setError(t.needOtp);
+      return;
+    }
+
+    setOtpVerifying(true);
+    setError(null);
+    setMessage(null);
+    setFaceScanPassed(false);
+
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { error: verifyError } = await supabase.auth.verifyOtp({
+        email: normalizedEmail,
+        token: otpValue,
+        type: "email",
+      });
+      if (verifyError) {
+        throw new Error(t.otpInvalid);
+      }
+
+      const kycResponse = await fetch("/api/customer/kyc/session", { cache: "no-store" });
+      const kycPayload = (await kycResponse.json().catch(() => null)) as
+        | { ok?: boolean; data?: { kycStatus?: string } }
+        | null;
+      const kycStatus = String(kycPayload?.data?.kycStatus ?? "").trim().toLowerCase();
+      if (!kycResponse.ok || !kycPayload?.ok || kycStatus !== "approved") {
+        await supabase.auth.signOut();
+        throw new Error(t.faceReferenceMissing);
+      }
+
+      setOtpVerified(true);
+      setMessage(t.otpVerified);
+    } catch (caught) {
+      const fallback = caught instanceof Error ? caught.message : t.otpInvalid;
+      setError(fallback);
+      setOtpVerified(false);
+    } finally {
+      setOtpVerifying(false);
+    }
+  }
+
   async function handleFaceScan() {
     if (faceScanning) {
+      return;
+    }
+    if (!otpVerified) {
+      setError(t.needOtpVerify);
       return;
     }
     if (!navigator.mediaDevices?.getUserMedia) {
@@ -357,7 +471,7 @@ export function ForgotPasswordModal({
       }
 
       setFaceScanPassed(true);
-      setMessage(t.scanReady);
+      setMessage(t.faceReady);
     } catch (caught) {
       setFaceScanPassed(false);
       setError(mapFaceScanError(caught, t.noCamera, t.permissionDenied, t.scanFailed));
@@ -371,58 +485,16 @@ export function ForgotPasswordModal({
     }
   }
 
-  async function handleSendOtp() {
-    const normalizedEmail = email.trim();
-    if (!normalizedEmail) {
-      setError(t.needEmail);
-      return;
-    }
-    if (!faceScanPassed) {
-      setError(t.needFaceScan);
-      return;
-    }
-
-    setSendingOtp(true);
-    setError(null);
-    setMessage(null);
-    setOtp(createEmptyOtp());
-    try {
-      const supabase = getSupabaseBrowserClient();
-      const { error: otpError } = await supabase.auth.signInWithOtp({
-        email: normalizedEmail,
-        options: {
-          shouldCreateUser: false,
-        },
-      });
-      if (otpError) {
-        throw otpError;
-      }
-      setOtpSent(true);
-      setMessage(t.otpHint);
-    } catch (caught) {
-      const fallback = caught instanceof Error ? caught.message : t.otpInvalid;
-      setError(fallback);
-    } finally {
-      setSendingOtp(false);
-    }
-  }
-
   async function handleSaveNewPassword() {
-    const normalizedEmail = email.trim();
-    const normalizedOtp = otpValue.trim();
     const normalizedNewPassword = newPassword.trim();
     const normalizedConfirmPassword = confirmPassword.trim();
 
-    if (!normalizedEmail) {
-      setError(t.needEmail);
+    if (!otpVerified) {
+      setError(t.needOtpVerify);
       return;
     }
     if (!faceScanPassed) {
       setError(t.needFaceScan);
-      return;
-    }
-    if (!otpComplete || normalizedOtp.length !== OTP_LENGTH) {
-      setError(t.needOtp);
       return;
     }
     if (!normalizedNewPassword) {
@@ -443,24 +515,11 @@ export function ForgotPasswordModal({
     setMessage(null);
     try {
       const supabase = getSupabaseBrowserClient();
-      const { error: verifyError } = await supabase.auth.verifyOtp({
-        email: normalizedEmail,
-        token: normalizedOtp,
-        type: "email",
-      });
-      if (verifyError) {
-        throw new Error(t.otpInvalid);
-      }
-
       const { error: updateError } = await supabase.auth.updateUser({
         password: normalizedNewPassword,
       });
       if (updateError) {
         throw updateError;
-      }
-
-      if (signOutAfterSuccess) {
-        await supabase.auth.signOut();
       }
 
       setMessage(t.resetSuccess);
@@ -469,7 +528,7 @@ export function ForgotPasswordModal({
       }
       window.setTimeout(() => {
         onClose();
-      }, 320);
+      }, 250);
     } catch (caught) {
       const fallback = caught instanceof Error ? caught.message : t.otpInvalid;
       setError(fallback);
@@ -510,91 +569,112 @@ export function ForgotPasswordModal({
               type="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              className="h-11 w-full rounded-xl border border-cyan-300/40 bg-black/35 px-3 text-sm text-cyan-50 outline-none transition focus:border-cyan-200 focus:ring-2 focus:ring-cyan-200/20"
+              disabled={lockEmail || otpSent || otpVerified || saving || sendingOtp || otpVerifying}
+              className="h-11 w-full rounded-xl border border-cyan-300/40 bg-black/35 px-3 text-sm text-cyan-50 outline-none transition focus:border-cyan-200 focus:ring-2 focus:ring-cyan-200/20 disabled:opacity-75"
             />
           </label>
 
-          <div className="grid gap-2 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={() => void handleSendOtp()}
+            disabled={sendingOtp || saving || otpVerifying}
+            className="inline-flex h-10 w-full items-center justify-center rounded-lg border border-sky-300/60 bg-sky-500/20 px-3 text-sm font-semibold text-sky-100 transition hover:bg-sky-500/30 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {sendingOtp ? t.sendingOtp : t.sendOtp}
+          </button>
+
+          {otpSent ? (
+            <>
+              <div className="grid grid-cols-6 gap-1.5 sm:gap-2">
+                {Array.from({ length: OTP_LENGTH }, (_, index) => (
+                  <input
+                    key={`forgot-password-otp-${index}`}
+                    ref={(node) => {
+                      otpRefs.current[index] = node;
+                    }}
+                    value={otp[index] ?? ""}
+                    onChange={(event) => handleOtpChange(index, event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Backspace" || event.key === "ArrowLeft" || event.key === "ArrowRight") {
+                        event.preventDefault();
+                        handleOtpKeyDown(index, event.key);
+                        return;
+                      }
+                      if (event.key.length === 1 && !/[0-9]/.test(event.key)) {
+                        event.preventDefault();
+                      }
+                    }}
+                    onFocus={(event) => event.currentTarget.select()}
+                    onPaste={(event) => {
+                      event.preventDefault();
+                      handleOtpPaste(index, event.clipboardData.getData("text"));
+                    }}
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={OTP_LENGTH}
+                    autoComplete={index === 0 ? "one-time-code" : "off"}
+                    aria-label={`${t.otpLabel} ${index + 1}`}
+                    className="h-11 w-full rounded-xl border border-cyan-300/40 bg-black/45 px-0 text-center text-base font-semibold tracking-[0.08em] text-cyan-100 outline-none transition focus:border-cyan-200 focus:ring-2 focus:ring-cyan-200/20 sm:h-12 sm:text-lg"
+                  />
+                ))}
+              </div>
+
+              {!otpVerified ? (
+                <button
+                  type="button"
+                  onClick={() => void handleVerifyOtp()}
+                  disabled={otpVerifying || saving || !otpComplete}
+                  className="inline-flex h-10 w-full items-center justify-center rounded-lg border border-cyan-300/60 bg-cyan-500/20 px-3 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-500/30 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {otpVerifying ? t.verifyingOtp : t.verifyOtp}
+                </button>
+              ) : null}
+            </>
+          ) : null}
+
+          {otpVerified ? (
             <button
               type="button"
               onClick={() => void handleFaceScan()}
-              disabled={faceScanning || sendingOtp || saving}
-              className="inline-flex h-10 items-center justify-center rounded-lg border border-cyan-300/60 bg-cyan-500/20 px-3 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-500/30 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={faceScanning || saving}
+              className="inline-flex h-10 w-full items-center justify-center rounded-lg border border-emerald-300/60 bg-emerald-500/20 px-3 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-500/30 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {faceScanning ? t.scanning : t.scanFace}
+              {faceScanning ? t.scanningFace : t.scanFace}
             </button>
-            <button
-              type="button"
-              onClick={() => void handleSendOtp()}
-              disabled={sendingOtp || saving}
-              className="inline-flex h-10 items-center justify-center rounded-lg border border-sky-300/60 bg-sky-500/20 px-3 text-sm font-semibold text-sky-100 transition hover:bg-sky-500/30 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {sendingOtp ? t.sendingOtp : t.sendOtp}
-            </button>
-          </div>
+          ) : null}
 
-          <div className="grid grid-cols-6 gap-1.5 sm:gap-2">
-            {Array.from({ length: OTP_LENGTH }, (_, index) => (
-              <input
-                key={`forgot-password-otp-${index}`}
-                ref={(node) => {
-                  otpRefs.current[index] = node;
-                }}
-                value={otp[index] ?? ""}
-                onChange={(event) => handleOtpChange(index, event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Backspace" || event.key === "ArrowLeft" || event.key === "ArrowRight") {
-                    event.preventDefault();
-                    handleOtpKeyDown(index, event.key);
-                    return;
-                  }
-                  if (event.key.length === 1 && !/[0-9]/.test(event.key)) {
-                    event.preventDefault();
-                  }
-                }}
-                onFocus={(event) => event.currentTarget.select()}
-                onPaste={(event) => {
-                  event.preventDefault();
-                  handleOtpPaste(index, event.clipboardData.getData("text"));
-                }}
-                inputMode="numeric"
-                pattern="[0-9]*"
-                maxLength={OTP_LENGTH}
-                autoComplete={index === 0 ? "one-time-code" : "off"}
-                aria-label={`${t.otpLabel} ${index + 1}`}
-                className="h-11 w-full rounded-xl border border-cyan-300/40 bg-black/45 px-0 text-center text-base font-semibold tracking-[0.08em] text-cyan-100 outline-none transition focus:border-cyan-200 focus:ring-2 focus:ring-cyan-200/20 sm:h-12 sm:text-lg"
-              />
-            ))}
-          </div>
+          {faceScanPassed ? (
+            <>
+              <label className="block">
+                <span className="mb-1.5 block text-sm font-medium text-cyan-100/90">{t.passwordLabel}</span>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(event) => setNewPassword(event.target.value)}
+                  autoComplete="new-password"
+                  className="h-11 w-full rounded-xl border border-cyan-300/40 bg-black/35 px-3 text-sm text-cyan-50 outline-none transition focus:border-cyan-200 focus:ring-2 focus:ring-cyan-200/20"
+                />
+              </label>
 
-          <label className="block">
-            <span className="mb-1.5 block text-sm font-medium text-cyan-100/90">{t.passwordLabel}</span>
-            <input
-              type="password"
-              value={newPassword}
-              onChange={(event) => setNewPassword(event.target.value)}
-              autoComplete="new-password"
-              className="h-11 w-full rounded-xl border border-cyan-300/40 bg-black/35 px-3 text-sm text-cyan-50 outline-none transition focus:border-cyan-200 focus:ring-2 focus:ring-cyan-200/20"
-            />
-          </label>
-
-          <label className="block">
-            <span className="mb-1.5 block text-sm font-medium text-cyan-100/90">{t.confirmPasswordLabel}</span>
-            <input
-              type="password"
-              value={confirmPassword}
-              onChange={(event) => setConfirmPassword(event.target.value)}
-              autoComplete="new-password"
-              className="h-11 w-full rounded-xl border border-cyan-300/40 bg-black/35 px-3 text-sm text-cyan-50 outline-none transition focus:border-cyan-200 focus:ring-2 focus:ring-cyan-200/20"
-            />
-          </label>
+              <label className="block">
+                <span className="mb-1.5 block text-sm font-medium text-cyan-100/90">{t.confirmPasswordLabel}</span>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(event) => setConfirmPassword(event.target.value)}
+                  autoComplete="new-password"
+                  className="h-11 w-full rounded-xl border border-cyan-300/40 bg-black/35 px-3 text-sm text-cyan-50 outline-none transition focus:border-cyan-200 focus:ring-2 focus:ring-cyan-200/20"
+                />
+              </label>
+            </>
+          ) : null}
         </div>
 
         <div className="mt-5 flex flex-wrap justify-end gap-2">
           <button
             type="button"
             onClick={onClose}
-            disabled={saving || sendingOtp || faceScanning}
+            disabled={saving || sendingOtp || otpVerifying || faceScanning}
             className="inline-flex h-10 items-center justify-center rounded-lg border border-slate-500/45 bg-slate-800/70 px-4 text-sm font-semibold text-slate-100 transition hover:bg-slate-700/80 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {t.cancel}
@@ -602,7 +682,7 @@ export function ForgotPasswordModal({
           <button
             type="button"
             onClick={() => void handleSaveNewPassword()}
-            disabled={saving || !otpSent || !otpComplete}
+            disabled={saving || !faceScanPassed}
             className="inline-flex h-10 items-center justify-center rounded-lg border border-cyan-300/65 bg-gradient-to-r from-cyan-300 to-sky-300 px-4 text-sm font-semibold text-zinc-900 transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {saving ? t.saving : t.save}
