@@ -477,7 +477,7 @@ export function CustomerUsersSettingItem({
     };
   }, [fetchUsersSnapshot, savingUserId]);
 
-  const resetPanel = async () => {
+  const resetPanel = () => {
     setEditingUser(null);
     setDeletingUserId(null);
     setDeletingUser(null);
@@ -505,7 +505,7 @@ export function CustomerUsersSettingItem({
     setEditKycStatus("not_started");
     setEditKycRejectedReason("");
     setEditOtpPurpose("forgot_password");
-    await loadUsers();
+    void loadUsers();
   };
 
   const openEdit = (user: AdminCustomerUserRecord) => {
@@ -558,8 +558,8 @@ export function CustomerUsersSettingItem({
         throw new Error(parsedError.message);
       }
       setEditingUser(null);
-      await loadUsers();
       onSuccess(t.updateSuccess);
+      void loadUsers();
     } catch (error) {
       onError(toRequestErrorMessage(error, t.updateFailed));
     } finally {
@@ -588,8 +588,8 @@ export function CustomerUsersSettingItem({
       if (editingUser?.id === user.id) {
         setEditingUser(null);
       }
-      await loadUsers();
       onSuccess(t.recoverSuccess);
+      void loadUsers();
     } catch (error) {
       onError(toRequestErrorMessage(error, t.recoverFailed));
     } finally {
@@ -646,8 +646,8 @@ export function CustomerUsersSettingItem({
       if (editingUser?.id === user.id) {
         setEditingUser(null);
       }
-      await loadUsers();
       onSuccess(t.deleteSuccess);
+      void loadUsers();
     } catch (error) {
       onError(toRequestErrorMessage(error, t.deleteFailed));
     } finally {

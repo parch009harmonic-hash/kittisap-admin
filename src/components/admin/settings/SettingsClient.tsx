@@ -243,14 +243,14 @@ export default function SettingsClient({
   isDeveloperMode?: boolean;
 }) {
   const router = useRouter();
-  const [activeSection, setActiveSection] = useState<SectionId>("display");
+  const [activeSection, setActiveSection] = useState<SectionId | null>(null);
   const [editingField, setEditingField] = useState<AdminSettingField | null>(null);
   const [draftValue, setDraftValue] = useState("");
   const [savingField, setSavingField] = useState<AdminSettingField | null>(null);
   const [values, setValues] = useState<AdminSettings>(initialSettings);
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
-  const [mobileSectionOpen, setMobileSectionOpen] = useState(false);
+  const [switchingSection, setSwitchingSection] = useState(false);
   const handleUserSuccess = useCallback((message: string) => {
     setToast({ type: "success", message });
   }, []);
@@ -260,7 +260,8 @@ export default function SettingsClient({
 
   const saveLabel = locale === "th" ? "บันทึก" : "Save";
   const cancelLabel = locale === "th" ? "ยกเลิก" : "Cancel";
-  const closeLabel = locale === "th" ? "ปิด" : "Close";
+  const backToQuickMenuLabel = locale === "th" ? "ย้อนกลับเมนูลัด" : "Back to Quick Menu";
+  const loadingSectionLabel = locale === "th" ? "กำลังเปิดเมนู..." : "Opening section...";
   const savedMessage = locale === "th" ? "บันทึกข้อมูลแล้ว" : "Settings saved";
   const saveFailedMessage = locale === "th" ? "บันทึกไม่สำเร็จ" : "Save failed";
 
@@ -283,12 +284,6 @@ export default function SettingsClient({
     window.addEventListener("resize", checkViewport);
     return () => window.removeEventListener("resize", checkViewport);
   }, []);
-
-  useEffect(() => {
-    if (!(isMobileViewport || (!isDeveloperMode && values.uiMode === "mobile"))) {
-      setMobileSectionOpen(false);
-    }
-  }, [isDeveloperMode, isMobileViewport, values.uiMode]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -380,16 +375,27 @@ export default function SettingsClient({
     [isDeveloperMode, locale, text],
   );
 
-  const currentSection = sections.find((section) => section.id === activeSection) ?? sections[0];
+  const currentSection = activeSection ? sections.find((section) => section.id === activeSection) ?? null : null;
   const popupMode = isMobileViewport || (!isDeveloperMode && values.uiMode === "mobile");
 
   const handleSwitchSection = (sectionId: SectionId) => {
+    setSwitchingSection(true);
     setActiveSection(sectionId);
     setEditingField(null);
     setDraftValue("");
-    if (popupMode) {
-      setMobileSectionOpen(true);
+    if (typeof window !== "undefined") {
+      window.requestAnimationFrame(() => {
+        setSwitchingSection(false);
+      });
+      return;
     }
+    setSwitchingSection(false);
+  };
+
+  const handleBackToQuickMenu = () => {
+    setActiveSection(null);
+    setEditingField(null);
+    setDraftValue("");
   };
 
   const startEditing = (fieldId: AdminSettingField) => {
@@ -447,8 +453,12 @@ export default function SettingsClient({
     await commitField(editingField, draftValue);
   };
 
-  const renderCurrentSectionItems = () =>
-    currentSection.items.map((item) =>
+  const renderCurrentSectionItems = () => {
+    if (!currentSection) {
+      return null;
+    }
+
+    return currentSection.items.map((item) =>
       item.id === "createUser" ? (
         <CreateUserSettingItem
           key={item.id}
@@ -549,74 +559,71 @@ export default function SettingsClient({
         />
       ),
     );
+  };
 
   return (
     <div className="space-y-5">
-      <section className="space-y-4">
-        <aside className="settings-quicknav sst-card-soft rounded-2xl p-4 sm:p-5">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">{text.quickMenu}</p>
-          <div className={popupMode ? "grid grid-cols-1 gap-3" : "grid grid-cols-2 gap-3 md:grid-cols-3"}>
-            {sections.map((section, index) => {
-              const isActive = section.id === activeSection;
-              const isLastOddCard = !popupMode && sections.length % 2 === 1 && index === sections.length - 1;
-              return (
-                <button
-                  key={`card-${section.id}`}
-                  type="button"
-                  onClick={() => handleSwitchSection(section.id)}
-                  className={[
-                    "group rounded-2xl border bg-white p-4 text-left transition-all duration-200",
-                    isLastOddCard ? "col-span-2 md:col-span-1" : "",
-                    "hover:-translate-y-0.5 hover:shadow-md",
-                    isActive
-                      ? "border-blue-200 ring-2 ring-blue-100 shadow-md"
-                      : "border-slate-200 hover:border-blue-200",
-                  ].join(" ")}
-                >
-                  <div className="flex items-center gap-3">
-                    <span
-                      className={[
-                        "inline-flex h-10 w-10 items-center justify-center rounded-xl",
-                        section.iconTone,
-                        section.iconColor,
-                      ].join(" ")}
-                    >
-                      <SectionGlyph id={section.id} />
-                    </span>
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-slate-900">{section.title}</p>
-                      <p className="mt-0.5 text-xs text-slate-500 max-lg:line-clamp-3">{section.subtitle}</p>
+      {!currentSection ? (
+        <section className="space-y-4">
+          <aside className="settings-quicknav sst-card-soft rounded-2xl p-4 sm:p-5">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">{text.quickMenu}</p>
+            <div className={popupMode ? "grid grid-cols-1 gap-3" : "grid grid-cols-2 gap-3 md:grid-cols-3"}>
+              {sections.map((section, index) => {
+                const isLastOddCard = !popupMode && sections.length % 2 === 1 && index === sections.length - 1;
+                return (
+                  <button
+                    key={`card-${section.id}`}
+                    type="button"
+                    onClick={() => handleSwitchSection(section.id)}
+                    disabled={switchingSection}
+                    className={[
+                      "group rounded-2xl border border-slate-200 bg-white p-4 text-left transition-all duration-150 active:scale-[0.995]",
+                      isLastOddCard ? "col-span-2 md:col-span-1" : "",
+                      "hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-70",
+                    ].join(" ")}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span
+                        className={[
+                          "inline-flex h-10 w-10 items-center justify-center rounded-xl",
+                          section.iconTone,
+                          section.iconColor,
+                        ].join(" ")}
+                      >
+                        <SectionGlyph id={section.id} />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-slate-900">{section.title}</p>
+                        <p className="mt-0.5 text-xs text-slate-500 max-lg:line-clamp-3">{section.subtitle}</p>
+                      </div>
                     </div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </aside>
-        {!popupMode ? <SettingsSection title={currentSection.title}>{renderCurrentSectionItems()}</SettingsSection> : null}
-      </section>
-
-      {popupMode && mobileSectionOpen ? (
-        <div className="fixed inset-0 z-[120] flex items-end bg-slate-900/35 p-2 backdrop-blur-sm sm:items-center sm:justify-center sm:p-4">
-          <div className="max-h-[92vh] w-full overflow-hidden rounded-2xl bg-white shadow-2xl sm:max-w-xl">
-            <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-              <p className="text-base font-semibold text-slate-900">{currentSection.title}</p>
-              <button
-                type="button"
-                onClick={() => setMobileSectionOpen(false)}
-                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-              >
-                {closeLabel}
-              </button>
+                  </button>
+                );
+              })}
             </div>
-            <div className="max-h-[calc(92vh-60px)] overflow-y-auto p-3 sm:p-4">
-              <SettingsSection title={currentSection.title} plain hideTitle>
-                {renderCurrentSectionItems()}
-              </SettingsSection>
-            </div>
+          </aside>
+        </section>
+      ) : (
+        <section className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <button
+              type="button"
+              onClick={handleBackToQuickMenu}
+              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 active:scale-[0.99]"
+            >
+              {backToQuickMenuLabel}
+            </button>
+            <h2 className="text-base font-semibold text-slate-900">{currentSection.title}</h2>
           </div>
-        </div>
-      ) : null}
+          <SettingsSection title={currentSection.title} plain={popupMode}>
+            {switchingSection ? (
+              <li className="px-4 py-5 text-sm text-slate-500">{loadingSectionLabel}</li>
+            ) : (
+              renderCurrentSectionItems()
+            )}
+          </SettingsSection>
+        </section>
+      )}
 
       <Toast
         open={Boolean(toast)}
@@ -1140,7 +1147,7 @@ function CreateUserSettingItem({
     void loadUsers();
   }, [loadUsers]);
 
-  const resetUserPanel = async () => {
+  const resetUserPanel = () => {
     setCreatingOpen(false);
     setEditingUser(null);
     setDeletingUserId(null);
@@ -1156,7 +1163,7 @@ function CreateUserSettingItem({
     setEditRole("staff");
     setEditPassword("");
     setEditDeveloperPin("");
-    await loadUsers();
+    void loadUsers();
   };
 
   const submit = async () => {
@@ -1201,8 +1208,8 @@ function CreateUserSettingItem({
       setDeveloperPin("");
       setRole("staff");
       setCreatingOpen(false);
-      await loadUsers();
       onSuccess(text.createUserSuccess);
+      void loadUsers();
     } catch (error) {
       const message = toRequestErrorMessage(error, text.createUserFailed, locale);
       onError(message);
@@ -1263,8 +1270,8 @@ function CreateUserSettingItem({
         throw new Error(parsedError.message);
       }
       setEditingUser(null);
-      await loadUsers();
       onSuccess(t.updateSuccess);
+      void loadUsers();
     } catch (error) {
       const message = toRequestErrorMessage(error, t.updateFailed, locale);
       onError(message);
@@ -1300,8 +1307,8 @@ function CreateUserSettingItem({
       setDeletingUserId(null);
       setDeletingUser(null);
       setEditDeveloperPin("");
-      await loadUsers();
       onSuccess(t.deleteSuccess);
+      void loadUsers();
     } catch (error) {
       const message = toRequestErrorMessage(error, t.deleteFailed, locale);
       onError(message);
