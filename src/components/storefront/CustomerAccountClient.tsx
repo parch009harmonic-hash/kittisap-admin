@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { clearCustomerSessionActivity } from "../../../lib/storefront/customer-session";
 import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
+import { ForgotPasswordModal } from "./ForgotPasswordModal";
 
 type ProfileDto = {
   id: string;
@@ -86,6 +87,7 @@ function copy(locale: AccountLocale) {
       save: "Save Profile",
       saving: "Saving...",
       logout: "Log out",
+      forgotPasswordAction: "Forgot password",
       loggingOut: "Signing out...",
       logoutConfirmTitle: "Confirm sign out",
       logoutConfirmDescription: "Do you want to sign out of your customer account now?",
@@ -180,6 +182,7 @@ function copy(locale: AccountLocale) {
       save: "ບັນທຶກຂໍ້ມູນ",
       saving: "ກຳລັງບັນທຶກ...",
       logout: "ອອກຈາກລະບົບ",
+      forgotPasswordAction: "ລືມລະຫັດຜ່ານ",
       loggingOut: "ກຳລັງອອກຈາກລະບົບ...",
       logoutConfirmTitle: "ຢືນຢັນອອກຈາກລະບົບ",
       logoutConfirmDescription: "ທ່ານຕ້ອງການອອກຈາກລະບົບລູກຄ້າຕອນນີ້ບໍ?",
@@ -273,6 +276,7 @@ function copy(locale: AccountLocale) {
     save: "บันทึกข้อมูล",
     saving: "กำลังบันทึก...",
     logout: "ออกจากระบบ",
+    forgotPasswordAction: "ลืมรหัสผ่าน",
     loggingOut: "กำลังออกจากระบบ...",
     logoutConfirmTitle: "ยืนยันออกจากระบบ",
     logoutConfirmDescription: "ต้องการออกจากระบบลูกค้าตอนนี้หรือไม่?",
@@ -479,6 +483,8 @@ export function CustomerAccountClient() {
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [avatarUrlOverride, setAvatarUrlOverride] = useState("");
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+  const [customerEmail, setCustomerEmail] = useState("");
 
   const paidOrders = useMemo(
     () => orders.filter((item) => item.status === "completed" || item.payment_status === "paid").length,
@@ -555,6 +561,27 @@ export function CustomerAccountClient() {
       window.clearTimeout(timerId);
     };
   }, [notificationText, notificationType]);
+
+  useEffect(() => {
+    let mounted = true;
+    async function loadCustomerEmail() {
+      try {
+        const { data } = await getSupabaseBrowserClient().auth.getUser();
+        if (!mounted) {
+          return;
+        }
+        setCustomerEmail(String(data.user?.email ?? ""));
+      } catch {
+        if (mounted) {
+          setCustomerEmail("");
+        }
+      }
+    }
+    void loadCustomerEmail();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -976,6 +1003,13 @@ export function CustomerAccountClient() {
               <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-200/80 md:text-base">{t.subtitle}</p>
             </div>
             <div className="flex flex-wrap items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowForgotPasswordModal(true)}
+                className="inline-flex h-11 items-center justify-center rounded-full border border-cyan-300/70 bg-cyan-500/15 px-5 text-sm font-semibold text-cyan-100 shadow-[0_10px_30px_rgba(34,211,238,0.2)] transition hover:bg-cyan-500/30"
+              >
+                {t.forgotPasswordAction}
+              </button>
               {!deletionPending ? (
                 <button
                   type="button"
@@ -1342,6 +1376,17 @@ export function CustomerAccountClient() {
           </div>
         </div>
       ) : null}
+      <ForgotPasswordModal
+        open={showForgotPasswordModal}
+        locale={locale}
+        initialEmail={customerEmail}
+        onClose={() => setShowForgotPasswordModal(false)}
+        onSuccess={(successMessage) => {
+          setShowForgotPasswordModal(false);
+          setError(null);
+          setMessage(successMessage);
+        }}
+      />
       {deleteConfirmOpen ? (
         <div className="fixed inset-0 z-[140] flex items-center justify-center p-4">
           <button

@@ -9,6 +9,7 @@ import type { AppLocale } from "../../../lib/i18n/locale";
 import { buildCustomerAuthCallbackUrl } from "../../../lib/storefront/auth-redirect-url";
 import { markCustomerSessionActive } from "../../../lib/storefront/customer-session";
 import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
+import { ForgotPasswordModal } from "./ForgotPasswordModal";
 
 type Mode = "login" | "register";
 
@@ -293,11 +294,13 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
   const [googlePendingClosing, setGooglePendingClosing] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorModalClosing, setErrorModalClosing] = useState(false);
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const googlePendingCloseTimer = useRef<NodeJS.Timeout | null>(null);
   const errorModalCloseTimer = useRef<NodeJS.Timeout | null>(null);
   const emailRecoveryOtpRefs = useRef<Array<HTMLInputElement | null>>([]);
+  const forgotPasswordActionLabel = locale === "th" ? "ลืมรหัสผ่าน?" : locale === "lo" ? "ລືມລະຫັດຜ່ານ?" : "Forgot password?";
 
   const firstEmailOtpEmptyIndex = emailRecoveryOtp.findIndex((digit) => digit.length === 0);
   const emailRecoveryOtpFilledLength =
@@ -1235,6 +1238,15 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
             placeholder={t.passwordPlaceholder}
             className="h-12 w-full rounded-xl border border-amber-500/35 bg-black/50 px-4 text-base text-amber-50 outline-none transition-all duration-200 focus:scale-[1.01] focus:border-amber-300 focus:shadow-[0_0_0_3px_rgba(251,191,36,0.14)]"
           />
+          {mode === "login" ? (
+            <button
+              type="button"
+              onClick={() => setShowForgotPasswordModal(true)}
+              className="inline-flex text-sm font-semibold text-cyan-200 transition hover:text-cyan-100"
+            >
+              {forgotPasswordActionLabel}
+            </button>
+          ) : null}
 
           <button
             type="submit"
@@ -1270,6 +1282,24 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
           {t.switchLabel}
         </Link>
       </section>
+
+      <ForgotPasswordModal
+        open={showForgotPasswordModal}
+        locale={locale}
+        initialEmail={email}
+        signOutAfterSuccess={mode === "login"}
+        onClose={() => setShowForgotPasswordModal(false)}
+        onSuccess={(successMessage) => {
+          setShowForgotPasswordModal(false);
+          setError(null);
+          setMessage(successMessage);
+          setPassword("");
+          setPendingDeleteRecovery(false);
+          setEmailRateLimited(false);
+          setEmailRecoveryOtpSent(false);
+          setEmailRecoveryOtp(createEmptyEmailRecoveryOtp());
+        }}
+      />
 
       {showGooglePendingModal ? (
         <div
