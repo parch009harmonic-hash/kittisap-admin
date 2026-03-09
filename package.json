@@ -17,7 +17,8 @@
     "sync:github": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\sync-github.ps1",
     "cleanup:old-folders": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\cleanup-old-folders.ps1",
     "deploy:vercel": "vercel deploy --prod",
-    "release": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\release.ps1"
+    "release": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\release.ps1",
+    "smoke:test": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\smoke-test.ps1"
   },
   "dependencies": {
     "@supabase/auth-helpers-nextjs": "^0.15.0",
