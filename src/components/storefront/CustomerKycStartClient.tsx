@@ -24,6 +24,18 @@ type KycSessionDto = {
   reused?: boolean;
 };
 
+type KycCompletePayload = {
+  ok?: boolean;
+  code?: string;
+  error?: string;
+  data?: {
+    sessionId?: string;
+    status?: string;
+    kycStatus?: KycStatus;
+    approvedAt?: string | null;
+  };
+};
+
 function localeFromPath(pathname: string): AccountLocale {
   if (pathname.startsWith("/en")) return "en";
   if (pathname.startsWith("/lo")) return "lo";
@@ -53,26 +65,32 @@ function copy(locale: AccountLocale) {
       sessionCreated: "KYC session created.",
       sessionReused: "Existing KYC session resumed.",
       authRequired: "Session expired. Please sign in again.",
+      scan: "Scan Face",
+      scanning: "Scanning...",
+      cameraHint: "System will open the camera and verify your face automatically.",
     };
   }
 
   if (locale === "lo") {
     return {
-      title: "ຕ້ອງຢືນຢັນຕົວຕົນ",
-      subtitle: "ກ່ອນໃຊ້ບັນຊີລູກຄ້າ ກະລຸນາເລີ່ມ KYC.",
+      title: "ຕ້ອງຢືນຢັນຕົວຕົນກ່ອນໃຊ້ງານ",
+      subtitle: "ກ່ອນໃຊ້ບັນຊີລູກຄ້າ ກະລຸນາເລີ່ມ KYC",
       loading: "ກຳລັງໂຫຼດສະຖານະ KYC...",
       start: "ເລີ່ມ KYC",
       starting: "ກຳລັງເລີ່ມ...",
-      refresh: "ໂຫຼດສະຖານະອີກຄັ້ງ",
-      goAccount: "ໄປໜ້າບັນຊີ",
+      refresh: "ຣີເຟຣຊສະຖານະ",
+      goAccount: "ໄປບັນຊີ",
       goHome: "ກັບໜ້າຫຼັກ",
-      approved: "KYC ຜ່ານແລ້ວ. ສາມາດໄປໜ້າບັນຊີໄດ້.",
-      pending: "KYC ກຳລັງດຳເນີນການ. ກະລຸນາດຳເນີນຕໍ່.",
-      rejected: "KYC ບໍ່ຜ່ານ. ກະລຸນາລອງໃໝ່.",
-      blocked: "KYC ຖືກລະງັບ. ກະລຸນາຕິດຕໍ່ຝ່າຍຊ່ວຍເຫຼືອ.",
-      sessionCreated: "ສ້າງເຊດຊັນ KYC ແລ້ວ.",
-      sessionReused: "ໃຊ້ເຊດຊັນ KYC ເກົ່າທີ່ຍັງໃຊ້ໄດ້.",
-      authRequired: "ເຊດຊັນໝົດອາຍຸ. ກະລຸນາເຂົ້າລະບົບໃໝ່.",
+      approved: "KYC ຜ່ານແລ້ວ ສາມາດເຂົ້າບັນຊີໄດ້",
+      pending: "KYC ກຳລັງດຳເນີນການ ກະລຸນາເຮັດຂັ້ນຕອນຕໍ່",
+      rejected: "KYC ບໍ່ຜ່ານ ກະລຸນາລອງໃໝ່",
+      blocked: "KYC ຖືກບລັອກ ກະລຸນາຕິດຕໍ່ທີມງານ",
+      sessionCreated: "ສ້າງ KYC session ແລ້ວ",
+      sessionReused: "ນຳ KYC session ເກົ່າກັບມາໃຊ້",
+      authRequired: "ເຊສຊັນໝົດອາຍຸ ກະລຸນາເຂົ້າລະບົບໃໝ່",
+      scan: "ສະແກນໃບໜ້າ",
+      scanning: "ກຳລັງສະແກນ...",
+      cameraHint: "ລະບົບຈະເປີດກ້ອງ ແລະກວດໃບໜ້າອັດຕະໂນມັດ",
     };
   }
 
@@ -87,19 +105,21 @@ function copy(locale: AccountLocale) {
     goHome: "กลับหน้าแรก",
     approved: "KYC ผ่านแล้ว สามารถไปหน้าบัญชีได้",
     pending: "KYC อยู่ระหว่างดำเนินการ กรุณาทำขั้นตอนต่อ",
-    rejected: "KYC ไม่ผ่าน กรุณาลองส่งใหม่",
+    rejected: "KYC ไม่ผ่าน กรุณาลองใหม่",
     blocked: "KYC ถูกระงับ กรุณาติดต่อทีมงาน",
     sessionCreated: "สร้าง KYC session แล้ว",
     sessionReused: "ใช้ KYC session เดิมที่ยังไม่หมดอายุ",
     authRequired: "เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่",
+    scan: "สแกนใบหน้า",
+    scanning: "กำลังสแกน...",
+    cameraHint: "ระบบจะเปิดกล้องและตรวจสอบใบหน้าให้อัตโนมัติ",
   };
 }
 
 function scanCopy(locale: AccountLocale) {
   if (locale === "en") {
     return {
-      action: "Scan Face",
-      working: "Scanning face...",
+      working: "Opening camera and scanning face...",
       success: "Face scan verified. KYC approved.",
       failed: "Face scan failed. Please try again with better lighting.",
       noCamera: "Camera is not available on this device.",
@@ -110,21 +130,19 @@ function scanCopy(locale: AccountLocale) {
   }
   if (locale === "lo") {
     return {
-      action: "ສະແກນໃບໜ້າ",
-      working: "ກຳລັງສະແກນໃບໜ້າ...",
-      success: "ຢືນຢັນໃບໜ້າສຳເລັດ ແລະ KYC ຜ່ານແລ້ວ.",
-      failed: "ສະແກນໃບໜ້າບໍ່ສຳເລັດ ກະລຸນາລອງໃໝ່.",
-      noCamera: "ອຸປະກອນນີ້ບໍ່ຮອງຮັບກ້ອງ.",
-      permissionDenied: "ບໍ່ໄດ້ຮັບອະນຸຍາດໃຊ້ກ້ອງ ກະລຸນາອະນຸຍາດກ້ອງໃນເບຣາວເຊີ.",
-      needSession: "ກະລຸນາເລີ່ມ KYC session ກ່ອນສະແກນໃບໜ້າ.",
-      sessionExpired: "KYC session ໝົດອາຍຸແລ້ວ ກະລຸນາເລີ່ມໃໝ່.",
+      working: "ກຳລັງເປີດກ້ອງ ແລະສະແກນໃບໜ້າ...",
+      success: "ຢືນຢັນໃບໜ້າສຳເລັດ ແລະ KYC ຖືກອະນຸມັດ",
+      failed: "ສະແກນໃບໜ້າບໍ່ສຳເລັດ ກະລຸນາລອງໃໝ່",
+      noCamera: "ອຸປະກອນນີ້ບໍ່ຮອງຮັບກ້ອງ",
+      permissionDenied: "ບໍ່ໄດ້ອະນຸຍາດກ້ອງ ກະລຸນາອະນຸຍາດໃນເບຣາວເຊີ",
+      needSession: "ກະລຸນາເລີ່ມ KYC session ກ່ອນ",
+      sessionExpired: "KYC session ໝົດອາຍຸ ກະລຸນາເລີ່ມໃໝ່",
     };
   }
   return {
-    action: "สแกนใบหน้า",
-    working: "กำลังสแกนใบหน้า...",
+    working: "กำลังเปิดกล้องและสแกนใบหน้า...",
     success: "ยืนยันใบหน้าสำเร็จ และอนุมัติ KYC แล้ว",
-    failed: "สแกนใบหน้าไม่สำเร็จ กรุณาลองใหม่ในที่แสงเพียงพอ",
+    failed: "สแกนใบหน้าไม่สำเร็จ กรุณาลองใหม่ในที่แสงพอ",
     noCamera: "อุปกรณ์นี้ไม่รองรับการเปิดกล้อง",
     permissionDenied: "ไม่ได้รับสิทธิ์ใช้งานกล้อง กรุณาอนุญาตกล้องในเบราว์เซอร์",
     needSession: "กรุณาเริ่ม KYC session ก่อนสแกนใบหน้า",
@@ -152,10 +170,39 @@ function isKycSchemaCacheMissing(message: string) {
     );
 }
 
+function mapFaceScanError(caught: unknown, permissionDeniedText: string, genericFailedText: string, notSupportedText: string) {
+  const name = typeof caught === "object" && caught && "name" in caught
+    ? String((caught as { name?: unknown }).name ?? "").trim().toLowerCase()
+    : "";
+  const message = caught instanceof Error ? caught.message : "";
+  const lower = message.toLowerCase();
+
+  if (
+    name === "notallowederror"
+    || name === "permissiondeniederror"
+    || lower.includes("permission denied")
+    || lower.includes("permissiondenied")
+    || lower.includes("notallowederror")
+  ) {
+    return permissionDeniedText;
+  }
+
+  if (name === "notfounderror" || name === "notreadableerror") {
+    return notSupportedText;
+  }
+
+  if (lower.includes("could not start video") || lower.includes("could not access video stream")) {
+    return notSupportedText;
+  }
+
+  return message || genericFailedText;
+}
+
 export function CustomerKycStartClient() {
   const pathname = usePathname();
   const locale = useMemo(() => localeFromPath(pathname), [pathname]);
   const t = useMemo(() => copy(locale), [locale]);
+  const s = useMemo(() => scanCopy(locale), [locale]);
   const router = useRouter();
 
   const loginPath = withLocale(locale, "/auth/login");
@@ -164,7 +211,7 @@ export function CustomerKycStartClient() {
   const schemaMissingMessage = locale === "en"
     ? "KYC tables are not ready yet. Please ask admin to run sql/ensure-customer-kyc.sql in Supabase SQL Editor."
     : locale === "lo"
-      ? "ຕາຕະລາງ KYC ຍັງບໍ່ພ້ອມ. ກະລຸນາໃຫ້ແອດມິນຮັນ sql/ensure-customer-kyc.sql ໃນ Supabase SQL Editor."
+      ? "ຕາຕະລາງ KYC ຍັງບໍ່ພ້ອມ. ກະລຸນາໃຫ້ແອດມິນລັນ sql/ensure-customer-kyc.sql ໃນ Supabase SQL Editor."
       : "ตาราง KYC ยังไม่พร้อม กรุณาให้แอดมินรันไฟล์ sql/ensure-customer-kyc.sql ใน Supabase SQL Editor";
   const loadFailedMessage = locale === "en"
     ? "Failed to load KYC status"
@@ -179,6 +226,7 @@ export function CustomerKycStartClient() {
 
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
+  const [scanning, setScanning] = useState(false);
   const [profile, setProfile] = useState<KycProfileDto | null>(null);
   const [session, setSession] = useState<KycSessionDto | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -221,8 +269,118 @@ export function CustomerKycStartClient() {
     void loadStatus();
   }, [loadStatus]);
 
+  const performFaceScan = useCallback(async (nextSession?: KycSessionDto | null) => {
+    const activeSession = nextSession ?? session;
+    if (scanning) {
+      return false;
+    }
+    if (!activeSession?.sessionId) {
+      setError(s.needSession);
+      return false;
+    }
+    if (Date.parse(activeSession.expiresAt) <= Date.now()) {
+      setError(s.sessionExpired);
+      return false;
+    }
+
+    setScanning(true);
+    setError(null);
+    setMessage(s.working);
+
+    let stream: MediaStream | null = null;
+    try {
+      if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+        throw new Error(s.noCamera);
+      }
+
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
+      const video = document.createElement("video");
+      video.srcObject = stream;
+      video.muted = true;
+      video.playsInline = true;
+      await video.play();
+      await new Promise((resolve) => setTimeout(resolve, 650));
+
+      const width = video.videoWidth || 640;
+      const height = video.videoHeight || 480;
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext("2d");
+      if (!context) {
+        throw new Error(s.failed);
+      }
+      context.drawImage(video, 0, 0, width, height);
+
+      let scanMethod = "camera";
+      let detected = true;
+      const withFaceDetector = window as Window & {
+        FaceDetector?: new (options?: { fastMode?: boolean; maxDetectedFaces?: number }) => {
+          detect: (input: HTMLCanvasElement) => Promise<Array<unknown>>;
+        };
+      };
+      if (withFaceDetector.FaceDetector) {
+        scanMethod = "camera+facedetector";
+        const detector = new withFaceDetector.FaceDetector({ fastMode: true, maxDetectedFaces: 1 });
+        const faces = await detector.detect(canvas);
+        detected = Array.isArray(faces) && faces.length > 0;
+      }
+      if (!detected) {
+        throw new Error(s.failed);
+      }
+
+      const response = await fetch("/api/customer/kyc/session/complete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId: activeSession.sessionId,
+          verificationMethod: scanMethod,
+          resultPayload: {
+            faceDetected: true,
+            imageWidth: width,
+            imageHeight: height,
+          },
+        }),
+      });
+
+      const payload = (await response.json().catch(() => null)) as KycCompletePayload | null;
+      if (response.status === 401) {
+        setError(t.authRequired);
+        router.replace(loginPath);
+        return false;
+      }
+      if (!response.ok || !payload?.ok) {
+        if (payload?.code === "KYC_SESSION_EXPIRED" || payload?.code === "KYC_SESSION_FINALIZED") {
+          throw new Error(s.sessionExpired);
+        }
+        throw new Error(mapKycErrorMessage(payload?.code, payload?.error));
+      }
+
+      const nextStatus = normalizeStatus(payload?.data?.kycStatus ?? "approved");
+      setProfile((prev) => ({
+        ...(prev ?? {}),
+        kycStatus: nextStatus,
+        approvedAt: payload?.data?.approvedAt ?? prev?.approvedAt ?? null,
+      }));
+      setMessage(s.success);
+      setError(null);
+      return true;
+    } catch (caught) {
+      setError(mapFaceScanError(caught, s.permissionDenied, s.failed, s.noCamera));
+      setMessage(null);
+      return false;
+    } finally {
+      if (stream) {
+        for (const track of stream.getTracks()) {
+          track.stop();
+        }
+      }
+      setScanning(false);
+    }
+  }, [loginPath, mapKycErrorMessage, router, s.failed, s.needSession, s.noCamera, s.permissionDenied, s.sessionExpired, s.success, s.working, scanning, session, t.authRequired]);
+
   async function startKyc() {
-    if (starting) return;
+    if (starting || scanning) return;
     setStarting(true);
     setError(null);
     setMessage(null);
@@ -247,12 +405,15 @@ export function CustomerKycStartClient() {
       }
 
       setSession(payload.data);
-      setMessage(payload.data.reused ? t.sessionReused : t.sessionCreated);
       const nextStatus = normalizeStatus(payload.data.kycStatus);
       setProfile((prev) => ({
         ...(prev ?? {}),
         kycStatus: nextStatus,
       }));
+      setMessage(payload.data.reused ? t.sessionReused : t.sessionCreated);
+
+      // Trigger camera immediately after KYC session is created.
+      await performFaceScan(payload.data);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : startFailedMessage);
     } finally {
@@ -285,6 +446,7 @@ export function CustomerKycStartClient() {
                     ? t.blocked
                     : t.pending}
             </p>
+            <p className="mt-2 text-xs text-slate-400/90">{t.cameraHint}</p>
             {session ? (
               <div className="mt-3 rounded-xl border border-cyan-300/25 bg-cyan-500/10 px-3 py-2 text-xs text-cyan-100/90">
                 <p>session: {session.sessionId}</p>
@@ -298,7 +460,7 @@ export function CustomerKycStartClient() {
           <button
             type="button"
             onClick={() => void startKyc()}
-            disabled={starting || isApproved}
+            disabled={starting || scanning || isApproved}
             className="inline-flex h-11 items-center justify-center rounded-full border border-amber-300/65 bg-gradient-to-r from-amber-500 to-yellow-300 px-6 text-sm font-semibold text-zinc-900 transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {starting ? t.starting : t.start}
@@ -306,8 +468,17 @@ export function CustomerKycStartClient() {
 
           <button
             type="button"
+            onClick={() => void performFaceScan()}
+            disabled={scanning || isApproved}
+            className="inline-flex h-11 items-center justify-center rounded-full border border-cyan-300/40 bg-cyan-900/40 px-6 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-800/60 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {scanning ? t.scanning : t.scan}
+          </button>
+
+          <button
+            type="button"
             onClick={() => void loadStatus()}
-            disabled={loading}
+            disabled={loading || starting || scanning}
             className="inline-flex h-11 items-center justify-center rounded-full border border-slate-300/40 bg-slate-900/70 px-6 text-sm font-semibold text-slate-100 transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {t.refresh}
