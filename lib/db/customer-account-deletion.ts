@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getSupabaseServiceRoleClient } from "../supabase/service";
+import { CustomerKycError, getCustomerKycProfile } from "./customer-kyc";
 
 const DELETION_GRACE_PERIOD_MS = 3 * 24 * 60 * 60 * 1000;
 const AVATAR_BUCKET = "profile-avatars";
@@ -105,6 +106,47 @@ async function verifyCustomerPassword(email: string, password: string) {
   }
 
   throw new CustomerAccountDeletionError(401, "INVALID_PASSWORD", "Password is invalid");
+}
+
+async function ensureCustomerFaceKycApproved(customerId: string) {
+  const normalizedCustomerId = String(customerId ?? "").trim();
+  if (!normalizedCustomerId) {
+    throw new CustomerAccountDeletionError(400, "INVALID_CUSTOMER_ID", "Customer id is required");
+  }
+
+  try {
+    const kycProfile = await getCustomerKycProfile(normalizedCustomerId);
+    if (kycProfile.kycStatus !== "approved") {
+      throw new CustomerAccountDeletionError(
+        403,
+        "KYC_FACE_REQUIRED",
+        "Face KYC is required before this action. Please complete face verification first.",
+      );
+    }
+  } catch (error) {
+    if (error instanceof CustomerAccountDeletionError) {
+      throw error;
+    }
+    if (error instanceof CustomerKycError) {
+      if (error.code === "KYC_SCHEMA_MISSING") {
+        throw new CustomerAccountDeletionError(
+          503,
+          "KYC_SCHEMA_MISSING",
+          "Missing KYC schema. Run sql/ensure-customer-kyc.sql first.",
+        );
+      }
+      throw new CustomerAccountDeletionError(
+        error.status,
+        "KYC_PROFILE_FETCH_FAILED",
+        error.message || "Failed to verify KYC profile.",
+      );
+    }
+    throw new CustomerAccountDeletionError(
+      500,
+      "KYC_PROFILE_FETCH_FAILED",
+      normalizeErrorMessage(error) || "Failed to verify KYC profile.",
+    );
+  }
 }
 
 async function appendDeletionLog(input: {
@@ -314,6 +356,7 @@ export async function requestCustomerAccountDeletion(input: {
   }
 
   const profileRow = await getCustomerProfileDeletionRow(customerId);
+  await ensureCustomerFaceKycApproved(customerId);
   await verifyCustomerPassword(input.email, input.password);
   const status = String(profileRow.deletion_status ?? "active").trim().toLowerCase();
   const now = Date.now();
@@ -396,6 +439,7 @@ export async function recoverCustomerAccountDeletion(input: {
   if (!customerId) {
     throw new CustomerAccountDeletionError(400, "INVALID_CUSTOMER_ID", "Customer id is required");
   }
+  await ensureCustomerFaceKycApproved(customerId);
   if (!input.faceScanPassed) {
     throw new CustomerAccountDeletionError(400, "FACE_SCAN_REQUIRED", "Face scan verification is required");
   }
@@ -464,6 +508,7 @@ export async function recoverCustomerAccountDeletionByEmailLink(input: {
   if (!customerId) {
     throw new CustomerAccountDeletionError(400, "INVALID_CUSTOMER_ID", "Customer id is required");
   }
+  await ensureCustomerFaceKycApproved(customerId);
 
   const profileRow = await getCustomerProfileDeletionRow(customerId);
   const status = String(profileRow.deletion_status ?? "active").trim().toLowerCase();
@@ -556,6 +601,7 @@ export async function recoverCustomerAccountDeletionByOrderProof(input: {
   }
 
   const customerId = await resolveCustomerIdByEmail(normalizedEmail);
+  await ensureCustomerFaceKycApproved(customerId);
   const profileRow = await getCustomerProfileDeletionRow(customerId);
   const status = String(profileRow.deletion_status ?? "active").trim().toLowerCase();
   if (status !== "pending_delete") {

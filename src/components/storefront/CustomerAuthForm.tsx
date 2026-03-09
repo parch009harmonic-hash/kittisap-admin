@@ -20,14 +20,10 @@ type CustomerAuthFormProps = {
 };
 
 const EMAIL_RECOVERY_OTP_MIN_LENGTH = 6;
-const EMAIL_RECOVERY_OTP_LENGTH = 8;
-
-function createEmptyEmailRecoveryOtp() {
-  return Array.from({ length: EMAIL_RECOVERY_OTP_LENGTH }, () => "");
-}
+const EMAIL_RECOVERY_OTP_MAX_LENGTH = 16;
 
 function normalizeOtpDigits(value: string) {
-  return value.replace(/\D/g, "").slice(0, EMAIL_RECOVERY_OTP_LENGTH);
+  return value.replace(/\D/g, "").slice(0, EMAIL_RECOVERY_OTP_MAX_LENGTH);
 }
 
 function text(mode: Mode, locale: AppLocale) {
@@ -72,11 +68,12 @@ function text(mode: Mode, locale: AppLocale) {
       recoveryLinkSending: isThai ? "กำลังส่ง OTP..." : isLao ? "ກຳລັງສົ່ງ OTP..." : "Sending OTP...",
       recoveryLinkSent: isThai ? "ส่งรหัส OTP แล้ว กรุณาตรวจสอบอีเมลและกรอกรหัสด้านล่าง" : isLao ? "ສົ່ງລະຫັດ OTP ແລ້ວ ກະລຸນາກວດອີເມວ" : "OTP sent. Please check your email and enter the code below.",
       recoveryNeedEmail: isThai ? "กรุณากรอกอีเมลก่อนส่ง OTP กู้คืนบัญชี" : isLao ? "ກະລຸນາກອກອີເມວກ່ອນສົ່ງ OTP ກູ້ຄືນ" : "Please enter your email before sending recovery OTP.",
-      recoveryOtpPlaceholder: isThai ? "รหัส OTP 6-8 หลัก" : isLao ? "ລະຫັດ OTP 6-8 ຫຼັກ" : "6-8 digit OTP",
+      recoveryOtpPlaceholder: isThai ? "รหัส OTP (ตัวเลขเท่านั้น)" : isLao ? "ລະຫັດ OTP (ຕົວເລກເທົ່ານັ້ນ)" : "OTP code (digits only)",
       recoveryOtpAction: isThai ? "ยืนยัน OTP และกู้คืนบัญชี" : isLao ? "ຢືນຢັນ OTP ແລະ ກູ້ຄືນບັນຊີ" : "Verify OTP & Recover",
       recoveryOtpWorking: isThai ? "กำลังยืนยัน OTP..." : isLao ? "ກຳລັງຢືນຢັນ OTP..." : "Verifying OTP...",
       recoveryOtpNeed: isThai ? "กรุณากรอกรหัส OTP อย่างน้อย 6 หลัก" : isLao ? "ກະລຸນາກອກ OTP ຢ່າງນ້ອຍ 6 ຫຼັກ" : "Please enter at least 6 OTP digits.",
       recoveryOtpInvalid: isThai ? "รหัส OTP ไม่ถูกต้องหรือหมดอายุ กรุณาขอรหัสใหม่" : isLao ? "OTP ບໍ່ຖືກ ຫຼື ໝົດອາຍຸ ກະລຸນາຂໍໃໝ່" : "OTP is invalid or expired. Request a new code.",
+      recoveryNeedKyc: isThai ? "บัญชีนี้ยังไม่ผ่าน KYC ใบหน้า กรุณาทำ KYC ก่อนดำเนินการ" : isLao ? "ບັນຊີນີ້ຍັງບໍ່ຜ່ານ KYC ໃບໜ້າ ກະລຸນາເຮັດ KYC ກ່ອນ" : "Face KYC is required before continuing.",
       recoveryExpired: isThai ? "หมดเวลาการกู้คืนบัญชี (เกิน 3 วัน)" : isLao ? "ໝົດເວລາກູ້ຄືນບັນຊີ (ເກີນ 3 ມື້)" : "Recovery window has expired (over 3 days).",
       recoveryFailed: isThai ? "กู้คืนบัญชีไม่สำเร็จ กรุณาลองอีกครั้ง" : isLao ? "ກູ້ຄືນບັນຊີບໍ່ສຳເລັດ ກະລຸນາລອງໃໝ່" : "Account recovery failed. Please try again.",
       accountRecovered: isThai ? "กู้คืนบัญชีสำเร็จแล้ว สามารถใช้งานต่อได้ทันที" : isLao ? "ກູ້ຄືນບັນຊີສຳເລັດແລ້ວ" : "Account recovered successfully.",
@@ -143,11 +140,12 @@ function text(mode: Mode, locale: AppLocale) {
     recoveryLinkSending: isThai ? "กำลังส่ง OTP..." : isLao ? "ກຳລັງສົ່ງ OTP..." : "Sending OTP...",
     recoveryLinkSent: isThai ? "ส่งรหัส OTP แล้ว กรุณาตรวจสอบอีเมลและกรอกรหัสด้านล่าง" : isLao ? "ສົ່ງລະຫັດ OTP ແລ້ວ ກະລຸນາກວດອີເມວ" : "OTP sent. Please check your email and enter the code below.",
     recoveryNeedEmail: isThai ? "กรุณากรอกอีเมลก่อนส่ง OTP กู้คืนบัญชี" : isLao ? "ກະລຸນາກອກອີເມວກ່ອນສົ່ງ OTP ກູ້ຄືນ" : "Please enter your email before sending recovery OTP.",
-    recoveryOtpPlaceholder: isThai ? "รหัส OTP 6-8 หลัก" : isLao ? "ລະຫັດ OTP 6-8 ຫຼັກ" : "6-8 digit OTP",
+    recoveryOtpPlaceholder: isThai ? "รหัส OTP (ตัวเลขเท่านั้น)" : isLao ? "ລະຫັດ OTP (ຕົວເລກເທົ່ານັ້ນ)" : "OTP code (digits only)",
     recoveryOtpAction: isThai ? "ยืนยัน OTP และกู้คืนบัญชี" : isLao ? "ຢືນຢັນ OTP ແລະ ກູ້ຄືນບັນຊີ" : "Verify OTP & Recover",
     recoveryOtpWorking: isThai ? "กำลังยืนยัน OTP..." : isLao ? "ກຳລັງຢືນຢັນ OTP..." : "Verifying OTP...",
     recoveryOtpNeed: isThai ? "กรุณากรอกรหัส OTP อย่างน้อย 6 หลัก" : isLao ? "ກະລຸນາກອກ OTP ຢ່າງນ້ອຍ 6 ຫຼັກ" : "Please enter at least 6 OTP digits.",
     recoveryOtpInvalid: isThai ? "รหัส OTP ไม่ถูกต้องหรือหมดอายุ กรุณาขอรหัสใหม่" : isLao ? "OTP ບໍ່ຖືກ ຫຼື ໝົດອາຍຸ ກະລຸນາຂໍໃໝ່" : "OTP is invalid or expired. Request a new code.",
+    recoveryNeedKyc: isThai ? "บัญชีนี้ยังไม่ผ่าน KYC ใบหน้า กรุณาทำ KYC ก่อนดำเนินการ" : isLao ? "ບັນຊີນີ້ຍັງບໍ່ຜ່ານ KYC ໃບໜ້າ ກະລຸນາເຮັດ KYC ກ່ອນ" : "Face KYC is required before continuing.",
     recoveryExpired: isThai ? "หมดเวลาการกู้คืนบัญชี (เกิน 3 วัน)" : isLao ? "ໝົດເວລາກູ້ຄືນບັນຊີ (ເກີນ 3 ມື້)" : "Recovery window has expired (over 3 days).",
     recoveryFailed: isThai ? "กู้คืนบัญชีไม่สำเร็จ กรุณาลองอีกครั้ง" : isLao ? "ກູ້ຄືນບັນຊີບໍ່ສຳເລັດ ກະລຸນາລອງໃໝ່" : "Account recovery failed. Please try again.",
     accountRecovered: isThai ? "กู้คืนบัญชีสำเร็จแล้ว สามารถใช้งานต่อได้ทันที" : isLao ? "ກູ້ຄືນບັນຊີສຳເລັດແລ້ວ" : "Account recovered successfully.",
@@ -272,7 +270,7 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
   const [loading, setLoading] = useState(false);
   const [resendingConfirm, setResendingConfirm] = useState(false);
   const [sendingRecoveryLink, setSendingRecoveryLink] = useState(false);
-  const [emailRecoveryOtp, setEmailRecoveryOtp] = useState<string[]>(createEmptyEmailRecoveryOtp);
+  const [emailRecoveryOtp, setEmailRecoveryOtp] = useState("");
   const [emailRecoveryOtpSent, setEmailRecoveryOtpSent] = useState(false);
   const [recoveringByEmailOtp, setRecoveringByEmailOtp] = useState(false);
   const [pendingConfirmEmail, setPendingConfirmEmail] = useState<string | null>(null);
@@ -299,115 +297,13 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
   const [message, setMessage] = useState<string | null>(null);
   const googlePendingCloseTimer = useRef<NodeJS.Timeout | null>(null);
   const errorModalCloseTimer = useRef<NodeJS.Timeout | null>(null);
-  const emailRecoveryOtpRefs = useRef<Array<HTMLInputElement | null>>([]);
   const forgotPasswordActionLabel = locale === "th" ? "ลืมรหัสผ่าน?" : locale === "lo" ? "ລືມລະຫັດຜ່ານ?" : "Forgot password?";
 
-  const firstEmailOtpEmptyIndex = emailRecoveryOtp.findIndex((digit) => digit.length === 0);
-  const emailRecoveryOtpFilledLength =
-    firstEmailOtpEmptyIndex === -1 ? EMAIL_RECOVERY_OTP_LENGTH : firstEmailOtpEmptyIndex;
-  const hasEmailOtpGap =
-    firstEmailOtpEmptyIndex >= 0 && emailRecoveryOtp.slice(firstEmailOtpEmptyIndex + 1).some((digit) => digit.length > 0);
-  const emailRecoveryOtpValue = emailRecoveryOtp.slice(0, emailRecoveryOtpFilledLength).join("");
-  const isEmailRecoveryOtpComplete = !hasEmailOtpGap && emailRecoveryOtpFilledLength >= EMAIL_RECOVERY_OTP_MIN_LENGTH;
+  const emailRecoveryOtpValue = normalizeOtpDigits(emailRecoveryOtp);
+  const isEmailRecoveryOtpComplete = emailRecoveryOtpValue.length >= EMAIL_RECOVERY_OTP_MIN_LENGTH;
 
   function isEmailNotConfirmedError(input: string) {
     return input.toLowerCase().includes("email not confirmed");
-  }
-
-  function focusEmailRecoveryOtpCell(index: number) {
-    const bounded = Math.max(0, Math.min(EMAIL_RECOVERY_OTP_LENGTH - 1, index));
-    const target = emailRecoveryOtpRefs.current[bounded];
-    if (!target) {
-      return;
-    }
-    target.focus();
-    target.select();
-  }
-
-  function handleEmailRecoveryOtpChange(index: number, raw: string) {
-    const digits = normalizeOtpDigits(raw);
-    if (!digits) {
-      setEmailRecoveryOtp((previous) => {
-        const next = [...previous];
-        next[index] = "";
-        return next;
-      });
-      return;
-    }
-
-    setEmailRecoveryOtp((previous) => {
-      const next = [...previous];
-      let cursor = index;
-      for (const digit of digits) {
-        if (cursor >= EMAIL_RECOVERY_OTP_LENGTH) {
-          break;
-        }
-        next[cursor] = digit;
-        cursor += 1;
-      }
-      return next;
-    });
-
-    requestAnimationFrame(() => {
-      const nextIndex = Math.min(index + digits.length, EMAIL_RECOVERY_OTP_LENGTH - 1);
-      focusEmailRecoveryOtpCell(nextIndex);
-    });
-  }
-
-  function handleEmailRecoveryOtpKeyDown(index: number, key: string) {
-    if (key === "Backspace") {
-      if (emailRecoveryOtp[index]) {
-        setEmailRecoveryOtp((previous) => {
-          const next = [...previous];
-          next[index] = "";
-          return next;
-        });
-        return;
-      }
-      if (index > 0) {
-        setEmailRecoveryOtp((previous) => {
-          const next = [...previous];
-          next[index - 1] = "";
-          return next;
-        });
-        requestAnimationFrame(() => focusEmailRecoveryOtpCell(index - 1));
-      }
-      return;
-    }
-
-    if (key === "ArrowLeft" && index > 0) {
-      requestAnimationFrame(() => focusEmailRecoveryOtpCell(index - 1));
-      return;
-    }
-
-    if (key === "ArrowRight" && index < EMAIL_RECOVERY_OTP_LENGTH - 1) {
-      requestAnimationFrame(() => focusEmailRecoveryOtpCell(index + 1));
-    }
-  }
-
-  function handleEmailRecoveryOtpPaste(index: number, pastedText: string) {
-    const digits = normalizeOtpDigits(pastedText);
-    if (!digits) {
-      return;
-    }
-
-    setEmailRecoveryOtp((previous) => {
-      const next = [...previous];
-      let cursor = index;
-      for (const digit of digits) {
-        if (cursor >= EMAIL_RECOVERY_OTP_LENGTH) {
-          break;
-        }
-        next[cursor] = digit;
-        cursor += 1;
-      }
-      return next;
-    });
-
-    requestAnimationFrame(() => {
-      const nextIndex = Math.min(index + digits.length, EMAIL_RECOVERY_OTP_LENGTH - 1);
-      focusEmailRecoveryOtpCell(nextIndex);
-    });
   }
 
   useEffect(() => {
@@ -483,13 +379,6 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
     setShowErrorModal(true);
   }, [error]);
 
-  useEffect(() => {
-    if (!emailRecoveryOtpSent) {
-      return;
-    }
-    requestAnimationFrame(() => focusEmailRecoveryOtpCell(0));
-  }, [emailRecoveryOtpSent]);
-
   function openGooglePendingModal() {
     if (googlePendingCloseTimer.current) {
       clearTimeout(googlePendingCloseTimer.current);
@@ -538,7 +427,7 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
     setPendingConfirmEmail(null);
     setPendingDeleteRecovery(false);
     setEmailRateLimited(false);
-    setEmailRecoveryOtp(createEmptyEmailRecoveryOtp());
+    setEmailRecoveryOtp("");
     setEmailRecoveryOtpSent(false);
 
     try {
@@ -667,7 +556,7 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
     setError(null);
     setMessage(null);
     setEmailRateLimited(false);
-    setEmailRecoveryOtp(createEmptyEmailRecoveryOtp());
+    setEmailRecoveryOtp("");
 
     try {
       const supabase = getSupabaseBrowserClient();
@@ -745,6 +634,9 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
         if (payload?.code === "DELETION_RECOVERY_EXPIRED") {
           throw new Error(t.recoveryExpired);
         }
+        if (payload?.code === "KYC_FACE_REQUIRED" || payload?.code === "KYC_SCHEMA_MISSING") {
+          throw new Error(t.recoveryNeedKyc);
+        }
         throw new Error(mapAuthErrorMessage(payload?.error ?? t.recoveryFailed, locale, t));
       }
 
@@ -752,7 +644,7 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
       setPendingDeleteRecovery(false);
       setEmailRateLimited(false);
       setEmailRecoveryOtpSent(false);
-      setEmailRecoveryOtp(createEmptyEmailRecoveryOtp());
+      setEmailRecoveryOtp("");
       setError(null);
       setMessage(t.accountRecovered);
       router.replace(accountPath);
@@ -949,6 +841,9 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
         if (payload?.code === "DELETION_RECOVERY_EXPIRED") {
           throw new Error(t.recoveryExpired);
         }
+        if (payload?.code === "KYC_FACE_REQUIRED" || payload?.code === "KYC_SCHEMA_MISSING") {
+          throw new Error(t.recoveryNeedKyc);
+        }
         if (payload?.code === "INVALID_PASSWORD") {
           throw new Error(t.unauthorized);
         }
@@ -968,7 +863,7 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
         setPendingDeleteRecovery(false);
         setEmailRateLimited(false);
         setEmailRecoveryOtpSent(false);
-        setEmailRecoveryOtp(createEmptyEmailRecoveryOtp());
+        setEmailRecoveryOtp("");
         setError(null);
         setMessage(t.accountRecovered);
         setShowFaceRecoveryModal(false);
@@ -979,7 +874,7 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
       setPendingDeleteRecovery(false);
       setEmailRateLimited(false);
       setEmailRecoveryOtpSent(false);
-      setEmailRecoveryOtp(createEmptyEmailRecoveryOtp());
+      setEmailRecoveryOtp("");
       setError(null);
       setMessage(t.accountRecovered);
       setShowFaceRecoveryModal(false);
@@ -1031,6 +926,9 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
         if (payload?.code === "DELETION_RECOVERY_EXPIRED") {
           throw new Error(t.recoveryExpired);
         }
+        if (payload?.code === "KYC_FACE_REQUIRED" || payload?.code === "KYC_SCHEMA_MISSING") {
+          throw new Error(t.recoveryNeedKyc);
+        }
         if (payload?.code === "RECOVERY_PROOF_INVALID") {
           throw new Error(t.recoverByOrderInvalidProof);
         }
@@ -1043,7 +941,7 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
       setPendingDeleteRecovery(false);
       setEmailRateLimited(false);
       setEmailRecoveryOtpSent(false);
-      setEmailRecoveryOtp(createEmptyEmailRecoveryOtp());
+      setEmailRecoveryOtp("");
       setError(null);
       setMessage(t.accountRecovered);
       setShowOrderRecoveryModal(false);
@@ -1150,40 +1048,17 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
             </div>
             {emailRecoveryOtpSent ? (
               <div className="space-y-2">
-                <div className="grid grid-cols-8 gap-1.5 sm:gap-2">
-                  {Array.from({ length: EMAIL_RECOVERY_OTP_LENGTH }, (_, index) => (
-                    <input
-                      key={`email-recovery-otp-${index}`}
-                      ref={(node) => {
-                        emailRecoveryOtpRefs.current[index] = node;
-                      }}
-                      value={emailRecoveryOtp[index] ?? ""}
-                      onChange={(event) => handleEmailRecoveryOtpChange(index, event.target.value)}
-                      onKeyDown={(event) => {
-                        if (event.key === "Backspace" || event.key === "ArrowLeft" || event.key === "ArrowRight") {
-                          event.preventDefault();
-                          handleEmailRecoveryOtpKeyDown(index, event.key);
-                          return;
-                        }
-                        if (event.key.length === 1 && !/[0-9]/.test(event.key)) {
-                          event.preventDefault();
-                          return;
-                        }
-                      }}
-                      onFocus={(event) => event.currentTarget.select()}
-                      onPaste={(event) => {
-                        event.preventDefault();
-                        handleEmailRecoveryOtpPaste(index, event.clipboardData.getData("text"));
-                      }}
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      maxLength={EMAIL_RECOVERY_OTP_LENGTH}
-                      autoComplete={index === 0 ? "one-time-code" : "off"}
-                      aria-label={`${t.recoveryOtpPlaceholder} ${index + 1}`}
-                      className="h-11 w-full rounded-xl border border-sky-300/40 bg-black/45 px-0 text-center text-base font-semibold tracking-[0.08em] text-sky-100 outline-none transition focus:border-sky-200 focus:ring-2 focus:ring-sky-200/20 sm:h-12 sm:text-lg"
-                    />
-                  ))}
-                </div>
+                <input
+                  type="text"
+                  value={emailRecoveryOtp}
+                  onChange={(event) => setEmailRecoveryOtp(normalizeOtpDigits(event.target.value))}
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  autoComplete="one-time-code"
+                  placeholder={t.recoveryOtpPlaceholder}
+                  aria-label={t.recoveryOtpPlaceholder}
+                  className="h-12 w-full rounded-xl border border-sky-300/40 bg-black/45 px-4 text-center text-base font-semibold tracking-[0.18em] text-sky-100 outline-none transition focus:border-sky-200 focus:ring-2 focus:ring-sky-200/20 sm:h-12 sm:text-lg"
+                />
                 <button
                   type="button"
                   onClick={() => void handleRecoverByEmailOtp()}
@@ -1296,7 +1171,7 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
           setPendingDeleteRecovery(false);
           setEmailRateLimited(false);
           setEmailRecoveryOtpSent(false);
-          setEmailRecoveryOtp(createEmptyEmailRecoveryOtp());
+          setEmailRecoveryOtp("");
           markCustomerSessionActive();
           router.replace(accountPath);
           router.refresh();

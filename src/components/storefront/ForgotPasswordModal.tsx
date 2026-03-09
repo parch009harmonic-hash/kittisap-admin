@@ -1,28 +1,27 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 
 type CustomerLocale = "th" | "en" | "lo";
+type PasswordFlowIntent = "forgot" | "change";
 
 type ForgotPasswordModalProps = {
   open: boolean;
   locale: CustomerLocale;
+  intent?: PasswordFlowIntent;
   initialEmail?: string;
   lockEmail?: boolean;
   onClose: () => void;
   onSuccess?: (message: string) => void;
 };
 
-const OTP_LENGTH = 6;
-
-function createEmptyOtp() {
-  return Array.from({ length: OTP_LENGTH }, () => "");
-}
+const OTP_MIN_LENGTH = 6;
+const OTP_MAX_LENGTH = 16;
 
 function normalizeOtpDigits(value: string) {
-  return value.replace(/\D/g, "").slice(0, OTP_LENGTH);
+  return value.replace(/\D/g, "").slice(0, OTP_MAX_LENGTH);
 }
 
 function copy(locale: CustomerLocale) {
@@ -36,7 +35,7 @@ function copy(locale: CustomerLocale) {
       otpLabel: "OTP Code",
       verifyOtp: "Verify OTP",
       verifyingOtp: "Verifying OTP...",
-      otpSent: "OTP sent. Please enter 6 digits from email.",
+      otpSent: "OTP sent. Please enter the numeric code from your email.",
       otpVerified: "OTP verified successfully.",
       scanFace: "Scan Face",
       scanningFace: "Scanning...",
@@ -48,7 +47,7 @@ function copy(locale: CustomerLocale) {
       cancel: "Cancel",
       needEmail: "Please enter your email.",
       emailNotFound: "This email is not registered in the system.",
-      needOtp: "Please enter 6 OTP digits.",
+      needOtp: "Please enter at least 6 OTP digits.",
       needOtpVerify: "Please verify OTP before face scan.",
       otpInvalid: "OTP is invalid or expired. Request a new code.",
       needFaceScan: "Please scan your face before setting a new password.",
@@ -74,7 +73,7 @@ function copy(locale: CustomerLocale) {
       otpLabel: "ລະຫັດ OTP",
       verifyOtp: "ຢືນຢັນ OTP",
       verifyingOtp: "ກຳລັງຢືນຢັນ OTP...",
-      otpSent: "ສົ່ງ OTP ແລ້ວ. ກະລຸນາກອກ 6 ຕົວເລກຈາກອີເມວ.",
+      otpSent: "ສົ່ງ OTP ແລ້ວ. ກະລຸນາກອກລະຫັດຕົວເລກຈາກອີເມວ.",
       otpVerified: "ຢືນຢັນ OTP ສຳເລັດ.",
       scanFace: "ສະແກນໃບໜ້າ",
       scanningFace: "ກຳລັງສະແກນ...",
@@ -86,7 +85,7 @@ function copy(locale: CustomerLocale) {
       cancel: "ຍົກເລີກ",
       needEmail: "ກະລຸນາກອກອີເມວ.",
       emailNotFound: "ອີເມວນີ້ບໍ່ຢູ່ໃນລະບົບ.",
-      needOtp: "ກະລຸນາກອກ OTP 6 ຕົວເລກ.",
+      needOtp: "ກະລຸນາກອກ OTP ຢ່າງນ້ອຍ 6 ຕົວເລກ.",
       needOtpVerify: "ກະລຸນາຢືນຢັນ OTP ກ່ອນສະແກນໃບໜ້າ.",
       otpInvalid: "OTP ບໍ່ຖືກ ຫຼື ໝົດອາຍຸ.",
       needFaceScan: "ກະລຸນາສະແກນໃບໜ້າກ່ອນຕັ້ງລະຫັດໃໝ່.",
@@ -111,7 +110,7 @@ function copy(locale: CustomerLocale) {
     otpLabel: "รหัส OTP",
     verifyOtp: "ยืนยัน OTP",
     verifyingOtp: "กำลังยืนยัน OTP...",
-    otpSent: "ส่ง OTP แล้ว กรุณากรอกรหัส 6 หลักจากอีเมล",
+      otpSent: "ส่ง OTP แล้ว กรุณากรอกรหัสตัวเลขจากอีเมล",
     otpVerified: "ยืนยัน OTP สำเร็จ",
     scanFace: "สแกนใบหน้า",
     scanningFace: "กำลังสแกน...",
@@ -123,7 +122,7 @@ function copy(locale: CustomerLocale) {
     cancel: "ยกเลิก",
     needEmail: "กรุณากรอกอีเมล",
     emailNotFound: "อีเมลนี้ไม่มีบัญชีในระบบ",
-    needOtp: "กรุณากรอก OTP 6 หลัก",
+    needOtp: "กรุณากรอก OTP อย่างน้อย 6 หลัก",
     needOtpVerify: "กรุณายืนยัน OTP ก่อนสแกนใบหน้า",
     otpInvalid: "OTP ไม่ถูกต้องหรือหมดอายุ กรุณาขอใหม่",
     needFaceScan: "กรุณาสแกนใบหน้าก่อนตั้งรหัสใหม่",
@@ -170,15 +169,27 @@ function mapFaceScanError(caught: unknown, noCameraMessage: string, permissionDe
 export function ForgotPasswordModal({
   open,
   locale,
+  intent = "forgot",
   initialEmail = "",
   lockEmail = false,
   onClose,
   onSuccess,
 }: ForgotPasswordModalProps) {
   const t = useMemo(() => copy(locale), [locale]);
+  const isChangeIntent = intent === "change";
+  const modalTitle = isChangeIntent
+    ? (locale === "en" ? "Change Password" : locale === "lo" ? "ປ່ຽນລະຫັດຜ່ານ" : "เปลี่ยนรหัสผ่าน")
+    : t.title;
+  const modalSubtitle = isChangeIntent
+    ? (locale === "en"
+      ? "Verify email OTP, scan face, then set a new password."
+      : locale === "lo"
+        ? "ຢືນຢັນ OTP ທາງອີເມວ, ສະແກນໃບໜ້າ ແລ້ວຕັ້ງລະຫັດໃໝ່."
+        : "ยืนยัน OTP ทางอีเมล สแกนใบหน้า แล้วตั้งรหัสผ่านใหม่")
+    : t.subtitle;
 
   const [email, setEmail] = useState(initialEmail.trim());
-  const [otp, setOtp] = useState<string[]>(createEmptyOtp);
+  const [otp, setOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [otpVerifying, setOtpVerifying] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
@@ -190,17 +201,15 @@ export function ForgotPasswordModal({
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const otpRefs = useRef<Array<HTMLInputElement | null>>([]);
-
-  const otpValue = otp.join("");
-  const otpComplete = otpValue.length === OTP_LENGTH;
+  const otpValue = normalizeOtpDigits(otp);
+  const otpComplete = otpValue.length >= OTP_MIN_LENGTH;
 
   useEffect(() => {
     if (!open) {
       return;
     }
     setEmail(initialEmail.trim());
-    setOtp(createEmptyOtp());
+    setOtp("");
     setOtpSent(false);
     setOtpVerifying(false);
     setOtpVerified(false);
@@ -214,110 +223,8 @@ export function ForgotPasswordModal({
     setMessage(null);
   }, [initialEmail, open]);
 
-  useEffect(() => {
-    if (!open || !otpSent) {
-      return;
-    }
-    requestAnimationFrame(() => {
-      otpRefs.current[0]?.focus();
-      otpRefs.current[0]?.select();
-    });
-  }, [open, otpSent]);
-
   if (!open) {
     return null;
-  }
-
-  function focusOtpCell(index: number) {
-    const bounded = Math.max(0, Math.min(OTP_LENGTH - 1, index));
-    const target = otpRefs.current[bounded];
-    if (!target) {
-      return;
-    }
-    target.focus();
-    target.select();
-  }
-
-  function handleOtpChange(index: number, raw: string) {
-    const digits = normalizeOtpDigits(raw);
-    if (!digits) {
-      setOtp((previous) => {
-        const next = [...previous];
-        next[index] = "";
-        return next;
-      });
-      return;
-    }
-
-    setOtp((previous) => {
-      const next = [...previous];
-      let cursor = index;
-      for (const digit of digits) {
-        if (cursor >= OTP_LENGTH) {
-          break;
-        }
-        next[cursor] = digit;
-        cursor += 1;
-      }
-      return next;
-    });
-
-    requestAnimationFrame(() => {
-      const nextIndex = Math.min(index + digits.length, OTP_LENGTH - 1);
-      focusOtpCell(nextIndex);
-    });
-  }
-
-  function handleOtpKeyDown(index: number, key: string) {
-    if (key === "Backspace") {
-      if (otp[index]) {
-        setOtp((previous) => {
-          const next = [...previous];
-          next[index] = "";
-          return next;
-        });
-        return;
-      }
-      if (index > 0) {
-        setOtp((previous) => {
-          const next = [...previous];
-          next[index - 1] = "";
-          return next;
-        });
-        requestAnimationFrame(() => focusOtpCell(index - 1));
-      }
-      return;
-    }
-    if (key === "ArrowLeft" && index > 0) {
-      requestAnimationFrame(() => focusOtpCell(index - 1));
-      return;
-    }
-    if (key === "ArrowRight" && index < OTP_LENGTH - 1) {
-      requestAnimationFrame(() => focusOtpCell(index + 1));
-    }
-  }
-
-  function handleOtpPaste(index: number, pastedText: string) {
-    const digits = normalizeOtpDigits(pastedText);
-    if (!digits) {
-      return;
-    }
-    setOtp((previous) => {
-      const next = [...previous];
-      let cursor = index;
-      for (const digit of digits) {
-        if (cursor >= OTP_LENGTH) {
-          break;
-        }
-        next[cursor] = digit;
-        cursor += 1;
-      }
-      return next;
-    });
-    requestAnimationFrame(() => {
-      const nextIndex = Math.min(index + digits.length, OTP_LENGTH - 1);
-      focusOtpCell(nextIndex);
-    });
   }
 
   async function handleSendOtp() {
@@ -330,7 +237,7 @@ export function ForgotPasswordModal({
     setSendingOtp(true);
     setError(null);
     setMessage(null);
-    setOtp(createEmptyOtp());
+    setOtp("");
     setOtpVerified(false);
     setFaceScanPassed(false);
 
@@ -548,8 +455,8 @@ export function ForgotPasswordModal({
         className="w-full max-w-md rounded-2xl border border-cyan-300/45 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.18)_0%,_rgba(9,16,22,0.95)_46%,_#08090b_100%)] p-5 text-cyan-50 shadow-[0_24px_80px_rgba(0,0,0,0.56)]"
         onClick={(event) => event.stopPropagation()}
       >
-        <h2 className="text-lg font-semibold text-cyan-200">{t.title}</h2>
-        <p className="mt-1 text-sm text-cyan-100/80">{t.subtitle}</p>
+        <h2 className="text-lg font-semibold text-cyan-200">{modalTitle}</h2>
+        <p className="mt-1 text-sm text-cyan-100/80">{modalSubtitle}</p>
 
         {error ? (
           <p className="mt-3 rounded-xl border border-rose-300/45 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">
@@ -585,39 +492,17 @@ export function ForgotPasswordModal({
 
           {otpSent ? (
             <>
-              <div className="grid grid-cols-6 gap-1.5 sm:gap-2">
-                {Array.from({ length: OTP_LENGTH }, (_, index) => (
-                  <input
-                    key={`forgot-password-otp-${index}`}
-                    ref={(node) => {
-                      otpRefs.current[index] = node;
-                    }}
-                    value={otp[index] ?? ""}
-                    onChange={(event) => handleOtpChange(index, event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Backspace" || event.key === "ArrowLeft" || event.key === "ArrowRight") {
-                        event.preventDefault();
-                        handleOtpKeyDown(index, event.key);
-                        return;
-                      }
-                      if (event.key.length === 1 && !/[0-9]/.test(event.key)) {
-                        event.preventDefault();
-                      }
-                    }}
-                    onFocus={(event) => event.currentTarget.select()}
-                    onPaste={(event) => {
-                      event.preventDefault();
-                      handleOtpPaste(index, event.clipboardData.getData("text"));
-                    }}
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    maxLength={OTP_LENGTH}
-                    autoComplete={index === 0 ? "one-time-code" : "off"}
-                    aria-label={`${t.otpLabel} ${index + 1}`}
-                    className="h-11 w-full rounded-xl border border-cyan-300/40 bg-black/45 px-0 text-center text-base font-semibold tracking-[0.08em] text-cyan-100 outline-none transition focus:border-cyan-200 focus:ring-2 focus:ring-cyan-200/20 sm:h-12 sm:text-lg"
-                  />
-                ))}
-              </div>
+              <input
+                type="text"
+                value={otp}
+                onChange={(event) => setOtp(normalizeOtpDigits(event.target.value))}
+                inputMode="numeric"
+                pattern="[0-9]*"
+                autoComplete="one-time-code"
+                aria-label={t.otpLabel}
+                placeholder={t.otpLabel}
+                className="h-11 w-full rounded-xl border border-cyan-300/40 bg-black/45 px-4 text-center text-base font-semibold tracking-[0.18em] text-cyan-100 outline-none transition focus:border-cyan-200 focus:ring-2 focus:ring-cyan-200/20 sm:h-12 sm:text-lg"
+              />
 
               {!otpVerified ? (
                 <button

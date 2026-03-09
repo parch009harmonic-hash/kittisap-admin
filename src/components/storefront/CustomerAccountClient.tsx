@@ -35,6 +35,12 @@ type OrderDto = {
   created_at?: string | null;
 };
 
+type KycProfileDto = {
+  kycStatus?: string | null;
+};
+
+type PasswordModalIntent = "forgot" | "change";
+
 type AccountLocale = "th" | "en" | "lo";
 
 function localeFromPath(pathname: string): AccountLocale {
@@ -87,6 +93,7 @@ function copy(locale: AccountLocale) {
       save: "Save Profile",
       saving: "Saving...",
       logout: "Log out",
+      changePasswordAction: "Change Password",
       forgotPasswordAction: "Forgot password",
       loggingOut: "Signing out...",
       logoutConfirmTitle: "Confirm sign out",
@@ -120,6 +127,10 @@ function copy(locale: AccountLocale) {
       recovering: "Recovering...",
       recoverSuccess: "Account recovered successfully.",
       recoverExpired: "Recovery window has expired. Account may be deleted already.",
+      kycRequiredTitle: "Face KYC Required",
+      kycRequiredDescription: "Complete face KYC first to enable forgot/reset password, account deletion, and recovery actions.",
+      kycRequiredAction: "Complete Face KYC",
+      kycRequiredError: "Please complete face KYC before continuing this secure action.",
       loading: "Loading profile...",
       loadingOrders: "Loading orders...",
       createdAt: "Created",
@@ -182,6 +193,7 @@ function copy(locale: AccountLocale) {
       save: "ບັນທຶກຂໍ້ມູນ",
       saving: "ກຳລັງບັນທຶກ...",
       logout: "ອອກຈາກລະບົບ",
+      changePasswordAction: "ປ່ຽນລະຫັດຜ່ານ",
       forgotPasswordAction: "ລືມລະຫັດຜ່ານ",
       loggingOut: "ກຳລັງອອກຈາກລະບົບ...",
       logoutConfirmTitle: "ຢືນຢັນອອກຈາກລະບົບ",
@@ -215,6 +227,10 @@ function copy(locale: AccountLocale) {
       recovering: "ກຳລັງກູ້...",
       recoverSuccess: "ກູ້ບັນຊີສຳເລັດແລ້ວ",
       recoverExpired: "ໝົດເວລາກູ້ຄືນແລ້ວ",
+      kycRequiredTitle: "ຕ້ອງຜ່ານ KYC ໃບໜ້າ",
+      kycRequiredDescription: "ກະລຸນາເຮັດ KYC ໃບໜ້າກ່ອນ ເພື່ອໃຊ້ງານລືມລະຫັດ, ປ່ຽນລະຫັດ, ລົບບັນຊີ ແລະ ກູ້ບັນຊີ.",
+      kycRequiredAction: "ໄປທຳ Face KYC",
+      kycRequiredError: "ກະລຸນາເຮັດ KYC ໃບໜ້າກ່ອນດຳເນີນການທີ່ປອດໄພນີ້.",
       loading: "ກຳລັງໂຫຼດໂປຣໄຟລ໌...",
       loadingOrders: "ກຳລັງໂຫຼດຄຳສັ່ງຊື້...",
       createdAt: "ສ້າງເມື່ອ",
@@ -276,6 +292,7 @@ function copy(locale: AccountLocale) {
     save: "บันทึกข้อมูล",
     saving: "กำลังบันทึก...",
     logout: "ออกจากระบบ",
+    changePasswordAction: "เปลี่ยนรหัสผ่าน",
     forgotPasswordAction: "ลืมรหัสผ่าน",
     loggingOut: "กำลังออกจากระบบ...",
     logoutConfirmTitle: "ยืนยันออกจากระบบ",
@@ -309,6 +326,10 @@ function copy(locale: AccountLocale) {
     recovering: "กำลังกู้คืน...",
     recoverSuccess: "กู้คืนบัญชีสำเร็จแล้ว",
     recoverExpired: "หมดเวลาการกู้คืนแล้ว บัญชีอาจถูกลบถาวรไปแล้ว",
+    kycRequiredTitle: "ต้องผ่าน KYC ใบหน้าก่อนใช้งาน",
+    kycRequiredDescription: "กรุณาทำ KYC ใบหน้าก่อน เพื่อเปิดใช้งานลืม/เปลี่ยนรหัสผ่าน, ลบบัญชี และกู้คืนบัญชีแบบยืนยัน 2 ชั้น",
+    kycRequiredAction: "ไปทำ Face KYC",
+    kycRequiredError: "กรุณาทำ KYC ใบหน้าก่อนดำเนินการด้านความปลอดภัยนี้",
     loading: "กำลังโหลดข้อมูลโปรไฟล์...",
     loadingOrders: "กำลังโหลดรายการสั่งซื้อ...",
     createdAt: "สร้างเมื่อ",
@@ -402,6 +423,7 @@ export function CustomerAccountClient() {
   const t = useMemo(() => copy(locale), [locale]);
   const loginPath = withLocale(locale, "/auth/login");
   const homePath = withLocale(locale, "/");
+  const kycStartPath = withLocale(locale, "/kyc/start");
   const quickLinks = useMemo(
     () => [
       {
@@ -483,8 +505,9 @@ export function CustomerAccountClient() {
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [avatarUrlOverride, setAvatarUrlOverride] = useState("");
-  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+  const [passwordModalIntent, setPasswordModalIntent] = useState<PasswordModalIntent | null>(null);
   const [customerEmail, setCustomerEmail] = useState("");
+  const [kycStatus, setKycStatus] = useState("not_started");
 
   const paidOrders = useMemo(
     () => orders.filter((item) => item.status === "completed" || item.payment_status === "paid").length,
@@ -514,6 +537,7 @@ export function CustomerAccountClient() {
   const profileAvatarUrl = firstText(avatarUrlOverride, profile?.avatar_url, profile?.profile_image_url, profile?.image_url);
   const profileInitials = useMemo(() => nameInitials(profileName), [profileName]);
   const deletionPending = String(profile?.deletion_status ?? "").trim().toLowerCase() === "pending_delete";
+  const isKycApproved = kycStatus === "approved";
   const deletionScheduledFor = profile?.deletion_scheduled_for ? formatDateTime(profile.deletion_scheduled_for, locale) : "-";
   const activePopupTitle = activePopup === "profile" ? t.profileTitle : activePopup === "orders" ? t.ordersTitle : t.statsPopupTitle;
   const notificationText = error ?? message;
@@ -530,6 +554,12 @@ export function CustomerAccountClient() {
       : locale === "lo"
         ? "ເຄືອຂ່າຍບໍ່ສະຖຽນ. ກະລຸນາລອງໃໝ່ອີກຄັ້ງ."
         : "เครือข่ายไม่เสถียร กรุณาลองใหม่อีกครั้ง";
+  const kycSchemaFixMessage =
+    locale === "en"
+      ? "KYC schema is incomplete. Please run sql/ensure-customer-kyc.sql and try again."
+      : locale === "lo"
+        ? "ໂຄງສ້າງ KYC ຍັງບໍ່ຄົບ. ກະລຸນາຮັນ sql/ensure-customer-kyc.sql ແລ້ວລອງໃໝ່."
+        : "โครงสร้าง KYC ยังไม่ครบ กรุณารัน sql/ensure-customer-kyc.sql แล้วลองใหม่";
 
   useEffect(() => {
     if (!activePopup) {
@@ -582,6 +612,42 @@ export function CustomerAccountClient() {
       mounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    async function loadKycStatus() {
+      try {
+        const response = await fetch("/api/customer/kyc/session", { cache: "no-store" });
+        if (response.status === 401) {
+          window.location.href = loginPath;
+          return;
+        }
+
+        const payload = (await response.json().catch(() => null)) as
+          | { ok?: boolean; data?: KycProfileDto; code?: string; error?: string }
+          | null;
+        if (!mounted) {
+          return;
+        }
+        if (!response.ok || !payload?.ok) {
+          setKycStatus("not_started");
+          return;
+        }
+
+        const normalizedStatus = String(payload.data?.kycStatus ?? "").trim().toLowerCase();
+        setKycStatus(normalizedStatus || "not_started");
+      } catch {
+        if (mounted) {
+          setKycStatus("not_started");
+        }
+      }
+    }
+
+    void loadKycStatus();
+    return () => {
+      mounted = false;
+    };
+  }, [loginPath]);
 
   useEffect(() => {
     let mounted = true;
@@ -777,6 +843,36 @@ export function CustomerAccountClient() {
     }
   }
 
+  function requireFaceKycForSecureAction() {
+    if (isKycApproved) {
+      return true;
+    }
+    setMessage(null);
+    setError(t.kycRequiredError);
+    return false;
+  }
+
+  function openForgotPasswordModal() {
+    if (!requireFaceKycForSecureAction()) {
+      return;
+    }
+    setPasswordModalIntent("forgot");
+  }
+
+  function openChangePasswordModal() {
+    if (!requireFaceKycForSecureAction()) {
+      return;
+    }
+    setPasswordModalIntent("change");
+  }
+
+  function openDeleteConfirmModal() {
+    if (!requireFaceKycForSecureAction()) {
+      return;
+    }
+    setDeleteConfirmOpen(true);
+  }
+
   function mapFaceScanError(caught: unknown) {
     const name = typeof caught === "object" && caught && "name" in caught
       ? String((caught as { name?: unknown }).name ?? "").trim().toLowerCase()
@@ -807,6 +903,9 @@ export function CustomerAccountClient() {
 
   async function performFaceScan() {
     if (faceScanning) {
+      return;
+    }
+    if (!requireFaceKycForSecureAction()) {
       return;
     }
 
@@ -879,6 +978,9 @@ export function CustomerAccountClient() {
     if (deletingAccount) {
       return;
     }
+    if (!requireFaceKycForSecureAction()) {
+      return;
+    }
     if (!deletePassword.trim()) {
       setError(t.deletePasswordLabel);
       return;
@@ -909,6 +1011,12 @@ export function CustomerAccountClient() {
         if (payload?.code === "DELETION_SCHEMA_MISSING" || payload?.code === "DELETION_LOG_TABLE_MISSING") {
           throw new Error(schemaFixMessage);
         }
+        if (payload?.code === "KYC_SCHEMA_MISSING") {
+          throw new Error(kycSchemaFixMessage);
+        }
+        if (payload?.code === "KYC_FACE_REQUIRED") {
+          throw new Error(t.kycRequiredError);
+        }
         throw new Error(payload?.error ?? "Failed to request account deletion");
       }
 
@@ -931,6 +1039,9 @@ export function CustomerAccountClient() {
   async function onRecoverAccount(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (recoveringAccount) {
+      return;
+    }
+    if (!requireFaceKycForSecureAction()) {
       return;
     }
     if (!faceScanPassed) {
@@ -962,6 +1073,12 @@ export function CustomerAccountClient() {
         }
         if (payload?.code === "DELETION_SCHEMA_MISSING" || payload?.code === "DELETION_LOG_TABLE_MISSING") {
           throw new Error(schemaFixMessage);
+        }
+        if (payload?.code === "KYC_SCHEMA_MISSING") {
+          throw new Error(kycSchemaFixMessage);
+        }
+        if (payload?.code === "KYC_FACE_REQUIRED") {
+          throw new Error(t.kycRequiredError);
         }
         throw new Error(payload?.error ?? "Failed to recover account");
       }
@@ -1005,16 +1122,25 @@ export function CustomerAccountClient() {
             <div className="flex flex-wrap items-center justify-end gap-2">
               <button
                 type="button"
-                onClick={() => setShowForgotPasswordModal(true)}
-                className="inline-flex h-11 items-center justify-center rounded-full border border-cyan-300/70 bg-cyan-500/15 px-5 text-sm font-semibold text-cyan-100 shadow-[0_10px_30px_rgba(34,211,238,0.2)] transition hover:bg-cyan-500/30"
+                onClick={openChangePasswordModal}
+                disabled={!isKycApproved}
+                className="inline-flex h-11 items-center justify-center rounded-full border border-emerald-300/70 bg-emerald-500/15 px-5 text-sm font-semibold text-emerald-100 shadow-[0_10px_30px_rgba(16,185,129,0.2)] transition hover:bg-emerald-500/30 disabled:cursor-not-allowed disabled:opacity-55"
+              >
+                {t.changePasswordAction}
+              </button>
+              <button
+                type="button"
+                onClick={openForgotPasswordModal}
+                disabled={!isKycApproved}
+                className="inline-flex h-11 items-center justify-center rounded-full border border-cyan-300/70 bg-cyan-500/15 px-5 text-sm font-semibold text-cyan-100 shadow-[0_10px_30px_rgba(34,211,238,0.2)] transition hover:bg-cyan-500/30 disabled:cursor-not-allowed disabled:opacity-55"
               >
                 {t.forgotPasswordAction}
               </button>
               {!deletionPending ? (
                 <button
                   type="button"
-                  onClick={() => setDeleteConfirmOpen(true)}
-                  disabled={deletingAccount}
+                  onClick={openDeleteConfirmModal}
+                  disabled={deletingAccount || !isKycApproved}
                   className="inline-flex h-11 items-center justify-center rounded-full border border-rose-300/70 bg-rose-500/15 px-5 text-sm font-semibold text-rose-100 shadow-[0_10px_30px_rgba(244,63,94,0.2)] transition hover:bg-rose-500/30 disabled:cursor-not-allowed disabled:opacity-65"
                 >
                   {deletingAccount ? t.deletingAccount : t.deleteAccount}
@@ -1030,6 +1156,19 @@ export function CustomerAccountClient() {
               </button>
             </div>
           </div>
+
+          {!isKycApproved ? (
+            <div className="mt-5 rounded-2xl border border-amber-300/45 bg-amber-500/10 p-4">
+              <h2 className="text-base font-semibold text-amber-100">{t.kycRequiredTitle}</h2>
+              <p className="mt-1 text-sm leading-6 text-amber-100/90">{t.kycRequiredDescription}</p>
+              <Link
+                href={kycStartPath}
+                className="mt-3 inline-flex h-10 items-center justify-center rounded-full border border-amber-300/65 bg-amber-400/20 px-4 text-sm font-semibold text-amber-50 transition hover:bg-amber-400/30"
+              >
+                {t.kycRequiredAction}
+              </Link>
+            </div>
+          ) : null}
 
           {deletionPending ? (
             <div className="mt-5 rounded-2xl border border-rose-300/35 bg-rose-500/10 p-4 md:p-5">
@@ -1054,20 +1193,20 @@ export function CustomerAccountClient() {
                   <button
                     type="button"
                     onClick={() => void performFaceScan()}
-                    disabled={faceScanning}
+                    disabled={faceScanning || !isKycApproved}
                     className="inline-flex h-11 items-center justify-center rounded-full border border-cyan-300/45 bg-cyan-500/15 px-4 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-500/25 disabled:cursor-not-allowed disabled:opacity-65"
                   >
                     {faceScanning ? t.faceScanning : t.recoverFaceScan}
                   </button>
                   <button
                     type="submit"
-                    disabled={recoveringAccount || !recoverPassword.trim()}
+                    disabled={recoveringAccount || !recoverPassword.trim() || !isKycApproved}
                     className="inline-flex h-11 items-center justify-center rounded-full border border-emerald-300/45 bg-emerald-500/20 px-4 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-500/30 disabled:cursor-not-allowed disabled:opacity-65"
                   >
                     {recoveringAccount ? t.recovering : t.recoverAction}
                   </button>
                   <p className="text-xs leading-5 text-slate-300/80">
-                    {t.faceScanHint}
+                    {isKycApproved ? t.faceScanHint : t.kycRequiredError}
                   </p>
                 </div>
               </form>
@@ -1377,13 +1516,14 @@ export function CustomerAccountClient() {
         </div>
       ) : null}
       <ForgotPasswordModal
-        open={showForgotPasswordModal}
+        open={passwordModalIntent !== null}
+        intent={passwordModalIntent === "change" ? "change" : "forgot"}
         locale={locale}
         initialEmail={customerEmail}
         lockEmail
-        onClose={() => setShowForgotPasswordModal(false)}
+        onClose={() => setPasswordModalIntent(null)}
         onSuccess={(successMessage) => {
-          setShowForgotPasswordModal(false);
+          setPasswordModalIntent(null);
           setError(null);
           setMessage(successMessage);
         }}
