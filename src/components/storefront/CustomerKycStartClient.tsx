@@ -105,6 +105,16 @@ function normalizeStatus(value: unknown): KycStatus {
   return "not_started";
 }
 
+function isKycSchemaCacheMissing(message: string) {
+  const lower = String(message ?? "").trim().toLowerCase();
+  return lower.includes("customer_kyc_profiles")
+    && (
+      lower.includes("schema cache")
+      || lower.includes("could not find the table")
+      || lower.includes("does not exist")
+    );
+}
+
 export function CustomerKycStartClient() {
   const pathname = usePathname();
   const locale = useMemo(() => localeFromPath(pathname), [pathname]);
@@ -114,6 +124,21 @@ export function CustomerKycStartClient() {
   const loginPath = withLocale(locale, "/auth/login");
   const accountPath = withLocale(locale, "/account");
   const homePath = withLocale(locale, "/");
+  const schemaMissingMessage = locale === "en"
+    ? "KYC tables are not ready yet. Please ask admin to run sql/ensure-customer-kyc.sql in Supabase SQL Editor."
+    : locale === "lo"
+      ? "ຕາຕະລາງ KYC ຍັງບໍ່ພ້ອມ. ກະລຸນາໃຫ້ແອດມິນຮັນ sql/ensure-customer-kyc.sql ໃນ Supabase SQL Editor."
+      : "ตาราง KYC ยังไม่พร้อม กรุณาให้แอดมินรันไฟล์ sql/ensure-customer-kyc.sql ใน Supabase SQL Editor";
+  const loadFailedMessage = locale === "en"
+    ? "Failed to load KYC status"
+    : locale === "lo"
+      ? "ໂຫຼດສະຖານະ KYC ບໍ່ສຳເລັດ"
+      : "โหลดสถานะ KYC ไม่สำเร็จ";
+  const startFailedMessage = locale === "en"
+    ? "Failed to start KYC"
+    : locale === "lo"
+      ? "ເລີ່ມ KYC ບໍ່ສຳເລັດ"
+      : "เริ่ม KYC ไม่สำเร็จ";
 
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
@@ -121,6 +146,18 @@ export function CustomerKycStartClient() {
   const [session, setSession] = useState<KycSessionDto | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+
+  const mapKycErrorMessage = useCallback((code?: string, apiError?: string) => {
+    const normalizedCode = String(code ?? "").trim().toUpperCase();
+    const normalizedError = String(apiError ?? "").trim();
+    if (normalizedCode === "AUTH_REQUIRED") {
+      return t.authRequired;
+    }
+    if (normalizedCode === "KYC_SCHEMA_MISSING" || isKycSchemaCacheMissing(normalizedError)) {
+      return schemaMissingMessage;
+    }
+    return normalizedError || loadFailedMessage;
+  }, [loadFailedMessage, schemaMissingMessage, t.authRequired]);
 
   const loadStatus = useCallback(async () => {
     setLoading(true);
@@ -133,15 +170,15 @@ export function CustomerKycStartClient() {
         return;
       }
       if (!response.ok || !payload?.ok) {
-        throw new Error(payload?.error ?? "Failed to load KYC status");
+        throw new Error(mapKycErrorMessage(payload?.code, payload?.error));
       }
       setProfile(payload.data ?? null);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Failed to load KYC status");
+      setError(caught instanceof Error ? caught.message : loadFailedMessage);
     } finally {
       setLoading(false);
     }
-  }, [loginPath, router]);
+  }, [loadFailedMessage, loginPath, mapKycErrorMessage, router]);
 
   useEffect(() => {
     void loadStatus();
@@ -169,7 +206,7 @@ export function CustomerKycStartClient() {
         return;
       }
       if (!response.ok || !payload?.ok || !payload.data) {
-        throw new Error(payload?.error ?? "Failed to start KYC");
+        throw new Error(mapKycErrorMessage(payload?.code, payload?.error) || startFailedMessage);
       }
 
       setSession(payload.data);
@@ -180,7 +217,7 @@ export function CustomerKycStartClient() {
         kycStatus: nextStatus,
       }));
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Failed to start KYC");
+      setError(caught instanceof Error ? caught.message : startFailedMessage);
     } finally {
       setStarting(false);
     }

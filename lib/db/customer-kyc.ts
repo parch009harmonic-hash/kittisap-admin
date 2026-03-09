@@ -58,7 +58,12 @@ function normalizeErrorMessage(error: unknown) {
 
 function isMissingTableError(message: string, tableName: string) {
   const lower = message.toLowerCase();
-  return lower.includes(tableName.toLowerCase()) && lower.includes("does not exist");
+  return lower.includes(tableName.toLowerCase())
+    && (
+      lower.includes("does not exist")
+      || lower.includes("schema cache")
+      || lower.includes("could not find the table")
+    );
 }
 
 function normalizeKycStatus(value: unknown): CustomerKycStatus {
