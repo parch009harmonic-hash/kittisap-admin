@@ -95,6 +95,43 @@ function copy(locale: AccountLocale) {
   };
 }
 
+function scanCopy(locale: AccountLocale) {
+  if (locale === "en") {
+    return {
+      action: "Scan Face",
+      working: "Scanning face...",
+      success: "Face scan verified. KYC approved.",
+      failed: "Face scan failed. Please try again with better lighting.",
+      noCamera: "Camera is not available on this device.",
+      permissionDenied: "Camera permission denied. Please allow camera access in your browser.",
+      needSession: "Please start KYC session before scanning face.",
+      sessionExpired: "KYC session expired. Please start again.",
+    };
+  }
+  if (locale === "lo") {
+    return {
+      action: "ສະແກນໃບໜ້າ",
+      working: "ກຳລັງສະແກນໃບໜ້າ...",
+      success: "ຢືນຢັນໃບໜ້າສຳເລັດ ແລະ KYC ຜ່ານແລ້ວ.",
+      failed: "ສະແກນໃບໜ້າບໍ່ສຳເລັດ ກະລຸນາລອງໃໝ່.",
+      noCamera: "ອຸປະກອນນີ້ບໍ່ຮອງຮັບກ້ອງ.",
+      permissionDenied: "ບໍ່ໄດ້ຮັບອະນຸຍາດໃຊ້ກ້ອງ ກະລຸນາອະນຸຍາດກ້ອງໃນເບຣາວເຊີ.",
+      needSession: "ກະລຸນາເລີ່ມ KYC session ກ່ອນສະແກນໃບໜ້າ.",
+      sessionExpired: "KYC session ໝົດອາຍຸແລ້ວ ກະລຸນາເລີ່ມໃໝ່.",
+    };
+  }
+  return {
+    action: "สแกนใบหน้า",
+    working: "กำลังสแกนใบหน้า...",
+    success: "ยืนยันใบหน้าสำเร็จ และอนุมัติ KYC แล้ว",
+    failed: "สแกนใบหน้าไม่สำเร็จ กรุณาลองใหม่ในที่แสงเพียงพอ",
+    noCamera: "อุปกรณ์นี้ไม่รองรับการเปิดกล้อง",
+    permissionDenied: "ไม่ได้รับสิทธิ์ใช้งานกล้อง กรุณาอนุญาตกล้องในเบราว์เซอร์",
+    needSession: "กรุณาเริ่ม KYC session ก่อนสแกนใบหน้า",
+    sessionExpired: "KYC session หมดอายุแล้ว กรุณาเริ่มใหม่",
+  };
+}
+
 function normalizeStatus(value: unknown): KycStatus {
   const normalized = String(value ?? "").trim().toLowerCase();
   if (normalized === "in_progress") return "in_progress";

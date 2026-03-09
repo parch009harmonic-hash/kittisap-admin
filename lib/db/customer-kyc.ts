@@ -307,3 +307,135 @@ export async function createCustomerKycSession(input: {
     reused: false,
   };
 }
+
+export async function completeCustomerKycSession(input: {
+  customerId: string;
+  sessionId: string;
+  verificationMethod?: string;
+  resultPayload?: Record<string, unknown>;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+}) {
+  const normalizedCustomerId = String(input.customerId ?? "").trim();
+  if (!normalizedCustomerId) {
+    throw new CustomerKycError(400, "INVALID_CUSTOMER_ID", "Customer id is required.");
+  }
+
+  const normalizedSessionId = String(input.sessionId ?? "").trim();
+  if (!normalizedSessionId) {
+    throw new CustomerKycError(400, "KYC_SESSION_ID_REQUIRED", "Session id is required.");
+  }
+
+  const verificationMethod = String(input.verificationMethod ?? "").trim() || "camera";
+  const nowIso = new Date().toISOString();
+  const supabase = getSupabaseServiceRoleClient();
+
+  const sessionResult = await supabase
+    .from("customer_kyc_sessions")
+    .select("id,status,purpose,expires_at")
+    .eq("id", normalizedSessionId)
+    .eq("customer_id", normalizedCustomerId)
+    .maybeSingle();
+
+  if (sessionResult.error) {
+    const message = normalizeErrorMessage(sessionResult.error);
+    if (isMissingTableError(message, "customer_kyc_sessions")) {
+      throw new CustomerKycError(500, "KYC_SCHEMA_MISSING", "Missing customer_kyc_sessions table. Run sql/ensure-customer-kyc.sql first.");
+    }
+    throw new CustomerKycError(500, "KYC_SESSION_FETCH_FAILED", message || "Failed to load KYC session.");
+  }
+
+  if (!sessionResult.data) {
+    throw new CustomerKycError(404, "KYC_SESSION_NOT_FOUND", "KYC session was not found.");
+  }
+
+  const currentStatus = String((sessionResult.data as { status?: string }).status ?? "").trim().toLowerCase();
+  if (currentStatus === "passed") {
+    const profile = await getCustomerKycProfile(normalizedCustomerId);
+    return {
+      sessionId: normalizedSessionId,
+      status: "passed" as const,
+      kycStatus: profile.kycStatus,
+      approvedAt: profile.approvedAt,
+      alreadyCompleted: true,
+    };
+  }
+  if (currentStatus === "failed" || currentStatus === "expired" || currentStatus === "cancelled") {
+    throw new CustomerKycError(409, "KYC_SESSION_FINALIZED", "KYC session is no longer active.");
+  }
+
+  const expiresAt = Date.parse(String((sessionResult.data as { expires_at?: string }).expires_at ?? ""));
+  if (Number.isFinite(expiresAt) && expiresAt <= Date.now()) {
+    await supabase
+      .from("customer_kyc_sessions")
+      .update({ status: "expired" })
+      .eq("id", normalizedSessionId)
+      .eq("customer_id", normalizedCustomerId);
+    throw new CustomerKycError(410, "KYC_SESSION_EXPIRED", "KYC session has expired.");
+  }
+
+  const nextResultPayload: Record<string, unknown> = {
+    ...(input.resultPayload ?? {}),
+    verificationMethod,
+    verifiedAt: nowIso,
+    source: "browser-face-scan",
+  };
+
+  const updateSession = await supabase
+    .from("customer_kyc_sessions")
+    .update({
+      status: "passed",
+      provider: "browser-face-scan",
+      result_payload: nextResultPayload,
+    })
+    .eq("id", normalizedSessionId)
+    .eq("customer_id", normalizedCustomerId);
+
+  if (updateSession.error) {
+    const message = normalizeErrorMessage(updateSession.error);
+    if (isMissingTableError(message, "customer_kyc_sessions")) {
+      throw new CustomerKycError(500, "KYC_SCHEMA_MISSING", "Missing customer_kyc_sessions table. Run sql/ensure-customer-kyc.sql first.");
+    }
+    throw new CustomerKycError(500, "KYC_SESSION_UPDATE_FAILED", message || "Failed to update KYC session.");
+  }
+
+  const updateProfile = await supabase
+    .from("customer_kyc_profiles")
+    .update({
+      kyc_status: "approved",
+      kyc_level: "basic",
+      approved_at: nowIso,
+      rejected_reason: null,
+      provider: "browser-face-scan",
+    })
+    .eq("customer_id", normalizedCustomerId);
+
+  if (updateProfile.error) {
+    const message = normalizeErrorMessage(updateProfile.error);
+    if (isMissingTableError(message, "customer_kyc_profiles")) {
+      throw new CustomerKycError(500, "KYC_SCHEMA_MISSING", "Missing customer_kyc_profiles table. Run sql/ensure-customer-kyc.sql first.");
+    }
+    throw new CustomerKycError(500, "KYC_PROFILE_UPSERT_FAILED", message || "Failed to update KYC profile.");
+  }
+
+  await appendKycAuditLog({
+    customerId: normalizedCustomerId,
+    sessionId: normalizedSessionId,
+    eventType: "session_passed",
+    eventStatus: "passed",
+    ipAddress: input.ipAddress ?? null,
+    userAgent: input.userAgent ?? null,
+    metadata: {
+      verificationMethod,
+      purpose: String((sessionResult.data as { purpose?: string }).purpose ?? ""),
+    },
+  });
+
+  return {
+    sessionId: normalizedSessionId,
+    status: "passed" as const,
+    kycStatus: "approved" as const,
+    approvedAt: nowIso,
+    alreadyCompleted: false,
+  };
+}

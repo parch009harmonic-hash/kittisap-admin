@@ -491,7 +491,7 @@ export async function uploadPublicOrderSlip(orderNo: string, file: File) {
 
 export async function cancelPublicOrder(orderNo: string) {
   const actor = await requireCustomerApi();
-  const supabase = await getSupabaseServerClient();
+  const supabase = getSupabaseServiceRoleClient();
   const normalizedOrderNo = orderNo.trim();
 
   if (!normalizedOrderNo) {

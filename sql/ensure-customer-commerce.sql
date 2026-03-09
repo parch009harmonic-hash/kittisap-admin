@@ -452,6 +452,23 @@ begin
   end if;
 end $$;
 
+-- Ensure cancellation transition is allowed for the order owner.
+drop policy if exists orders_self_update_payment_submit on public.orders;
+create policy orders_self_update_payment_submit
+  on public.orders
+  for update
+  to authenticated
+  using (
+    customer_id = auth.uid()
+    and status = 'pending_payment'
+    and payment_status = 'unpaid'
+  )
+  with check (
+    customer_id = auth.uid()
+    and status in ('pending_payment', 'pending_review', 'cancelled')
+    and payment_status in ('unpaid', 'pending_verify', 'expired')
+  );
+
 do $$
 begin
   if not exists (
