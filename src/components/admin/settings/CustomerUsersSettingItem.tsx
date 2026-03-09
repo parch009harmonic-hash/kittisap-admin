@@ -1186,8 +1186,9 @@ export function CustomerUsersSettingItem({
       </div>
 
       {editingUser ? (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/25 p-4 backdrop-blur-sm">
-          <div className={`w-full rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl ${isMobileMode ? "max-w-lg" : "max-w-2xl"}`}>
+        <div className="fixed inset-0 z-[110] overflow-y-auto bg-slate-900/25 p-3 backdrop-blur-sm sm:p-4">
+          <div className="flex min-h-full items-start justify-center py-2 sm:items-center sm:py-4">
+            <div className={`flex max-h-[calc(100vh-2rem)] w-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl ${isMobileMode ? "max-w-lg" : "max-w-2xl"}`}>
             <div className="mb-4 flex items-center justify-between">
               <div>
                 <p className="text-lg font-semibold text-slate-900">{t.editTitle}</p>
@@ -1202,7 +1203,8 @@ export function CustomerUsersSettingItem({
               </button>
             </div>
 
-            <div className={`grid gap-3 ${isMobileMode ? "grid-cols-1" : "md:grid-cols-2"}`}>
+            <div className="overflow-y-auto pr-1">
+              <div className={`grid gap-3 ${isMobileMode ? "grid-cols-1" : "md:grid-cols-2"}`}>
               <label className="space-y-1">
                 <span className="text-xs font-semibold text-slate-600">{nameLabel}</span>
                 <input
@@ -1304,8 +1306,9 @@ export function CustomerUsersSettingItem({
                 </div>
               </div>
             </div>
+            </div>
 
-            <div className="mt-5 flex flex-wrap justify-end gap-2">
+            <div className="mt-4 flex flex-wrap justify-end gap-2 border-t border-slate-200 pt-3">
               {needsRecover(editingUser) ? (
                 <button
                   type="button"
@@ -1356,11 +1359,13 @@ export function CustomerUsersSettingItem({
             </div>
           </div>
         </div>
+        </div>
       ) : null}
 
       {detailUser ? (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/25 p-4 backdrop-blur-sm">
-          <div className={`w-full rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl ${isMobileMode ? "max-w-lg" : "max-w-3xl"}`}>
+        <div className="fixed inset-0 z-[110] overflow-y-auto bg-slate-900/25 p-3 backdrop-blur-sm sm:p-4">
+          <div className="flex min-h-full items-start justify-center py-2 sm:items-center sm:py-4">
+            <div className={`flex max-h-[calc(100vh-2rem)] w-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl ${isMobileMode ? "max-w-lg" : "max-w-3xl"}`}>
             <div className="mb-4 flex items-center justify-between">
               <div>
                 <p className="text-lg font-semibold text-slate-900">{t.detailTitle}</p>
@@ -1378,6 +1383,7 @@ export function CustomerUsersSettingItem({
               </button>
             </div>
 
+            <div className="space-y-4 overflow-y-auto pr-1">
             <div className="grid gap-3 md:grid-cols-2">
               <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
                 <p className="text-xs font-semibold text-slate-600">{nameLabel}</p>
@@ -1499,7 +1505,9 @@ export function CustomerUsersSettingItem({
                 )}
               </div>
             </div>
+            </div>
           </div>
+        </div>
         </div>
       ) : null}
 
