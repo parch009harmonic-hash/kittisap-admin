@@ -327,6 +327,15 @@ export async function completeCustomerKycSession(input: {
   }
 
   const verificationMethod = String(input.verificationMethod ?? "").trim() || "camera";
+  const faceDetected = Boolean(input.resultPayload?.faceDetected);
+  const humanFaceValidated = Boolean(input.resultPayload?.humanFaceValidated);
+  if (!faceDetected || !humanFaceValidated) {
+    throw new CustomerKycError(
+      400,
+      "KYC_FACE_NOT_DETECTED",
+      "Human face was not detected. Please scan again with one real face in frame.",
+    );
+  }
   const nowIso = new Date().toISOString();
   const supabase = getSupabaseServiceRoleClient();
 

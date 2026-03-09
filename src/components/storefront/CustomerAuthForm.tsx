@@ -445,6 +445,7 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
           options: {
             emailRedirectTo,
             data: {
+              role: "customer",
               full_name: fullName,
               phone,
             },

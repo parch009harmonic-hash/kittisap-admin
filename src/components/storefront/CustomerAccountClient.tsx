@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { clearCustomerSessionActivity } from "../../../lib/storefront/customer-session";
@@ -42,6 +42,32 @@ type KycProfileDto = {
 type PasswordModalIntent = "forgot" | "change";
 
 type AccountLocale = "th" | "en" | "lo";
+
+type FaceDetectorBox = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
+function toFaceDetectorBox(face: unknown): FaceDetectorBox | null {
+  if (!face || typeof face !== "object" || !("boundingBox" in face)) {
+    return null;
+  }
+  const box = (face as { boundingBox?: unknown }).boundingBox;
+  if (!box || typeof box !== "object") {
+    return null;
+  }
+  const raw = box as Record<string, unknown>;
+  const x = Number(raw.x);
+  const y = Number(raw.y);
+  const width = Number(raw.width);
+  const height = Number(raw.height);
+  if (![x, y, width, height].every(Number.isFinite) || width <= 0 || height <= 0) {
+    return null;
+  }
+  return { x, y, width, height };
+}
 
 function localeFromPath(pathname: string): AccountLocale {
   if (pathname.startsWith("/en")) return "en";
@@ -493,6 +519,9 @@ export function CustomerAccountClient() {
   const [faceScanning, setFaceScanning] = useState(false);
   const [faceScanPassed, setFaceScanPassed] = useState(false);
   const [faceScanMethod, setFaceScanMethod] = useState("");
+  const [faceScanUiOpen, setFaceScanUiOpen] = useState(false);
+  const [faceScanProgress, setFaceScanProgress] = useState(0);
+  const [faceScanDetail, setFaceScanDetail] = useState("");
   const [activePopup, setActivePopup] = useState<"profile" | "orders" | "stats" | null>(null);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -508,6 +537,8 @@ export function CustomerAccountClient() {
   const [passwordModalIntent, setPasswordModalIntent] = useState<PasswordModalIntent | null>(null);
   const [customerEmail, setCustomerEmail] = useState("");
   const [kycStatus, setKycStatus] = useState("not_started");
+  const faceScanPreviewRef = useRef<HTMLVideoElement | null>(null);
+  const faceScanStreamRef = useRef<MediaStream | null>(null);
 
   const paidOrders = useMemo(
     () => orders.filter((item) => item.status === "completed" || item.payment_status === "paid").length,
@@ -524,6 +555,15 @@ export function CustomerAccountClient() {
   const profileName = firstText(fullName, profile?.full_name);
   const profilePhone = firstText(phone, profile?.phone);
   const profileAddress = firstText(address, profile?.address);
+  const hasProfileDraftChanges = useMemo(() => {
+    const currentName = String(fullName ?? "").trim();
+    const currentPhone = String(phone ?? "").trim();
+    const currentAddress = String(address ?? "").trim();
+    const savedName = String(profile?.full_name ?? "").trim();
+    const savedPhone = String(profile?.phone ?? "").trim();
+    const savedAddress = String(profile?.address ?? "").trim();
+    return currentName !== savedName || currentPhone !== savedPhone || currentAddress !== savedAddress;
+  }, [address, fullName, phone, profile?.address, profile?.full_name, profile?.phone]);
   const profileAddressPreview = useMemo(() => {
     const normalized = String(profileAddress ?? "").replace(/\s+/g, " ").trim();
     if (!normalized) return "-";
@@ -560,6 +600,12 @@ export function CustomerAccountClient() {
       : locale === "lo"
         ? "ໂຄງສ້າງ KYC ຍັງບໍ່ຄົບ. ກະລຸນາຮັນ sql/ensure-customer-kyc.sql ແລ້ວລອງໃໝ່."
         : "โครงสร้าง KYC ยังไม่ครบ กรุณารัน sql/ensure-customer-kyc.sql แล้วลองใหม่";
+  const faceDetectorRequiredMessage =
+    locale === "en"
+      ? "This browser cannot run human-face validation. Please use Chrome or Edge."
+      : locale === "lo"
+        ? "ເບຣາວເຊີນີ້ບໍ່ຮອງຮັບການກວດໃບໜ້າ. ກະລຸນາໃຊ້ Chrome ຫຼື Edge."
+        : "เบราว์เซอร์นี้ไม่รองรับการตรวจใบหน้ามนุษย์ กรุณาใช้ Chrome หรือ Edge";
 
   useEffect(() => {
     if (!activePopup) {
@@ -649,6 +695,24 @@ export function CustomerAccountClient() {
     };
   }, [loginPath]);
 
+  const stopFaceScanStream = useCallback(() => {
+    const stream = faceScanStreamRef.current;
+    if (stream) {
+      for (const track of stream.getTracks()) {
+        track.stop();
+      }
+    }
+    faceScanStreamRef.current = null;
+    const preview = faceScanPreviewRef.current;
+    if (preview) {
+      preview.srcObject = null;
+    }
+  }, []);
+
+  useEffect(() => () => {
+    stopFaceScanStream();
+  }, [stopFaceScanStream]);
+
   useEffect(() => {
     let mounted = true;
 
@@ -722,6 +786,113 @@ export function CustomerAccountClient() {
       mounted = false;
     };
   }, [loginPath, networkUnstableMessage, t.failedLoadOrders]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    let disposed = false;
+    let inFlight = false;
+
+    const refreshSilently = async () => {
+      if (
+        disposed
+        || inFlight
+        || saving
+        || uploadingAvatar
+        || removingAvatar
+        || deletingAccount
+        || recoveringAccount
+        || faceScanning
+      ) {
+        return;
+      }
+
+      inFlight = true;
+      try {
+        const [profileResponse, ordersResponse, kycResponse] = await Promise.all([
+          fetch("/api/customer/profile", { cache: "no-store" }),
+          fetch("/api/customer/orders", { cache: "no-store" }),
+          fetch("/api/customer/kyc/session", { cache: "no-store" }),
+        ]);
+
+        if (disposed) {
+          return;
+        }
+
+        if (profileResponse.status === 401 || ordersResponse.status === 401 || kycResponse.status === 401) {
+          window.location.href = loginPath;
+          return;
+        }
+
+        const [profilePayload, ordersPayload, kycPayload] = await Promise.all([
+          profileResponse.json().catch(() => null),
+          ordersResponse.json().catch(() => null),
+          kycResponse.json().catch(() => null),
+        ]) as [
+          { ok?: boolean; data?: ProfileDto | null } | null,
+          { ok?: boolean; data?: OrderDto[] } | null,
+          { ok?: boolean; data?: KycProfileDto } | null,
+        ];
+
+        if (profileResponse.ok && profilePayload?.ok) {
+          const nextProfile = profilePayload.data ?? null;
+          setProfile(nextProfile);
+          setAvatarUrlOverride(firstText(nextProfile?.avatar_url, nextProfile?.profile_image_url, nextProfile?.image_url));
+          if (!hasProfileDraftChanges) {
+            setFullName(nextProfile?.full_name ?? "");
+            setPhone(nextProfile?.phone ?? "");
+            setAddress(nextProfile?.address ?? "");
+          }
+        }
+
+        if (ordersResponse.ok && ordersPayload?.ok && Array.isArray(ordersPayload.data)) {
+          setOrders(ordersPayload.data);
+        }
+
+        if (kycResponse.ok && kycPayload?.ok) {
+          const normalizedStatus = String(kycPayload.data?.kycStatus ?? "").trim().toLowerCase();
+          setKycStatus(normalizedStatus || "not_started");
+        }
+      } catch {
+        // Auto-refresh should be quiet to avoid noisy UX on transient network errors.
+      } finally {
+        inFlight = false;
+      }
+    };
+
+    const intervalId = window.setInterval(() => {
+      void refreshSilently();
+    }, 10000);
+    const onFocus = () => {
+      void refreshSilently();
+    };
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        void refreshSilently();
+      }
+    };
+
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+      disposed = true;
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [
+    deletingAccount,
+    faceScanning,
+    hasProfileDraftChanges,
+    loginPath,
+    recoveringAccount,
+    removingAvatar,
+    saving,
+    uploadingAvatar,
+  ]);
 
   async function onAvatarFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0] ?? null;
@@ -912,23 +1083,37 @@ export function CustomerAccountClient() {
     setFaceScanning(true);
     setError(null);
     setMessage(null);
-
-    let stream: MediaStream | null = null;
+    setFaceScanPassed(false);
+    setFaceScanMethod("");
+    setFaceScanUiOpen(true);
+    setFaceScanProgress(0);
+    setFaceScanDetail(t.faceScanning);
     try {
       if (!navigator.mediaDevices?.getUserMedia) {
         throw new Error(t.faceScanNotSupported);
       }
 
-      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
-      const video = document.createElement("video");
-      video.srcObject = stream;
-      video.muted = true;
-      video.playsInline = true;
-      await video.play();
-      await new Promise((resolve) => setTimeout(resolve, 600));
+      const windowWithFaceDetector = window as Window & {
+        FaceDetector?: new (options?: { fastMode?: boolean; maxDetectedFaces?: number }) => {
+          detect: (input: HTMLCanvasElement) => Promise<Array<unknown>>;
+        };
+      };
+      if (!windowWithFaceDetector.FaceDetector) {
+        throw new Error(faceDetectorRequiredMessage);
+      }
 
-      const width = video.videoWidth || 640;
-      const height = video.videoHeight || 480;
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
+      faceScanStreamRef.current = stream;
+
+      const preview = faceScanPreviewRef.current ?? document.createElement("video");
+      preview.srcObject = stream;
+      preview.muted = true;
+      preview.playsInline = true;
+      await preview.play();
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      const width = preview.videoWidth || 640;
+      const height = preview.videoHeight || 480;
       const canvas = document.createElement("canvas");
       canvas.width = width;
       canvas.height = height;
@@ -936,40 +1121,62 @@ export function CustomerAccountClient() {
       if (!context) {
         throw new Error(t.faceScanFailed);
       }
-      context.drawImage(video, 0, 0, width, height);
 
-      let scanMethod = "camera";
-      let detected = true;
+      const detector = new windowWithFaceDetector.FaceDetector({ fastMode: true, maxDetectedFaces: 1 });
+      const frameCount = 10;
+      let validFrames = 0;
+      let movingFrames = 0;
+      let areaRatioTotal = 0;
+      let previousCenter: { x: number; y: number } | null = null;
 
-      const windowWithFaceDetector = window as Window & {
-        FaceDetector?: new (options?: { fastMode?: boolean; maxDetectedFaces?: number }) => {
-          detect: (input: HTMLCanvasElement) => Promise<Array<unknown>>;
-        };
-      };
-      if (windowWithFaceDetector.FaceDetector) {
-        scanMethod = "camera+facedetector";
-        const detector = new windowWithFaceDetector.FaceDetector({ fastMode: true, maxDetectedFaces: 1 });
+      for (let index = 0; index < frameCount; index += 1) {
+        context.drawImage(preview, 0, 0, width, height);
         const faces = await detector.detect(canvas);
-        detected = Array.isArray(faces) && faces.length > 0;
+        const face = Array.isArray(faces) && faces.length === 1 ? toFaceDetectorBox(faces[0]) : null;
+        if (face) {
+          const areaRatio = (face.width * face.height) / (width * height);
+          if (areaRatio >= 0.05 && areaRatio <= 0.65) {
+            validFrames += 1;
+            areaRatioTotal += areaRatio;
+            const center = {
+              x: (face.x + (face.width / 2)) / width,
+              y: (face.y + (face.height / 2)) / height,
+            };
+            if (previousCenter) {
+              const deltaX = center.x - previousCenter.x;
+              const deltaY = center.y - previousCenter.y;
+              if (Math.hypot(deltaX, deltaY) > 0.012) {
+                movingFrames += 1;
+              }
+            }
+            previousCenter = center;
+          }
+        }
+
+        setFaceScanProgress(Math.round(((index + 1) / frameCount) * 100));
+        setFaceScanDetail(t.faceScanning);
+        if (index < frameCount - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 140));
+        }
       }
 
-      if (!detected) {
+      const averageAreaRatio = validFrames > 0 ? areaRatioTotal / validFrames : 0;
+      if (validFrames < 6 || movingFrames < 2 || averageAreaRatio < 0.08 || averageAreaRatio > 0.5) {
         throw new Error(t.faceScanFailed);
       }
 
       setFaceScanPassed(true);
-      setFaceScanMethod(scanMethod);
+      setFaceScanMethod("camera+facedetector-live");
       setMessage(t.faceScanReady);
     } catch (caught) {
       setFaceScanPassed(false);
       setFaceScanMethod("");
       setError(mapFaceScanError(caught));
     } finally {
-      if (stream) {
-        for (const track of stream.getTracks()) {
-          track.stop();
-        }
-      }
+      stopFaceScanStream();
+      setFaceScanUiOpen(false);
+      setFaceScanProgress(0);
+      setFaceScanDetail("");
       setFaceScanning(false);
     }
   }
@@ -1209,6 +1416,29 @@ export function CustomerAccountClient() {
                     {isKycApproved ? t.faceScanHint : t.kycRequiredError}
                   </p>
                 </div>
+
+                {faceScanUiOpen ? (
+                  <div className="sm:col-span-2 rounded-2xl border border-cyan-300/35 bg-black/25 p-3">
+                    <div className="overflow-hidden rounded-xl border border-cyan-300/25 bg-black/45">
+                      <video
+                        ref={faceScanPreviewRef}
+                        autoPlay
+                        muted
+                        playsInline
+                        className="aspect-video w-full object-cover"
+                      />
+                    </div>
+                    <div className="mt-3 space-y-2">
+                      <p className="text-xs font-medium text-cyan-100/90">{faceScanDetail || t.faceScanning}</p>
+                      <div className="h-2 w-full overflow-hidden rounded-full bg-cyan-950/65">
+                        <div
+                          className="h-full rounded-full bg-cyan-300 transition-[width] duration-150"
+                          style={{ width: `${Math.max(0, Math.min(100, faceScanProgress))}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
               </form>
             </div>
           ) : (

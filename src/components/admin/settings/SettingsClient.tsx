@@ -7,6 +7,7 @@ import { AdminSettingField, AdminSettings, SessionPolicy, ThemePreset } from "..
 import { parseAdminApiError } from "../api-error";
 import { ConfirmModal } from "../ConfirmModal";
 import { Toast } from "../Toast";
+import { CustomerUsersSettingItem } from "./CustomerUsersSettingItem";
 import { PaymentShortcutSettingItem } from "./PaymentShortcutSettingItem";
 import { StorefrontProfileSettingItem } from "./StorefrontProfileSettingItem";
 
@@ -77,7 +78,7 @@ type SettingsText = {
   apiHealthUnavailable: string;
 };
 
-type SectionId = "display" | "store" | "security" | "notify" | "users" | "banking";
+type SectionId = "display" | "store" | "security" | "notify" | "users" | "customerUsers" | "banking";
 type SettingsSection = {
   id: SectionId;
   title: string;
@@ -85,7 +86,14 @@ type SettingsSection = {
   iconTone: string;
   iconColor: string;
   items: Array<{
-    id: "createUser" | "paymentShortcut" | "storefrontProfile" | AdminSettingField | "localeSwitch" | "themePreset";
+    id:
+      | "createUser"
+      | "customerUsers"
+      | "paymentShortcut"
+      | "storefrontProfile"
+      | AdminSettingField
+      | "localeSwitch"
+      | "themePreset";
     label: string;
   }>;
 };
@@ -296,10 +304,21 @@ export default function SettingsClient({
         id: "users",
         title: text.createUser,
         subtitle:
-          locale === "th" ? "จัดการบัญชีทีมงานและสิทธิ์การใช้งาน" : "Manage team accounts and roles",
+          locale === "th" ? "จัดการบัญชีแอดมิน พนักงาน และนักพัฒนา" : "Manage admin, staff, and developer accounts",
         iconTone: "bg-blue-100",
         iconColor: "text-blue-700",
         items: [{ id: "createUser", label: text.createUser }],
+      },
+      {
+        id: "customerUsers",
+        title: locale === "th" ? "ผู้ใช้ลูกค้า" : "Customer Users",
+        subtitle:
+          locale === "th"
+            ? "จัดการบัญชีลูกค้าแยกจากทีมงาน พร้อมสถานะลบบัญชีจากระบบลูกค้า"
+            : "Separate customer users from backoffice roles with storefront status.",
+        iconTone: "bg-teal-100",
+        iconColor: "text-teal-700",
+        items: [{ id: "customerUsers", label: locale === "th" ? "ผู้ใช้ลูกค้า" : "Customer Users" }],
       },
       {
         id: "display",
@@ -436,6 +455,16 @@ export default function SettingsClient({
           text={text}
           locale={locale}
           isMobileMode={popupMode}
+          onSuccess={handleUserSuccess}
+          onError={handleUserError}
+        />
+      ) : item.id === "customerUsers" ? (
+        <CustomerUsersSettingItem
+          key={item.id}
+          locale={locale}
+          isMobileMode={popupMode}
+          nameLabel={text.createUserName}
+          emailLabel={text.createUserEmail}
           onSuccess={handleUserSuccess}
           onError={handleUserError}
         />
@@ -635,6 +664,17 @@ function SectionGlyph({ id }: { id: SectionId }) {
         <circle cx="12" cy="9" r="3.2" />
         <path d="M20.5 18a3.4 3.4 0 0 0-2.8-3.3" />
         <path d="M17.4 5.5a3.2 3.2 0 0 1 0 6.3" />
+      </svg>
+    );
+  }
+
+  if (id === "customerUsers") {
+    return (
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+        <circle cx="12" cy="8.7" r="3.3" />
+        <path d="M5 19a7 7 0 0 1 14 0" />
+        <path d="M18.5 6.2h3" />
+        <path d="M20 4.7v3" />
       </svg>
     );
   }
@@ -1030,8 +1070,8 @@ function CreateUserSettingItem({
   onError: (message: string) => void;
 }) {
   const t = {
-    listTitle: locale === "th" ? "รายการผู้ใช้" : "User List",
-    noData: locale === "th" ? "ยังไม่มีผู้ใช้ในระบบ" : "No users found.",
+    listTitle: locale === "th" ? "รายการทีมงาน" : "Team Users",
+    noData: locale === "th" ? "ยังไม่มีผู้ใช้ทีมงาน" : "No team users found.",
     createButton: locale === "th" ? "สร้าง user" : "Create User",
     resetButton: locale === "th" ? "รีเซ็ต" : "Reset",
     editButton: locale === "th" ? "แก้ไข" : "Edit",
@@ -1087,7 +1127,7 @@ function CreateUserSettingItem({
         const parsedError = parseAdminApiError(result, refreshFailedText, locale);
         throw new Error(parsedError.message);
       }
-      setUsers(result.users);
+      setUsers(result.users.filter((user) => user.role !== "customer"));
     } catch (error) {
       const message = toRequestErrorMessage(error, refreshFailedText, locale);
       onError(message);
@@ -1489,7 +1529,6 @@ function CreateUserSettingItem({
                   className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                 >
                   <option value="staff">{text.createUserRoleStaff}</option>
-                  <option value="customer">{text.createUserRoleCustomer}</option>
                   <option value="developer">{text.createUserRoleDeveloper}</option>
                   <option value="admin">{text.createUserRoleAdmin}</option>
                 </select>
@@ -1575,7 +1614,6 @@ function CreateUserSettingItem({
                   className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                 >
                   <option value="staff">{text.createUserRoleStaff}</option>
-                  <option value="customer">{text.createUserRoleCustomer}</option>
                   <option value="developer">{text.createUserRoleDeveloper}</option>
                   <option value="admin">{text.createUserRoleAdmin}</option>
                 </select>

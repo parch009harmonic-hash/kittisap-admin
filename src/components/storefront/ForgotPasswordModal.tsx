@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 
@@ -20,8 +20,34 @@ type ForgotPasswordModalProps = {
 const OTP_MIN_LENGTH = 6;
 const OTP_MAX_LENGTH = 16;
 
+type FaceDetectorBox = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
 function normalizeOtpDigits(value: string) {
   return value.replace(/\D/g, "").slice(0, OTP_MAX_LENGTH);
+}
+
+function toFaceDetectorBox(face: unknown): FaceDetectorBox | null {
+  if (!face || typeof face !== "object" || !("boundingBox" in face)) {
+    return null;
+  }
+  const box = (face as { boundingBox?: unknown }).boundingBox;
+  if (!box || typeof box !== "object") {
+    return null;
+  }
+  const raw = box as Record<string, unknown>;
+  const x = Number(raw.x);
+  const y = Number(raw.y);
+  const width = Number(raw.width);
+  const height = Number(raw.height);
+  if (![x, y, width, height].every(Number.isFinite) || width <= 0 || height <= 0) {
+    return null;
+  }
+  return { x, y, width, height };
 }
 
 function copy(locale: CustomerLocale) {
@@ -187,6 +213,12 @@ export function ForgotPasswordModal({
         ? "ຢືນຢັນ OTP ທາງອີເມວ, ສະແກນໃບໜ້າ ແລ້ວຕັ້ງລະຫັດໃໝ່."
         : "ยืนยัน OTP ทางอีเมล สแกนใบหน้า แล้วตั้งรหัสผ่านใหม่")
     : t.subtitle;
+  const faceDetectorRequiredMessage =
+    locale === "en"
+      ? "This browser cannot run human-face validation. Please use Chrome or Edge."
+      : locale === "lo"
+        ? "ເບຣາວເຊີນີ້ບໍ່ຮອງຮັບການກວດໃບໜ້າ. ກະລຸນາໃຊ້ Chrome ຫຼື Edge."
+        : "เบราว์เซอร์นี้ไม่รองรับการตรวจใบหน้ามนุษย์ กรุณาใช้ Chrome หรือ Edge";
 
   const [email, setEmail] = useState(initialEmail.trim());
   const [otp, setOtp] = useState("");
@@ -195,17 +227,40 @@ export function ForgotPasswordModal({
   const [otpVerified, setOtpVerified] = useState(false);
   const [faceScanning, setFaceScanning] = useState(false);
   const [faceScanPassed, setFaceScanPassed] = useState(false);
+  const [scanUiOpen, setScanUiOpen] = useState(false);
+  const [scanProgress, setScanProgress] = useState(0);
+  const [scanDetail, setScanDetail] = useState("");
   const [sendingOtp, setSendingOtp] = useState(false);
   const [saving, setSaving] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const scanPreviewRef = useRef<HTMLVideoElement | null>(null);
+  const scanStreamRef = useRef<MediaStream | null>(null);
   const otpValue = normalizeOtpDigits(otp);
   const otpComplete = otpValue.length >= OTP_MIN_LENGTH;
 
+  const stopScanStream = useCallback(() => {
+    const stream = scanStreamRef.current;
+    if (stream) {
+      for (const track of stream.getTracks()) {
+        track.stop();
+      }
+    }
+    scanStreamRef.current = null;
+    const preview = scanPreviewRef.current;
+    if (preview) {
+      preview.srcObject = null;
+    }
+  }, []);
+
   useEffect(() => {
     if (!open) {
+      stopScanStream();
+      setScanUiOpen(false);
+      setScanProgress(0);
+      setScanDetail("");
       return;
     }
     setEmail(initialEmail.trim());
@@ -215,13 +270,20 @@ export function ForgotPasswordModal({
     setOtpVerified(false);
     setFaceScanning(false);
     setFaceScanPassed(false);
+    setScanUiOpen(false);
+    setScanProgress(0);
+    setScanDetail("");
     setSendingOtp(false);
     setSaving(false);
     setNewPassword("");
     setConfirmPassword("");
     setError(null);
     setMessage(null);
-  }, [initialEmail, open]);
+  }, [initialEmail, open, stopScanStream]);
+
+  useEffect(() => () => {
+    stopScanStream();
+  }, [stopScanStream]);
 
   if (!open) {
     return null;
@@ -240,6 +302,10 @@ export function ForgotPasswordModal({
     setOtp("");
     setOtpVerified(false);
     setFaceScanPassed(false);
+    setScanUiOpen(false);
+    setScanProgress(0);
+    setScanDetail("");
+    stopScanStream();
 
     try {
       const response = await fetch("/api/customer/auth/forgot-password/request", {
@@ -284,6 +350,10 @@ export function ForgotPasswordModal({
     setError(null);
     setMessage(null);
     setFaceScanPassed(false);
+    setScanUiOpen(false);
+    setScanProgress(0);
+    setScanDetail("");
+    stopScanStream();
 
     try {
       const supabase = getSupabaseBrowserClient();
@@ -333,9 +403,21 @@ export function ForgotPasswordModal({
     setError(null);
     setMessage(null);
     setFaceScanning(true);
-    let stream: MediaStream | null = null;
+    setFaceScanPassed(false);
+    setScanUiOpen(true);
+    setScanProgress(0);
+    setScanDetail(t.scanningFace);
     try {
-      stream = await navigator.mediaDevices.getUserMedia({
+      const withFaceDetector = window as Window & {
+        FaceDetector?: new (options?: { fastMode?: boolean; maxDetectedFaces?: number }) => {
+          detect: (input: HTMLCanvasElement) => Promise<Array<unknown>>;
+        };
+      };
+      if (!withFaceDetector.FaceDetector) {
+        throw new Error(faceDetectorRequiredMessage);
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: "user",
           width: { ideal: 640 },
@@ -343,16 +425,17 @@ export function ForgotPasswordModal({
         },
         audio: false,
       });
+      scanStreamRef.current = stream;
 
-      const video = document.createElement("video");
-      video.srcObject = stream;
-      video.muted = true;
-      video.playsInline = true;
-      await video.play();
+      const preview = scanPreviewRef.current ?? document.createElement("video");
+      preview.srcObject = stream;
+      preview.muted = true;
+      preview.playsInline = true;
+      await preview.play();
       await new Promise((resolve) => setTimeout(resolve, 450));
 
-      const width = video.videoWidth || 640;
-      const height = video.videoHeight || 480;
+      const width = preview.videoWidth || 640;
+      const height = preview.videoHeight || 480;
       const canvas = document.createElement("canvas");
       canvas.width = width;
       canvas.height = height;
@@ -360,20 +443,46 @@ export function ForgotPasswordModal({
       if (!context) {
         throw new Error(t.scanFailed);
       }
-      context.drawImage(video, 0, 0, width, height);
 
-      let detected = true;
-      const withFaceDetector = window as Window & {
-        FaceDetector?: new (options?: { fastMode?: boolean; maxDetectedFaces?: number }) => {
-          detect: (input: HTMLCanvasElement) => Promise<Array<unknown>>;
-        };
-      };
-      if (withFaceDetector.FaceDetector) {
-        const detector = new withFaceDetector.FaceDetector({ fastMode: true, maxDetectedFaces: 1 });
+      const detector = new withFaceDetector.FaceDetector({ fastMode: true, maxDetectedFaces: 1 });
+      const frameCount = 10;
+      let validFrames = 0;
+      let movingFrames = 0;
+      let areaRatioTotal = 0;
+      let previousCenter: { x: number; y: number } | null = null;
+
+      for (let index = 0; index < frameCount; index += 1) {
+        context.drawImage(preview, 0, 0, width, height);
         const faces = await detector.detect(canvas);
-        detected = Array.isArray(faces) && faces.length > 0;
+        const face = Array.isArray(faces) && faces.length === 1 ? toFaceDetectorBox(faces[0]) : null;
+        if (face) {
+          const areaRatio = (face.width * face.height) / (width * height);
+          if (areaRatio >= 0.05 && areaRatio <= 0.65) {
+            validFrames += 1;
+            areaRatioTotal += areaRatio;
+            const center = {
+              x: (face.x + (face.width / 2)) / width,
+              y: (face.y + (face.height / 2)) / height,
+            };
+            if (previousCenter) {
+              const deltaX = center.x - previousCenter.x;
+              const deltaY = center.y - previousCenter.y;
+              if (Math.hypot(deltaX, deltaY) > 0.012) {
+                movingFrames += 1;
+              }
+            }
+            previousCenter = center;
+          }
+        }
+        setScanProgress(Math.round(((index + 1) / frameCount) * 100));
+        setScanDetail(t.scanningFace);
+        if (index < frameCount - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 140));
+        }
       }
-      if (!detected) {
+
+      const averageAreaRatio = validFrames > 0 ? areaRatioTotal / validFrames : 0;
+      if (validFrames < 6 || movingFrames < 2 || averageAreaRatio < 0.08 || averageAreaRatio > 0.5) {
         throw new Error(t.scanFailed);
       }
 
@@ -383,11 +492,10 @@ export function ForgotPasswordModal({
       setFaceScanPassed(false);
       setError(mapFaceScanError(caught, t.noCamera, t.permissionDenied, t.scanFailed));
     } finally {
-      if (stream) {
-        for (const track of stream.getTracks()) {
-          track.stop();
-        }
-      }
+      stopScanStream();
+      setScanUiOpen(false);
+      setScanProgress(0);
+      setScanDetail("");
       setFaceScanning(false);
     }
   }
@@ -526,6 +634,29 @@ export function ForgotPasswordModal({
             >
               {faceScanning ? t.scanningFace : t.scanFace}
             </button>
+          ) : null}
+
+          {scanUiOpen ? (
+            <div className="rounded-xl border border-emerald-300/35 bg-black/25 p-3">
+              <div className="overflow-hidden rounded-xl border border-emerald-300/25 bg-black/45">
+                <video
+                  ref={scanPreviewRef}
+                  autoPlay
+                  muted
+                  playsInline
+                  className="aspect-video w-full object-cover"
+                />
+              </div>
+              <div className="mt-3 space-y-2">
+                <p className="text-xs font-medium text-emerald-100/90">{scanDetail || t.scanningFace}</p>
+                <div className="h-2 w-full overflow-hidden rounded-full bg-emerald-950/70">
+                  <div
+                    className="h-full rounded-full bg-emerald-300 transition-[width] duration-150"
+                    style={{ width: `${Math.max(0, Math.min(100, scanProgress))}%` }}
+                  />
+                </div>
+              </div>
+            </div>
           ) : null}
 
           {faceScanPassed ? (
