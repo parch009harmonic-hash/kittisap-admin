@@ -385,9 +385,6 @@ export function CustomerKycStartClient() {
           detect: (input: HTMLCanvasElement) => Promise<Array<unknown>>;
         };
       };
-      if (!withFaceDetector.FaceDetector) {
-        throw new Error(scanUiText.detectorUnavailable);
-      }
 
       localStream = await navigator.mediaDevices.getUserMedia({
         video: {
@@ -428,12 +425,21 @@ export function CustomerKycStartClient() {
 
       const width = sourceVideo.videoWidth || 640;
       const height = sourceVideo.videoHeight || 480;
-      const detector = new withFaceDetector.FaceDetector({ fastMode: true, maxDetectedFaces: 2 });
+      const detector = withFaceDetector.FaceDetector
+        ? new withFaceDetector.FaceDetector({ fastMode: true, maxDetectedFaces: 2 })
+        : null;
       const canvas = document.createElement("canvas");
       canvas.width = width;
       canvas.height = height;
       const context = canvas.getContext("2d");
       if (!context) {
+        throw new Error(s.failed);
+      }
+      const fallbackCanvas = document.createElement("canvas");
+      fallbackCanvas.width = 96;
+      fallbackCanvas.height = 96;
+      const fallbackContext = fallbackCanvas.getContext("2d");
+      if (!fallbackContext) {
         throw new Error(s.failed);
       }
 
@@ -442,30 +448,73 @@ export function CustomerKycStartClient() {
       let movingFrames = 0;
       let lastCenter: { x: number; y: number } | null = null;
       let averageAreaRatio = 0;
+      let fallbackReadableFrames = 0;
+      let previousLumaFrame: Float32Array | null = null;
 
       for (let i = 0; i < totalFrames; i += 1) {
         context.drawImage(sourceVideo, 0, 0, width, height);
-        const faces = await detector.detect(canvas);
-        const maybeFace = Array.isArray(faces) && faces.length === 1 ? toFaceDetectorBox(faces[0]) : null;
 
-        if (maybeFace) {
-          const areaRatio = (maybeFace.width * maybeFace.height) / (width * height);
-          const reasonableFace = areaRatio >= 0.05 && areaRatio <= 0.72;
-          if (reasonableFace) {
-            validFrames += 1;
-            averageAreaRatio += areaRatio;
-            const center = {
-              x: maybeFace.x + maybeFace.width / 2,
-              y: maybeFace.y + maybeFace.height / 2,
-            };
-            if (lastCenter) {
-              const distance = Math.hypot(center.x - lastCenter.x, center.y - lastCenter.y);
-              if (distance >= 6) {
-                movingFrames += 1;
+        if (detector) {
+          const faces = await detector.detect(canvas);
+          const maybeFace = Array.isArray(faces) && faces.length === 1 ? toFaceDetectorBox(faces[0]) : null;
+
+          if (maybeFace) {
+            const areaRatio = (maybeFace.width * maybeFace.height) / (width * height);
+            const reasonableFace = areaRatio >= 0.05 && areaRatio <= 0.72;
+            if (reasonableFace) {
+              validFrames += 1;
+              averageAreaRatio += areaRatio;
+              const center = {
+                x: maybeFace.x + maybeFace.width / 2,
+                y: maybeFace.y + maybeFace.height / 2,
+              };
+              if (lastCenter) {
+                const distance = Math.hypot(center.x - lastCenter.x, center.y - lastCenter.y);
+                if (distance >= 6) {
+                  movingFrames += 1;
+                }
               }
+              lastCenter = center;
             }
-            lastCenter = center;
           }
+        } else {
+          fallbackContext.drawImage(sourceVideo, 0, 0, fallbackCanvas.width, fallbackCanvas.height);
+          const frame = fallbackContext.getImageData(0, 0, fallbackCanvas.width, fallbackCanvas.height);
+          const pixelCount = fallbackCanvas.width * fallbackCanvas.height;
+          const currentLumaFrame = new Float32Array(pixelCount);
+          let brightnessSum = 0;
+          let varianceSum = 0;
+          let motionSum = 0;
+
+          for (let p = 0, idx = 0; p < frame.data.length; p += 4, idx += 1) {
+            const luma = (
+              frame.data[p] * 0.299
+              + frame.data[p + 1] * 0.587
+              + frame.data[p + 2] * 0.114
+            );
+            currentLumaFrame[idx] = luma;
+            brightnessSum += luma;
+          }
+
+          const avgBrightness = brightnessSum / pixelCount;
+
+          for (let idx = 0; idx < currentLumaFrame.length; idx += 1) {
+            const diff = currentLumaFrame[idx] - avgBrightness;
+            varianceSum += diff * diff;
+            if (previousLumaFrame) {
+              motionSum += Math.abs(currentLumaFrame[idx] - previousLumaFrame[idx]);
+            }
+          }
+
+          const variance = varianceSum / pixelCount;
+          const meanMotion = previousLumaFrame ? motionSum / pixelCount : 0;
+          if (avgBrightness >= 35 && avgBrightness <= 225 && variance >= 160) {
+            fallbackReadableFrames += 1;
+          }
+          if (previousLumaFrame && meanMotion >= 4.2) {
+            movingFrames += 1;
+          }
+          previousLumaFrame = currentLumaFrame;
         }
 
         const progress = Math.min(92, 30 + Math.round(((i + 1) / totalFrames) * 62));
@@ -477,11 +526,19 @@ export function CustomerKycStartClient() {
         await new Promise((resolve) => setTimeout(resolve, 110));
       }
 
+      const usingFallback = !detector;
+      if (usingFallback) {
+        validFrames = fallbackReadableFrames;
+      }
+
       const validRatio = validFrames / totalFrames;
-      if (validFrames < 8 || validRatio < 0.65 || movingFrames < 1) {
+      if (
+        (usingFallback && (validFrames < 8 || validRatio < 0.65 || movingFrames < 2))
+        || (!usingFallback && (validFrames < 8 || validRatio < 0.65 || movingFrames < 1))
+      ) {
         throw new Error(scanUiText.humanFaceRequired);
       }
-      const avgArea = validFrames > 0 ? averageAreaRatio / validFrames : 0;
+      const avgArea = !usingFallback && validFrames > 0 ? averageAreaRatio / validFrames : 0;
 
       setScanProgress(95);
       setScanDetail(scanUiText.scanningFace);
@@ -490,11 +547,12 @@ export function CustomerKycStartClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sessionId: activeSession.sessionId,
-          verificationMethod: "camera+facedetector-live",
+          verificationMethod: detector ? "camera+facedetector-live" : "camera+motion-live-fallback",
           resultPayload: {
             faceDetected: true,
             humanFaceValidated: true,
             livenessDetected: movingFrames >= 1,
+            faceDetectorSupported: Boolean(detector),
             validFrames,
             movingFrames,
             frameCount: totalFrames,

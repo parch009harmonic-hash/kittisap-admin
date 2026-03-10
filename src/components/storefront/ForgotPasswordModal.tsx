@@ -314,11 +314,8 @@ export function ForgotPasswordModal({
         body: JSON.stringify({ email: normalizedEmail }),
       });
 
-      const payload = (await response.json().catch(() => null)) as { ok?: boolean; code?: string; error?: string } | null;
+      const payload = (await response.json().catch(() => null)) as { ok?: boolean; code?: string; error?: string; message?: string } | null;
       if (!response.ok || !payload?.ok) {
-        if (payload?.code === "EMAIL_NOT_FOUND") {
-          throw new Error(t.emailNotFound);
-        }
         if (payload?.code === "RATE_LIMITED") {
           throw new Error(t.rateLimited);
         }
@@ -326,7 +323,13 @@ export function ForgotPasswordModal({
       }
 
       setOtpSent(true);
-      setMessage(t.otpSent);
+      setMessage(
+        locale === "th"
+          ? "หากอีเมลนี้มีอยู่ในระบบ เราได้ส่ง OTP แล้ว กรุณาตรวจสอบอีเมล"
+          : locale === "lo"
+            ? "ຖ້າອີເມວນີ້ມີຢູ່ໃນລະບົບ ພວກເຮົາໄດ້ສົ່ງ OTP ແລ້ວ ກະລຸນາກວດອີເມວ"
+            : (payload?.message || "If this email exists in our system, OTP has been sent."),
+      );
     } catch (caught) {
       const fallback = caught instanceof Error ? caught.message : t.otpInvalid;
       setError(fallback);

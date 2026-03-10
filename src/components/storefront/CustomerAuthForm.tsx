@@ -66,7 +66,7 @@ function text(mode: Mode, locale: AppLocale) {
       accountDeletePending: isThai ? "กำลังดำเนินการลบบัญชีผู้ใช้ โปรดกู้คืนบัญชีผู้ใช้ก่อนแก้ไขโปรไฟล์" : isLao ? "ບັນຊີຢູ່ລະຫວ່າງລໍລົບ ກະລຸນາກູ້ຄືນກ່ອນແກ້ໄຂໂປຣໄຟລ໌" : "Account deletion is pending. Recover your account before editing profile.",
       recoveryLinkAction: isThai ? "ส่ง OTP ทางอีเมล" : isLao ? "ສົ່ງ OTP ທາງອີເມວ" : "Send Email OTP",
       recoveryLinkSending: isThai ? "กำลังส่ง OTP..." : isLao ? "ກຳລັງສົ່ງ OTP..." : "Sending OTP...",
-      recoveryLinkSent: isThai ? "ส่งรหัส OTP แล้ว กรุณาตรวจสอบอีเมลและกรอกรหัสด้านล่าง" : isLao ? "ສົ່ງລະຫັດ OTP ແລ້ວ ກະລຸນາກວດອີເມວ" : "OTP sent. Please check your email and enter the code below.",
+      recoveryLinkSent: isThai ? "หากอีเมลนี้มีอยู่ในระบบ เราได้ส่ง OTP แล้ว กรุณาตรวจสอบอีเมลและกรอกรหัสด้านล่าง" : isLao ? "ຖ້າອີເມວນີ້ມີຢູ່ໃນລະບົບ ພວກເຮົາໄດ້ສົ່ງ OTP ແລ້ວ ກະລຸນາກວດອີເມວ" : "If this email exists in our system, OTP has been sent. Please check your email and enter the code below.",
       recoveryNeedEmail: isThai ? "กรุณากรอกอีเมลก่อนส่ง OTP กู้คืนบัญชี" : isLao ? "ກະລຸນາກອກອີເມວກ່ອນສົ່ງ OTP ກູ້ຄືນ" : "Please enter your email before sending recovery OTP.",
       recoveryOtpPlaceholder: isThai ? "รหัส OTP (ตัวเลขเท่านั้น)" : isLao ? "ລະຫັດ OTP (ຕົວເລກເທົ່ານັ້ນ)" : "OTP code (digits only)",
       recoveryOtpAction: isThai ? "ยืนยัน OTP และกู้คืนบัญชี" : isLao ? "ຢືນຢັນ OTP ແລະ ກູ້ຄືນບັນຊີ" : "Verify OTP & Recover",
@@ -138,7 +138,7 @@ function text(mode: Mode, locale: AppLocale) {
     accountDeletePending: isThai ? "กำลังดำเนินการลบบัญชีผู้ใช้ โปรดกู้คืนบัญชีผู้ใช้ก่อนแก้ไขโปรไฟล์" : isLao ? "ບັນຊີຢູ່ລະຫວ່າງລໍລົບ ກະລຸນາກູ້ຄືນກ່ອນແກ້ໄຂໂປຣໄຟລ໌" : "Account deletion is pending. Recover your account before editing profile.",
     recoveryLinkAction: isThai ? "ส่ง OTP ทางอีเมล" : isLao ? "ສົ່ງ OTP ທາງອີເມວ" : "Send Email OTP",
     recoveryLinkSending: isThai ? "กำลังส่ง OTP..." : isLao ? "ກຳລັງສົ່ງ OTP..." : "Sending OTP...",
-    recoveryLinkSent: isThai ? "ส่งรหัส OTP แล้ว กรุณาตรวจสอบอีเมลและกรอกรหัสด้านล่าง" : isLao ? "ສົ່ງລະຫັດ OTP ແລ້ວ ກະລຸນາກວດອີເມວ" : "OTP sent. Please check your email and enter the code below.",
+    recoveryLinkSent: isThai ? "หากอีเมลนี้มีอยู่ในระบบ เราได้ส่ง OTP แล้ว กรุณาตรวจสอบอีเมลและกรอกรหัสด้านล่าง" : isLao ? "ຖ້າອີເມວນີ້ມີຢູ່ໃນລະບົບ ພວກເຮົາໄດ້ສົ່ງ OTP ແລ້ວ ກະລຸນາກວດອີເມວ" : "If this email exists in our system, OTP has been sent. Please check your email and enter the code below.",
     recoveryNeedEmail: isThai ? "กรุณากรอกอีเมลก่อนส่ง OTP กู้คืนบัญชี" : isLao ? "ກະລຸນາກອກອີເມວກ່ອນສົ່ງ OTP ກູ້ຄືນ" : "Please enter your email before sending recovery OTP.",
     recoveryOtpPlaceholder: isThai ? "รหัส OTP (ตัวเลขเท่านั้น)" : isLao ? "ລະຫັດ OTP (ຕົວເລກເທົ່ານັ້ນ)" : "OTP code (digits only)",
     recoveryOtpAction: isThai ? "ยืนยัน OTP และกู้คืนบัญชี" : isLao ? "ຢືນຢັນ OTP ແລະ ກູ້ຄືນບັນຊີ" : "Verify OTP & Recover",
@@ -560,26 +560,28 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
     setEmailRecoveryOtp("");
 
     try {
-      const supabase = getSupabaseBrowserClient();
       const emailRedirectTo = buildCustomerAuthCallbackUrl(locale, { recoverAccount: true });
-
-      const { error: otpError } = await supabase.auth.signInWithOtp({
-        email: normalizedEmail,
-        options: {
-          shouldCreateUser: false,
+      const response = await fetch("/api/customer/auth/otp/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: normalizedEmail.toLowerCase(),
+          purpose: "account_recovery",
           ...(emailRedirectTo ? { emailRedirectTo } : {}),
-        },
+        }),
       });
+      const payload = (await response.json().catch(() => null)) as
+        | { ok?: boolean; code?: string; error?: string; message?: string }
+        | null;
 
-      if (otpError) {
-        if (isEmailRateLimitError(otpError.message)) {
+      if (!response.ok || !payload?.ok) {
+        if (payload?.code === "RATE_LIMITED") {
           setPendingDeleteRecovery(true);
           setEmailRateLimited(true);
           setError(t.emailRateLimit);
           return;
         }
-        setError(mapAuthErrorMessage(otpError.message, locale, t));
-        return;
+        throw new Error(mapAuthErrorMessage(payload?.error ?? t.recoveryFailed, locale, t));
       }
 
       setPendingDeleteRecovery(true);
