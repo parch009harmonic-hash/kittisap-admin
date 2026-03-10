@@ -21,7 +21,7 @@ export type AdminSettings = {
 
 export function getDefaultAdminSettings(): AdminSettings {
   return {
-    displayName: "Kittisap Admin",
+    displayName: "Kittisap Atv",
     email: "admin@kittisap.com",
     language: "th",
     storeName: "Kittisap Store",

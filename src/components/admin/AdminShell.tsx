@@ -751,7 +751,7 @@ function BrandCard({ collapsed, locale }: { collapsed: boolean; locale: AdminLoc
           <div className="relative grid h-12 w-12 place-items-center overflow-hidden rounded-xl bg-slate-900/30">
             <Image
               src={BRAND_LOGO_URL}
-              alt="Kittisap Admin Logo"
+              alt="Kittisap Atv Logo"
               fill
               className="object-contain object-center p-1"
               sizes="48px"
@@ -759,7 +759,7 @@ function BrandCard({ collapsed, locale }: { collapsed: boolean; locale: AdminLoc
             />
           </div>
           <div>
-            <h1 className="font-heading text-xl font-semibold text-white">Kittisap Admin</h1>
+            <h1 className="font-heading text-xl font-semibold text-white">Kittisap Atv</h1>
             <p className="mt-0.5 text-sm text-slate-300">{TEXT.appSubtitle[locale]}</p>
           </div>
         </div>
@@ -767,7 +767,7 @@ function BrandCard({ collapsed, locale }: { collapsed: boolean; locale: AdminLoc
         <div className="relative mx-auto grid h-12 w-12 place-items-center overflow-hidden">
           <Image
             src={BRAND_LOGO_URL}
-            alt="Kittisap Admin Logo"
+            alt="Kittisap Atv Logo"
             fill
             className="object-contain object-center p-1"
             sizes="48px"

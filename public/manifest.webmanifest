@@ -1,7 +1,7 @@
 {
-    "name":  "Kittisap Admin",
-    "short_name":  "Kittisap Admin",
-    "description":  "Kittisap Admin Dashboard",
+    "name":  "Kittisap Atv",
+    "short_name":  "Kittisap Atv",
+    "description":  "Kittisap Atv Dashboard",
     "start_url":  "/admin",
     "scope":  "/",
     "display":  "standalone",

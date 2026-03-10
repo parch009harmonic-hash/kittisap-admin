@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import Image from "next/image";
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type ProductGallerySliderProps = {
   title: string;
@@ -11,6 +11,8 @@ type ProductGallerySliderProps = {
 
 export function ProductGallerySlider({ title, images, fallbackUrl }: ProductGallerySliderProps) {
   const trackRef = useRef<HTMLDivElement | null>(null);
+  const scrollRafRef = useRef<number | null>(null);
+  const preloadedUrlsRef = useRef<Set<string>>(new Set());
   const [index, setIndex] = useState(0);
 
   const slides = useMemo(() => {
@@ -23,7 +25,45 @@ export function ProductGallerySlider({ title, images, fallbackUrl }: ProductGall
     return [];
   }, [images, fallbackUrl]);
 
-  const scrollTo = (nextIndex: number) => {
+  const prefetchImage = useCallback((url: string | null | undefined) => {
+    const normalized = String(url ?? "").trim();
+    if (!normalized || preloadedUrlsRef.current.has(normalized) || typeof window === "undefined") {
+      return;
+    }
+    preloadedUrlsRef.current.add(normalized);
+    const img = new window.Image();
+    img.decoding = "async";
+    img.loading = "eager";
+    img.src = normalized;
+  }, []);
+
+  useEffect(() => {
+    if (slides.length === 0) {
+      setIndex(0);
+      return;
+    }
+    if (index > slides.length - 1) {
+      setIndex(slides.length - 1);
+    }
+  }, [index, slides.length]);
+
+  useEffect(() => {
+    if (slides.length <= 1) {
+      return;
+    }
+    prefetchImage(slides[(index + 1) % slides.length]?.url);
+    prefetchImage(slides[(index - 1 + slides.length) % slides.length]?.url);
+  }, [index, prefetchImage, slides]);
+
+  useEffect(() => {
+    return () => {
+      if (scrollRafRef.current !== null) {
+        window.cancelAnimationFrame(scrollRafRef.current);
+      }
+    };
+  }, []);
+
+  const scrollTo = useCallback((nextIndex: number) => {
     if (!trackRef.current) {
       return;
     }
@@ -36,24 +76,36 @@ export function ProductGallerySlider({ title, images, fallbackUrl }: ProductGall
 
     node.scrollIntoView({ behavior: "smooth", inline: "start", block: "nearest" });
     setIndex(safe);
-  };
+    prefetchImage(slides[safe]?.url);
+  }, [prefetchImage, slides]);
 
-  const onScroll = () => {
+  const onScroll = useCallback(() => {
     const track = trackRef.current;
     if (!track || slides.length <= 1) {
       return;
     }
 
-    const width = track.clientWidth;
-    if (!width) {
+    if (scrollRafRef.current !== null) {
       return;
     }
 
-    const next = Math.round(track.scrollLeft / width);
-    if (next !== index) {
-      setIndex(Math.max(0, Math.min(next, slides.length - 1)));
-    }
-  };
+    scrollRafRef.current = window.requestAnimationFrame(() => {
+      scrollRafRef.current = null;
+      const width = track.clientWidth;
+      if (!width) {
+        return;
+      }
+
+      const next = Math.round(track.scrollLeft / width);
+      if (next !== index) {
+        setIndex(Math.max(0, Math.min(next, slides.length - 1)));
+      }
+    });
+  }, [index, slides.length]);
+
+  const moveSlide = useCallback((step: number) => {
+    scrollTo(index + step);
+  }, [index, scrollTo]);
 
   if (slides.length === 0) {
     return (
@@ -65,16 +117,47 @@ export function ProductGallerySlider({ title, images, fallbackUrl }: ProductGall
 
   return (
     <div className="space-y-2">
-      <div
-        ref={trackRef}
-        onScroll={onScroll}
-        className="flex snap-x snap-mandatory overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
-      >
-        {slides.map((slide) => (
-          <div key={slide.key} className="relative aspect-square min-w-full snap-start">
-            <Image src={slide.url} alt={title} fill sizes="(max-width: 768px) 100vw, 42vw" className="object-cover" priority={index === 0} />
-          </div>
-        ))}
+      <div className="relative">
+        <div
+          ref={trackRef}
+          onScroll={onScroll}
+          className="flex snap-x snap-mandatory overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {slides.map((slide) => (
+            <div key={slide.key} className="relative aspect-square min-w-full snap-start">
+              <Image
+                src={slide.url}
+                alt={title}
+                fill
+                sizes="(max-width: 768px) 100vw, 42vw"
+                className="object-cover"
+                priority={index === 0}
+                unoptimized
+              />
+            </div>
+          ))}
+        </div>
+
+        {slides.length > 1 ? (
+          <>
+            <button
+              type="button"
+              onClick={() => moveSlide(-1)}
+              className="absolute left-2 top-1/2 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/35 bg-slate-900/60 text-white transition hover:bg-slate-900/85"
+              aria-label="Previous image"
+            >
+              {"<"}
+            </button>
+            <button
+              type="button"
+              onClick={() => moveSlide(1)}
+              className="absolute right-2 top-1/2 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/35 bg-slate-900/60 text-white transition hover:bg-slate-900/85"
+              aria-label="Next image"
+            >
+              {">"}
+            </button>
+          </>
+        ) : null}
       </div>
 
       {slides.length > 1 ? (

@@ -6,12 +6,12 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "Kittisap Admin",
-    template: "%s | Kittisap Admin",
+    default: "Kittisap Atv",
+    template: "%s | Kittisap Atv",
   },
   description: "Kittisap customer website and commerce platform",
   manifest: "/manifest.webmanifest?v=20260225-3",
-  applicationName: "Kittisap Admin",
+  applicationName: "Kittisap Atv",
   icons: {
     icon: "/icons/pwa-icon-512.png",
     shortcut: "/icons/pwa-icon-512.png",

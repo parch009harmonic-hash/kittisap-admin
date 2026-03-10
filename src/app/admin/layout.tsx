@@ -13,10 +13,10 @@ type AdminLayoutProps = {
 
 export const metadata: Metadata = {
   title: {
-    default: "Kittisap Admin",
-    template: "%s | Kittisap Admin",
+    default: "Kittisap Atv",
+    template: "%s | Kittisap Atv",
   },
-  description: "Kittisap admin dashboard",
+  description: "Kittisap Atv admin dashboard",
 };
 
 export default async function AdminLayout({ children }: AdminLayoutProps) {

@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { AppLocale } from "../../../lib/i18n/locale";
 import { AddToCartButton } from "./AddToCartButton";
@@ -83,6 +83,7 @@ type QuickViewTheme = {
 
 const DEFAULT_QUICK_VIEW_THEME: QuickViewThemeKey = "brand_gold";
 const QUICK_VIEW_THEME_STORAGE_KEY = "kittisap_quickview_theme";
+const QUICK_VIEW_NAV_THROTTLE_MS = 140;
 
 const QUICK_VIEW_THEMES: Record<QuickViewThemeKey, QuickViewTheme> = {
   brand_gold: {
@@ -205,6 +206,8 @@ export function StorefrontProductQuickViewModal({
   onClose,
 }: StorefrontProductQuickViewModalProps) {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const lastNavigateAtRef = useRef(0);
+  const preloadedUrlsRef = useRef<Set<string>>(new Set());
   const [themeKey, setThemeKey] = useState<QuickViewThemeKey>(() => {
     if (typeof window === "undefined") {
       return DEFAULT_QUICK_VIEW_THEME;
@@ -244,6 +247,76 @@ export function StorefrontProductQuickViewModal({
   const safeActiveIndex =
     galleryImages.length > 0 ? Math.max(0, Math.min(activeImageIndex, galleryImages.length - 1)) : 0;
   const activeImage = galleryImages[safeActiveIndex] ?? null;
+  const prefetchImage = useCallback((url: string | null | undefined) => {
+    const normalized = String(url ?? "").trim();
+    if (!normalized || preloadedUrlsRef.current.has(normalized) || typeof window === "undefined") {
+      return;
+    }
+
+    preloadedUrlsRef.current.add(normalized);
+    const img = new window.Image();
+    img.decoding = "async";
+    img.loading = "eager";
+    img.src = normalized;
+  }, []);
+
+  useEffect(() => {
+    if (!open || !item) {
+      return;
+    }
+    setActiveImageIndex(0);
+    lastNavigateAtRef.current = 0;
+  }, [item?.id, open]);
+
+  useEffect(() => {
+    if (!open || galleryImages.length === 0) {
+      return;
+    }
+
+    const prefetchAll = () => {
+      for (const image of galleryImages) {
+        prefetchImage(image.url);
+      }
+    };
+
+    // Warm image cache while modal is open to reduce lag when users tap arrows quickly.
+    const runtime = globalThis as typeof globalThis & {
+      requestIdleCallback?: (callback: IdleRequestCallback, options?: IdleRequestOptions) => number;
+      cancelIdleCallback?: (handle: number) => void;
+    };
+    if (runtime.requestIdleCallback && runtime.cancelIdleCallback) {
+      const idleId = runtime.requestIdleCallback(prefetchAll, { timeout: 1200 });
+      return () => runtime.cancelIdleCallback?.(idleId);
+    }
+
+    const timer = setTimeout(prefetchAll, 80);
+    return () => clearTimeout(timer);
+  }, [galleryImages, open, prefetchImage]);
+
+  useEffect(() => {
+    if (!open || galleryImages.length <= 1) {
+      return;
+    }
+    const next = galleryImages[(safeActiveIndex + 1) % galleryImages.length];
+    const prev = galleryImages[(safeActiveIndex - 1 + galleryImages.length) % galleryImages.length];
+    prefetchImage(next?.url);
+    prefetchImage(prev?.url);
+  }, [galleryImages, open, prefetchImage, safeActiveIndex]);
+
+  const moveImage = useCallback(
+    (step: number) => {
+      if (galleryImages.length <= 1) {
+        return;
+      }
+      const now = Date.now();
+      if (now - lastNavigateAtRef.current < QUICK_VIEW_NAV_THROTTLE_MS) {
+        return;
+      }
+      lastNavigateAtRef.current = now;
+      setActiveImageIndex((current) => (current + step + galleryImages.length) % galleryImages.length);
+    },
+    [galleryImages.length],
+  );
 
   useEffect(() => {
     if (!open) {
@@ -261,11 +334,11 @@ export function StorefrontProductQuickViewModal({
       }
 
       if (event.key === "ArrowLeft") {
-        setActiveImageIndex((current) => (current - 1 + galleryImages.length) % galleryImages.length);
+        moveImage(-1);
         return;
       }
       if (event.key === "ArrowRight") {
-        setActiveImageIndex((current) => (current + 1) % galleryImages.length);
+        moveImage(1);
       }
     };
 
@@ -284,14 +357,7 @@ export function StorefrontProductQuickViewModal({
       document.body.style.overflow = originalOverflow;
       document.body.style.paddingRight = originalPaddingRight;
     };
-  }, [galleryImages.length, onClose, open]);
-
-  const moveImage = (step: number) => {
-    if (galleryImages.length <= 1) {
-      return;
-    }
-    setActiveImageIndex((current) => (current + step + galleryImages.length) % galleryImages.length);
-  };
+  }, [galleryImages.length, moveImage, onClose, open]);
 
   const handleSelectTheme = (nextTheme: QuickViewThemeKey) => {
     setThemeKey(nextTheme);
@@ -331,7 +397,8 @@ export function StorefrontProductQuickViewModal({
                     fill
                     sizes="(max-width: 1024px) 100vw, 58vw"
                     className="object-cover"
-                    priority
+                    priority={safeActiveIndex === 0}
+                    unoptimized
                   />
                 ) : (
                   <div className="grid h-full place-items-center text-slate-200">{text.noImage}</div>
