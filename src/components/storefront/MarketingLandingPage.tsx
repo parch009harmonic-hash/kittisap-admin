@@ -416,13 +416,12 @@ export async function MarketingLandingPage({
   const homePath = withLocale(locale, "/", useLocalePrefix);
   const productsPath = withLocale(locale, "/products", useLocalePrefix);
   const pricingPath = withLocale(locale, "/pricing", useLocalePrefix);
-  const promotionsPath = withLocale(locale, "/promotions", useLocalePrefix);
   const contactPath = withLocale(locale, "/contact", useLocalePrefix);
   const localizedHeroEyebrow = localizeSettingText(bannerSettings.eyebrow, locale, t.hero.eyebrow);
   const localizedHeroTitle = localizeSettingText(bannerSettings.title, locale, t.hero.title);
   const localizedHeroDesc = localizeSettingText(bannerSettings.description, locale, t.hero.desc);
   const localizedPrimaryButton = localizeSettingText(bannerSettings.primaryButtonLabel, locale, t.nav.products);
-  const localizedSecondaryButton = localizeSettingText(bannerSettings.secondaryButtonLabel, locale, t.nav.promotions);
+  const localizedSecondaryButton = localizeSettingText(bannerSettings.secondaryButtonLabel, locale, t.nav.contact);
   const localizedCallButtonLabel = localizeSettingText(
     storefrontSettings.callButtonLabel,
     locale,
@@ -576,7 +575,7 @@ export async function MarketingLandingPage({
               {bannerSettings.showButtons ? (
                 <div className={`mt-5 flex w-full flex-wrap gap-2 ${buttonAlignClass}`}>
                   <Link href={productsPath} className="inline-flex rounded-full border border-amber-400/40 bg-amber-500/15 px-4 py-2 text-xs font-extrabold text-amber-200">{localizedPrimaryButton}</Link>
-                  <Link href={promotionsPath} className="inline-flex rounded-full border border-slate-400/30 bg-white/5 px-4 py-2 text-xs font-extrabold text-slate-100">{localizedSecondaryButton}</Link>
+                  <Link href={contactPath} className="inline-flex rounded-full border border-slate-400/30 bg-white/5 px-4 py-2 text-xs font-extrabold text-slate-100">{localizedSecondaryButton}</Link>
                 </div>
               ) : null}
             </div>
@@ -828,7 +827,6 @@ export async function MarketingLandingPage({
               <Link href={homePath} className="block hover:text-amber-200">{t.nav.home}</Link>
               <Link href={productsPath} className="block hover:text-amber-200">{t.nav.products}</Link>
               <Link href={pricingPath} className="block hover:text-amber-200">{t.nav.pricing}</Link>
-              <Link href={promotionsPath} className="block hover:text-amber-200">{t.nav.promotions}</Link>
               <Link href={contactPath} className="block hover:text-amber-200">{t.nav.contact}</Link>
             </div>
           </div>

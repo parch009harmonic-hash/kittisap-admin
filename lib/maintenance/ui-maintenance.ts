@@ -15,7 +15,6 @@ export const UI_MAINTENANCE_PATHS = [
   "/admin",
   "/admin/products",
   "/admin/orders",
-  "/admin/coupons",
   "/admin/settings",
   "/admin/web-settings",
 ] as const;

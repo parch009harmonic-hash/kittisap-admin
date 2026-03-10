@@ -48,13 +48,6 @@ function tabs(locale: AppLocale): TabItem[] {
       ariaLabel: th ? "ไปหน้าสินค้า" : "Go to products",
     },
     {
-      key: "promotions",
-      label: th ? "โปรโมชัน" : "Promotions",
-      icon: "%",
-      href: withLocale(locale, "/promotions"),
-      ariaLabel: th ? "ไปหน้าโปรโมชัน" : "Go to promotions",
-    },
-    {
       key: "cart",
       label: th ? "ตะกร้า" : "Cart",
       icon: "◍",

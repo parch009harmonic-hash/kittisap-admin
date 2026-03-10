@@ -18,7 +18,6 @@ export function StorefrontTopMenu({
           home: "หน้าแรก",
           products: "สินค้าของเรา",
           pricing: "ตารางราคา",
-          promotions: "กิจกรรม + ส่วนลด/คูปอง",
           contact: "ติดต่อเรา",
           auth: "เข้าสู่ระบบ/สมัครสมาชิก",
         }}
@@ -40,7 +39,6 @@ export function StorefrontTopMenu({
           home: "ໜ້າຫຼັກ",
           products: "ສິນຄ້າຂອງພວກເຮົາ",
           pricing: "ຕາຕະລາງລາຄາ",
-          promotions: "ກິດຈະກຳ + ຄູປອງ",
           contact: "ຕິດຕໍ່",
           auth: "ເຂົ້າລະບົບ/ສະໝັກສະມາຊິກ",
         }}
@@ -61,7 +59,6 @@ export function StorefrontTopMenu({
         home: "Home",
         products: "Products",
         pricing: "Pricing",
-        promotions: "Promotions + Coupons",
         contact: "Contact",
         auth: "Login/Register",
       }}

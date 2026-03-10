@@ -23,7 +23,6 @@ type MarketingTopNavProps = {
     home: string;
     products: string;
     pricing: string;
-    promotions: string;
     contact: string;
     auth?: string;
   };
@@ -133,7 +132,6 @@ export function MarketingTopNav({ locale, useLocalePrefix, brand, nav, cta }: Ma
   const homePath = withLocale(locale, "/", useLocalePrefix);
   const productsPath = withLocale(locale, "/products", useLocalePrefix);
   const pricingPath = withLocale(locale, "/pricing", useLocalePrefix);
-  const promotionsPath = withLocale(locale, "/promotions", useLocalePrefix);
   const contactPath = withLocale(locale, "/contact", useLocalePrefix);
   const authPath = withLocale(locale, "/auth/login", useLocalePrefix);
   const accountPath = withLocale(locale, "/account", useLocalePrefix);
@@ -385,7 +383,6 @@ export function MarketingTopNav({ locale, useLocalePrefix, brand, nav, cta }: Ma
     { href: homePath, label: nav.home },
     { href: productsPath, label: nav.products },
     { href: pricingPath, label: nav.pricing },
-    { href: promotionsPath, label: nav.promotions },
     { href: contactPath, label: nav.contact },
   ];
   if (!isCustomerLoggedIn) {

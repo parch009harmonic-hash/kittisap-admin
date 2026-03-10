@@ -471,12 +471,6 @@ export function CustomerAccountClient() {
         className: "border-emerald-300/35 bg-gradient-to-br from-emerald-500/18 via-emerald-400/8 to-transparent text-emerald-100",
       },
       {
-        href: withLocale(locale, "/promotions"),
-        label: t.navPromotions,
-        hint: t.navPromotionsHint,
-        className: "border-fuchsia-300/35 bg-gradient-to-br from-fuchsia-500/16 via-fuchsia-400/8 to-transparent text-fuchsia-100",
-      },
-      {
         href: withLocale(locale, "/pricing"),
         label: t.navPricing,
         hint: t.navPricingHint,
@@ -501,8 +495,6 @@ export function CustomerAccountClient() {
       t.navPricingHint,
       t.navProducts,
       t.navProductsHint,
-      t.navPromotions,
-      t.navPromotionsHint,
     ],
   );
 

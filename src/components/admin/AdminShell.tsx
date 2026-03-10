@@ -21,7 +21,7 @@ type AdminShellProps = {
 
 type OsTheme = "windows" | "mobile-os";
 type MobilePlatform = "ios" | "android" | "other";
-type NavIcon = "dashboard" | "products" | "orders" | "coupons" | "settings" | "webSettings" | "broadcast" | "developer";
+type NavIcon = "dashboard" | "products" | "orders" | "settings" | "webSettings" | "broadcast" | "developer";
 
 type NavLinkItem = {
   href: string;
@@ -52,13 +52,6 @@ const NAV_LINKS: NavLinkItem[] = [
     short: { th: "\u0e04", en: "O" },
     mobileLabel: { th: "\u0e2d\u0e2d\u0e40\u0e14\u0e2d\u0e23\u0e4c", en: "Order" },
     icon: "orders",
-  },
-  {
-    href: "/admin/coupons",
-    label: { th: "\u0e04\u0e39\u0e1b\u0e2d\u0e07\u0e41\u0e25\u0e30\u0e41\u0e15\u0e49\u0e21", en: "Coupons & Points" },
-    short: { th: "\u0e04", en: "C" },
-    mobileLabel: { th: "\u0e04\u0e39\u0e1b\u0e2d\u0e07", en: "Coupons" },
-    icon: "coupons",
   },
   {
     href: "/admin/settings",
@@ -819,13 +812,6 @@ function MenuIcon({ icon, className }: { icon: NavIcon; className?: string }) {
           <path d="M7 4h10l1 3H6l1-3Z" />
           <path d="M5 7h14v12H5V7Z" />
           <path d="M9 11h6M9 15h4" />
-        </svg>
-      );
-    case "coupons":
-      return (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={base} aria-hidden>
-          <path d="M3 9a2 2 0 0 0 2-2h14v4a2 2 0 1 1 0 4v4H5a2 2 0 0 0-2-2V9Z" />
-          <path d="M12 7v12" strokeDasharray="2 2" />
         </svg>
       );
     case "settings":

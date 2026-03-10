@@ -970,9 +970,6 @@ function revalidatePublicProductPaths() {
   revalidatePath("/products");
   revalidatePath("/en/products");
   revalidatePath("/lo/products");
-  revalidatePath("/promotions");
-  revalidatePath("/en/promotions");
-  revalidatePath("/lo/promotions");
   revalidatePath("/pricing");
   revalidatePath("/en/pricing");
   revalidatePath("/lo/pricing");
