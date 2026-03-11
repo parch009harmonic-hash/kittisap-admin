@@ -15,6 +15,7 @@ type CustomerReceiptRouteProps = {
 const RECEIPT_REFERENCE_RE = /[^A-Z0-9]/gi;
 const ADDRESS_NOTE_PREFIX_RE = /^address\s*:/i;
 const READY_ORDER_STATUSES = new Set(["paid", "processing", "shipped", "completed"]);
+const RECEIPT_CONTACT_EMAIL = "kittisapsumaruvai@gmail.com";
 
 function mapStatus(message: string) {
   if (message === "Unauthorized") return 401;
@@ -157,7 +158,7 @@ export async function GET(request: Request, { params }: CustomerReceiptRouteProp
       name: storefront.brandName || "Kittisap ATV",
       address: storefront.contactAddressTh || storefront.contactAddressEn || "-",
       phone: storefront.contactPhone || "-",
-      email: "-",
+      email: RECEIPT_CONTACT_EMAIL,
       taxId: "-",
     };
 

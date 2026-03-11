@@ -1,8 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { getDefaultWebStorefrontSettings, WebStorefrontSettings } from "../../../../lib/types/web-settings";
+
+type Locale = "th" | "en" | "lo";
+
+type LocalizedText = {
+  th: string;
+  en: string;
+  lo: string;
+};
 
 type StorefrontPayload = {
   ok?: boolean;
@@ -12,9 +20,214 @@ type StorefrontPayload = {
 
 type FieldDef = {
   key: keyof WebStorefrontSettings;
-  label: string;
+  label: LocalizedText;
   type?: "text" | "tel" | "url" | "textarea";
 };
+
+const PANEL_TEXT = {
+  title: {
+    th: "ข้อมูลร้านค้าที่แสดงบนหน้าเว็บไซต์",
+    en: "Storefront profile settings",
+    lo: "ຂໍ້ມູນຮ້ານທີ່ສະແດງໜ້າເວັບ",
+  },
+  subtitle: {
+    th: "แก้ไขเมนูบนเว็บ ปุ่มโทรหาเรา หน้า Contact และ Footer ให้เชื่อมกันทั้งระบบ",
+    en: "Edit top menu, call button, contact page, and footer from one place.",
+    lo: "ແກ້ໄຂເມນູໜ້າເວັບ, ປຸ່ມໂທ, ໜ້າຕິດຕໍ່ ແລະ footer ໃຫ້ສອດຄ່ອງກັນ.",
+  },
+  loadFailed: {
+    th: "โหลดข้อมูลร้านค้าไม่สำเร็จ",
+    en: "Failed to load storefront settings.",
+    lo: "ໂຫລດຂໍ້ມູນຮ້ານບໍ່ສຳເລັດ",
+  },
+  saveFailed: {
+    th: "บันทึกข้อมูลร้านค้าไม่สำเร็จ",
+    en: "Failed to save storefront settings.",
+    lo: "ບັນທຶກຂໍ້ມູນຮ້ານບໍ່ສຳເລັດ",
+  },
+  saved: {
+    th: "บันทึกข้อมูลร้านค้าเรียบร้อย",
+    en: "Storefront settings saved.",
+    lo: "ບັນທຶກຂໍ້ມູນຮ້ານແລ້ວ",
+  },
+  loading: {
+    th: "กำลังโหลดข้อมูล...",
+    en: "Loading storefront settings...",
+    lo: "ກຳລັງໂຫລດຂໍ້ມູນ...",
+  },
+  save: {
+    th: "บันทึกการตั้งค่าเว็บไซต์",
+    en: "Save storefront settings",
+    lo: "ບັນທຶກການຕັ້ງຄ່າເວັບ",
+  },
+  saving: {
+    th: "กำลังบันทึก...",
+    en: "Saving...",
+    lo: "ກຳລັງບັນທຶກ...",
+  },
+  topbar: {
+    th: "แถบเมนูด้านบน",
+    en: "Top menu",
+    lo: "ເມນູດ້ານເທິງ",
+  },
+  footer: {
+    th: "ส่วนท้ายเว็บไซต์",
+    en: "Footer",
+    lo: "ສ່ວນທ້າຍເວັບ",
+  },
+  contact: {
+    th: "หน้าติดต่อเรา",
+    en: "Contact page",
+    lo: "ໜ້າຕິດຕໍ່",
+  },
+  previewPhone: {
+    th: "ทดสอบโทร:",
+    en: "Call preview:",
+    lo: "ທົດລອງໂທ:",
+  },
+  migrationTitle: {
+    th: "ยังไม่พร้อมบันทึก: ขาดตาราง web_settings",
+    en: "Cannot save yet: missing web_settings table",
+    lo: "ຍັງບໍ່ພ້ອມບັນທຶກ: ຂາດຕາຕະລາງ web_settings",
+  },
+  migrationBody: {
+    th: "กรุณารันไฟล์ sql/ensure-web-settings.sql ใน Supabase SQL Editor ก่อน แล้วรีเฟรชหน้านี้",
+    en: "Run sql/ensure-web-settings.sql in Supabase SQL Editor, then refresh this page.",
+    lo: "ກະລຸນາຮັນ sql/ensure-web-settings.sql ໃນ Supabase SQL Editor ແລ້ວ refresh ໜ້ານີ້",
+  },
+} satisfies Record<string, LocalizedText>;
+
+const TOP_FIELDS: FieldDef[] = [
+  {
+    key: "brandName",
+    label: { th: "ชื่อแบรนด์ (ซ้ายบน)", en: "Brand name", lo: "ຊື່ແບຣນ (ມຸມຊ້າຍເທິງ)" },
+  },
+  {
+    key: "storefrontLogoUrl",
+    label: { th: "ลิงก์โลโก้ร้าน", en: "Store logo URL", lo: "ລິ້ງໂລໂກ້ຮ້ານ" },
+    type: "url",
+  },
+  {
+    key: "callButtonLabel",
+    label: { th: "ข้อความปุ่มโทรหาเรา", en: "Call button label", lo: "ຂໍ້ຄວາມປຸ່ມໂທຫາພວກເຮົາ" },
+  },
+  {
+    key: "callPhone",
+    label: { th: "เบอร์โทรปุ่มโทรหาเรา", en: "Call phone", lo: "ເບີໂທສຳລັບປຸ່ມໂທ" },
+    type: "tel",
+  },
+];
+
+const FOOTER_FIELDS: FieldDef[] = [
+  { key: "footerTitle", label: { th: "หัวข้อ Footer", en: "Footer title", lo: "ຫົວຂໍ້ Footer" } },
+  {
+    key: "footerDescription1",
+    label: { th: "คำอธิบายบรรทัดที่ 1", en: "Footer description line 1", lo: "ຄຳອະທິບາຍແຖວ 1" },
+    type: "textarea",
+  },
+  {
+    key: "footerDescription2",
+    label: { th: "คำอธิบายบรรทัดที่ 2", en: "Footer description line 2", lo: "ຄຳອະທິບາຍແຖວ 2" },
+    type: "textarea",
+  },
+  {
+    key: "footerContactTitle",
+    label: { th: "หัวข้อ Contact ใน Footer", en: "Footer contact title", lo: "ຫົວຂໍ້ຕິດຕໍ່ໃນ Footer" },
+  },
+  {
+    key: "footerCallLabel",
+    label: { th: "ข้อความลิงก์โทร", en: "Footer call label", lo: "ຂໍ້ຄວາມລິ້ງໂທ" },
+  },
+  {
+    key: "footerLineLabel",
+    label: { th: "ข้อความลิงก์ LINE", en: "Footer LINE label", lo: "ຂໍ້ຄວາມລິ້ງ LINE" },
+  },
+  {
+    key: "footerFacebookLabel",
+    label: { th: "ข้อความลิงก์ Facebook", en: "Footer Facebook label", lo: "ຂໍ້ຄວາມລິ້ງ Facebook" },
+  },
+  { key: "lineUrl", label: { th: "ลิงก์ LINE", en: "LINE URL", lo: "ລິ້ງ LINE" }, type: "url" },
+  {
+    key: "facebookUrl",
+    label: { th: "ลิงก์ Facebook", en: "Facebook URL", lo: "ລິ້ງ Facebook" },
+    type: "url",
+  },
+];
+
+const CONTACT_FIELDS: FieldDef[] = [
+  { key: "contactTitle", label: { th: "หัวข้อหน้าติดต่อ", en: "Contact title", lo: "ຫົວຂໍ້ໜ້າຕິດຕໍ່" } },
+  {
+    key: "contactSubtitle",
+    label: { th: "คำอธิบายหน้าติดต่อ", en: "Contact subtitle", lo: "ຄຳອະທິບາຍໜ້າຕິດຕໍ່" },
+    type: "textarea",
+  },
+  {
+    key: "contactPhone",
+    label: { th: "เบอร์โทรติดต่อ", en: "Contact phone", lo: "ເບີໂທຕິດຕໍ່" },
+    type: "tel",
+  },
+  { key: "contactLineId", label: { th: "LINE ID", en: "LINE ID", lo: "LINE ID" } },
+  {
+    key: "contactAddressTh",
+    label: { th: "ที่อยู่ (ไทย/ลาว)", en: "Address (TH/LO)", lo: "ທີ່ຢູ່ (ໄທ/ລາວ)" },
+    type: "textarea",
+  },
+  {
+    key: "contactAddressEn",
+    label: { th: "ที่อยู่ (อังกฤษ)", en: "Address (EN)", lo: "ທີ່ຢູ່ (ອັງກິດ)" },
+    type: "textarea",
+  },
+  {
+    key: "contactMapEmbedUrl",
+    label: {
+      th: "ลิงก์แผนที่ Embed (วางลิงก์ Google Maps ได้)",
+      en: "Map embed URL (Google Maps link works)",
+      lo: "ລິ້ງແຜນທີ່ Embed (ໃຊ້ລິ້ງ Google Maps ໄດ້)",
+    },
+    type: "url",
+  },
+  {
+    key: "contactMapOpenUrl",
+    label: { th: "ลิงก์เปิด Google Maps", en: "Map open URL", lo: "ລິ້ງເປີດ Google Maps" },
+    type: "url",
+  },
+  {
+    key: "contactCallButtonLabel",
+    label: { th: "ข้อความปุ่มโทรทันที", en: "Call button label", lo: "ຂໍ້ຄວາມປຸ່ມໂທທັນທີ" },
+  },
+  {
+    key: "contactMapButtonLabel",
+    label: { th: "ข้อความปุ่มเปิดแผนที่", en: "Map button label", lo: "ຂໍ້ຄວາມປຸ່ມເປີດແຜນທີ່" },
+  },
+  {
+    key: "contactLineButtonLabel",
+    label: { th: "ข้อความปุ่มเปิด LINE", en: "LINE button label", lo: "ຂໍ້ຄວາມປຸ່ມເປີດ LINE" },
+  },
+  {
+    key: "contactHoursWeekdayLabel",
+    label: { th: "ชื่อวัน (จันทร์ - ศุกร์)", en: "Weekday label", lo: "ຊື່ວັນ (ຈັນ - ສຸກ)" },
+  },
+  {
+    key: "contactHoursWeekdayTime",
+    label: { th: "เวลา (จันทร์ - ศุกร์)", en: "Weekday time", lo: "ເວລາ (ຈັນ - ສຸກ)" },
+  },
+  {
+    key: "contactHoursSaturdayLabel",
+    label: { th: "ชื่อวัน (เสาร์)", en: "Saturday label", lo: "ຊື່ວັນ (ເສົາ)" },
+  },
+  {
+    key: "contactHoursSaturdayTime",
+    label: { th: "เวลา (เสาร์)", en: "Saturday time", lo: "ເວລາ (ເສົາ)" },
+  },
+  {
+    key: "contactHoursSundayLabel",
+    label: { th: "ชื่อวัน (อาทิตย์)", en: "Sunday label", lo: "ຊື່ວັນ (ອາທິດ)" },
+  },
+  {
+    key: "contactHoursSundayTime",
+    label: { th: "เวลา (อาทิตย์)", en: "Sunday time", lo: "ເວລາ (ອາທິດ)" },
+  },
+];
 
 async function fetchJson<T>(input: RequestInfo | URL, init?: RequestInit) {
   const response = await fetch(input, { ...init, cache: "no-store" });
@@ -31,12 +244,16 @@ function isMissingWebSettingsError(message: string) {
   return message.toLowerCase().includes("missing web_settings table");
 }
 
+function getText(locale: Locale, map: LocalizedText) {
+  return map[locale] ?? map.th;
+}
+
 export function StorefrontProfileSettingItem({
   locale,
   onSuccess,
   onError,
 }: {
-  locale: "th" | "en";
+  locale: "th" | "en" | "lo";
   onSuccess: (message: string) => void;
   onError: (message: string) => void;
 }) {
@@ -46,93 +263,35 @@ export function StorefrontProfileSettingItem({
   const [migrationRequired, setMigrationRequired] = useState(false);
 
   const text = useMemo(
-    () =>
-      locale === "th"
-        ? {
-            title: "เธเนเธญเธกเธนเธฅเธฃเนเธฒเธเธเนเธฒเธ—เธตเนเนเธชเธ”เธเธเธเธซเธเนเธฒเน€เธงเนเธเนเธเธ•เน",
-            subtitle: "เนเธเนเนเธเน€เธกเธเธนเธเธ เธเธธเนเธกเนเธ—เธฃเธซเธฒเน€เธฃเธฒ เธซเธเนเธฒ Contact เนเธฅเธฐ Footer เนเธซเนเน€เธเธทเนเธญเธกเธเธฑเธเธ—เธฑเนเธเธฃเธฐเธเธ",
-            loadFailed: "เนเธซเธฅเธ”เธเนเธญเธกเธนเธฅเธฃเนเธฒเธเธเนเธฒเนเธกเนเธชเธณเน€เธฃเนเธ",
-            saveFailed: "เธเธฑเธเธ—เธถเธเธเนเธญเธกเธนเธฅเธฃเนเธฒเธเธเนเธฒเนเธกเนเธชเธณเน€เธฃเนเธ",
-            saved: "เธเธฑเธเธ—เธถเธเธเนเธญเธกเธนเธฅเธฃเนเธฒเธเธเนเธฒเน€เธฃเธตเธขเธเธฃเนเธญเธข",
-            loading: "เธเธณเธฅเธฑเธเนเธซเธฅเธ”เธเนเธญเธกเธนเธฅ...",
-            save: "เธเธฑเธเธ—เธถเธเธเธฒเธฃเธ•เธฑเนเธเธเนเธฒเน€เธงเนเธเนเธเธ•เน",
-            saving: "เธเธณเธฅเธฑเธเธเธฑเธเธ—เธถเธ...",
-            topbar: "เนเธ–เธเธเธเน€เธงเนเธเนเธเธ•เน",
-            footer: "เธชเนเธงเธเธ—เนเธฒเธขเน€เธงเนเธเนเธเธ•เน",
-            contact: "เธซเธเนเธฒ เธ•เธดเธ”เธ•เนเธญเน€เธฃเธฒ",
-            previewPhone: "เธ—เธ”เธชเธญเธเนเธ—เธฃ:",
-            migrationTitle: "เธขเธฑเธเนเธกเนเธเธฃเนเธญเธกเธเธฑเธเธ—เธถเธ: เธเธฒเธ”เธ•เธฒเธฃเธฒเธ web_settings",
-            migrationBody: "เธเธฃเธธเธ“เธฒเธฃเธฑเธเนเธเธฅเน sql/ensure-web-settings.sql เนเธ Supabase SQL Editor เธเนเธญเธ เนเธฅเนเธงเธฃเธตเน€เธเธฃเธเธซเธเนเธฒ",
-          }
-        : {
-            title: "Storefront profile settings",
-            subtitle: "Edit top menu, call button, contact page, and footer from one place.",
-            loadFailed: "Failed to load storefront settings.",
-            saveFailed: "Failed to save storefront settings.",
-            saved: "Storefront settings saved.",
-            loading: "Loading storefront settings...",
-            save: "Save storefront settings",
-            saving: "Saving...",
-            topbar: "Top menu",
-            footer: "Footer",
-            contact: "Contact page",
-            previewPhone: "Call preview:",
-            migrationTitle: "Cannot save yet: missing web_settings table",
-            migrationBody: "Run sql/ensure-web-settings.sql in Supabase SQL Editor, then refresh this page.",
-          },
+    () => ({
+      title: getText(locale, PANEL_TEXT.title),
+      subtitle: getText(locale, PANEL_TEXT.subtitle),
+      loadFailed: getText(locale, PANEL_TEXT.loadFailed),
+      saveFailed: getText(locale, PANEL_TEXT.saveFailed),
+      saved: getText(locale, PANEL_TEXT.saved),
+      loading: getText(locale, PANEL_TEXT.loading),
+      save: getText(locale, PANEL_TEXT.save),
+      saving: getText(locale, PANEL_TEXT.saving),
+      topbar: getText(locale, PANEL_TEXT.topbar),
+      footer: getText(locale, PANEL_TEXT.footer),
+      contact: getText(locale, PANEL_TEXT.contact),
+      previewPhone: getText(locale, PANEL_TEXT.previewPhone),
+      migrationTitle: getText(locale, PANEL_TEXT.migrationTitle),
+      migrationBody: getText(locale, PANEL_TEXT.migrationBody),
+    }),
     [locale],
   );
 
-  const topFields: FieldDef[] = [
-    { key: "brandName", label: locale === "th" ? "เธเธทเนเธญเนเธเธฃเธเธ”เน (เธเนเธฒเธขเธเธ)" : "Brand name" },
-    { key: "storefrontLogoUrl", label: locale === "th" ? "ลิงก์โลโก้ร้าน" : "Store logo URL", type: "url" },
-    { key: "callButtonLabel", label: locale === "th" ? "เธเนเธญเธเธงเธฒเธกเธเธธเนเธกเนเธ—เธฃเธซเธฒเน€เธฃเธฒ" : "Call button label" },
-    { key: "callPhone", label: locale === "th" ? "เน€เธเธญเธฃเนเนเธ—เธฃเธเธธเนเธกเนเธ—เธฃเธซเธฒเน€เธฃเธฒ" : "Call phone", type: "tel" },
-  ];
-
-  const footerFields: FieldDef[] = [
-    { key: "footerTitle", label: locale === "th" ? "เธซเธฑเธงเธเนเธญ Footer" : "Footer title" },
-    { key: "footerDescription1", label: locale === "th" ? "เธเธณเธญเธเธดเธเธฒเธขเธเธฃเธฃเธ—เธฑเธ”เธ—เธตเน 1" : "Footer description line 1", type: "textarea" },
-    { key: "footerDescription2", label: locale === "th" ? "เธเธณเธญเธเธดเธเธฒเธขเธเธฃเธฃเธ—เธฑเธ”เธ—เธตเน 2" : "Footer description line 2", type: "textarea" },
-    { key: "footerContactTitle", label: locale === "th" ? "เธซเธฑเธงเธเนเธญ Contact เนเธ Footer" : "Footer contact title" },
-    { key: "footerCallLabel", label: locale === "th" ? "เธเนเธญเธเธงเธฒเธกเธฅเธดเธเธเนเนเธ—เธฃ" : "Footer call label" },
-    { key: "footerLineLabel", label: locale === "th" ? "เธเนเธญเธเธงเธฒเธกเธฅเธดเธเธเน LINE" : "Footer LINE label" },
-    { key: "footerFacebookLabel", label: locale === "th" ? "เธเนเธญเธเธงเธฒเธกเธฅเธดเธเธเน Facebook" : "Footer Facebook label" },
-    { key: "lineUrl", label: locale === "th" ? "เธฅเธดเธเธเน LINE" : "LINE URL", type: "url" },
-    { key: "facebookUrl", label: locale === "th" ? "เธฅเธดเธเธเน Facebook" : "Facebook URL", type: "url" },
-  ];
-
-  const contactFields: FieldDef[] = [
-    { key: "contactTitle", label: locale === "th" ? "เธซเธฑเธงเธเนเธญเธซเธเนเธฒ Contact" : "Contact title" },
-    { key: "contactSubtitle", label: locale === "th" ? "เธเธณเธญเธเธดเธเธฒเธขเธซเธเนเธฒ Contact" : "Contact subtitle", type: "textarea" },
-    { key: "contactPhone", label: locale === "th" ? "เน€เธเธญเธฃเนเนเธ—เธฃเธ•เธดเธ”เธ•เนเธญ" : "Contact phone", type: "tel" },
-    { key: "contactLineId", label: locale === "th" ? "LINE ID" : "LINE ID" },
-    { key: "contactAddressTh", label: locale === "th" ? "เธ—เธตเนเธญเธขเธนเน (เนเธ—เธข/เธฅเธฒเธง)" : "Address (TH/LO)", type: "textarea" },
-    { key: "contactAddressEn", label: locale === "th" ? "เธ—เธตเนเธญเธขเธนเน (เธญเธฑเธเธเธคเธฉ)" : "Address (EN)", type: "textarea" },
-    {
-      key: "contactMapEmbedUrl",
-      label: locale === "th" ? "เธฅเธดเธเธเนเนเธเธเธ—เธตเน Embed (เธงเธฒเธเธฅเธดเธเธเน Google Maps เนเธ”เน)" : "Map embed URL (Google Maps link works)",
-      type: "url",
-    },
-    { key: "contactMapOpenUrl", label: locale === "th" ? "เธฅเธดเธเธเนเน€เธเธดเธ” Google Maps" : "Map open URL", type: "url" },
-    { key: "contactCallButtonLabel", label: locale === "th" ? "เธเนเธญเธเธงเธฒเธกเธเธธเนเธกเนเธ—เธฃเธ—เธฑเธเธ—เธต" : "Call button label" },
-    { key: "contactMapButtonLabel", label: locale === "th" ? "เธเนเธญเธเธงเธฒเธกเธเธธเนเธกเน€เธเธดเธ”เนเธเธเธ—เธตเน" : "Map button label" },
-    { key: "contactLineButtonLabel", label: locale === "th" ? "เธเนเธญเธเธงเธฒเธกเธเธธเนเธกเน€เธเธดเธ” LINE" : "LINE button label" },
-    { key: "contactHoursWeekdayLabel", label: locale === "th" ? "เธเธทเนเธญเธงเธฑเธ (เธเธฑเธเธ—เธฃเน-เธจเธธเธเธฃเน)" : "Weekday label" },
-    { key: "contactHoursWeekdayTime", label: locale === "th" ? "เน€เธงเธฅเธฒ (เธเธฑเธเธ—เธฃเน-เธจเธธเธเธฃเน)" : "Weekday time" },
-    { key: "contactHoursSaturdayLabel", label: locale === "th" ? "เธเธทเนเธญเธงเธฑเธ (เน€เธชเธฒเธฃเน)" : "Saturday label" },
-    { key: "contactHoursSaturdayTime", label: locale === "th" ? "เน€เธงเธฅเธฒ (เน€เธชเธฒเธฃเน)" : "Saturday time" },
-    { key: "contactHoursSundayLabel", label: locale === "th" ? "เธเธทเนเธญเธงเธฑเธ (เธญเธฒเธ—เธดเธ•เธขเน)" : "Sunday label" },
-    { key: "contactHoursSundayTime", label: locale === "th" ? "เน€เธงเธฅเธฒ (เธญเธฒเธ—เธดเธ•เธขเน)" : "Sunday time" },
-  ];
-
   useEffect(() => {
     let active = true;
+
     async function load() {
       setLoading(true);
       try {
         const { response, payload } = await fetchJson<StorefrontPayload>("/api/admin/web-settings/storefront");
-        if (!active) return;
+        if (!active) {
+          return;
+        }
 
         if (!response.ok || !payload?.ok || !payload.data) {
           const message = payload?.error ?? text.loadFailed;
@@ -147,20 +306,23 @@ export function StorefrontProfileSettingItem({
       } catch (error) {
         onError(error instanceof Error ? error.message : text.loadFailed);
       } finally {
-        if (active) setLoading(false);
+        if (active) {
+          setLoading(false);
+        }
       }
     }
+
     void load();
     return () => {
       active = false;
     };
   }, [onError, text.loadFailed]);
 
-  function setField<K extends keyof WebStorefrontSettings>(key: K, value: WebStorefrontSettings[K]) {
+  const setField = useCallback(<K extends keyof WebStorefrontSettings>(key: K, value: WebStorefrontSettings[K]) => {
     setDraft((prev) => ({ ...prev, [key]: value }));
-  }
+  }, []);
 
-  async function save() {
+  const save = useCallback(async () => {
     if (migrationRequired) {
       onError(text.migrationBody);
       return;
@@ -173,6 +335,7 @@ export function StorefrontProfileSettingItem({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(draft),
       });
+
       if (!response.ok || !payload?.ok) {
         const message = payload?.error ?? text.saveFailed;
         if (isMissingWebSettingsError(message)) {
@@ -180,6 +343,7 @@ export function StorefrontProfileSettingItem({
         }
         throw new Error(message);
       }
+
       if (payload.data) {
         setDraft(payload.data);
       }
@@ -189,45 +353,49 @@ export function StorefrontProfileSettingItem({
     } finally {
       setSaving(false);
     }
-  }
+  }, [draft, migrationRequired, onError, onSuccess, text.migrationBody, text.saveFailed, text.saved]);
 
-  function renderField(field: FieldDef) {
-    if (field.type === "textarea") {
+  const renderField = useCallback(
+    (field: FieldDef) => {
+      if (field.type === "textarea") {
+        return (
+          <textarea
+            value={String(draft[field.key] ?? "")}
+            onChange={(event) => setField(field.key, event.target.value as never)}
+            rows={3}
+            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+          />
+        );
+      }
+
       return (
-        <textarea
+        <input
+          type={field.type ?? "text"}
           value={String(draft[field.key] ?? "")}
           onChange={(event) => setField(field.key, event.target.value as never)}
-          rows={3}
-          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+          className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
         />
       );
-    }
+    },
+    [draft, setField],
+  );
 
-    return (
-      <input
-        type={field.type ?? "text"}
-        value={String(draft[field.key] ?? "")}
-        onChange={(event) => setField(field.key, event.target.value as never)}
-        className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-      />
-    );
-  }
-
-  function renderGroup(title: string, fields: FieldDef[]) {
-    return (
+  const renderGroup = useCallback(
+    (title: string, fields: FieldDef[]) => (
       <section className="rounded-xl border border-slate-200 bg-slate-50 p-3">
         <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-600">{title}</p>
         <div className="grid gap-3 md:grid-cols-2">
           {fields.map((field) => (
             <label key={field.key} className={`space-y-1 ${field.type === "textarea" ? "md:col-span-2" : ""}`}>
-              <span className="text-xs font-semibold text-slate-600">{field.label}</span>
+              <span className="text-xs font-semibold text-slate-600">{getText(locale, field.label)}</span>
               {renderField(field)}
             </label>
           ))}
         </div>
       </section>
-    );
-  }
+    ),
+    [locale, renderField],
+  );
 
   if (loading) {
     return (
@@ -255,9 +423,9 @@ export function StorefrontProfileSettingItem({
           </div>
         ) : null}
 
-        {renderGroup(text.topbar, topFields)}
-        {renderGroup(text.footer, footerFields)}
-        {renderGroup(text.contact, contactFields)}
+        {renderGroup(text.topbar, TOP_FIELDS)}
+        {renderGroup(text.footer, FOOTER_FIELDS)}
+        {renderGroup(text.contact, CONTACT_FIELDS)}
 
         <div className="flex flex-wrap items-center gap-3">
           <button
@@ -279,4 +447,3 @@ export function StorefrontProfileSettingItem({
     </li>
   );
 }
-

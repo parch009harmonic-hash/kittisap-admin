@@ -1,6 +1,7 @@
 "use client";
 
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 type ConfirmModalProps = {
   open: boolean;
@@ -25,13 +26,22 @@ export function ConfirmModal({
   onConfirm,
   onCancel,
 }: ConfirmModalProps) {
-  if (!open) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    return () => {
+      setMounted(false);
+    };
+  }, []);
+
+  if (!open || !mounted) {
     return null;
   }
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 backdrop-blur-[6px]">
-      <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-white/30 bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800 p-6 text-slate-100 shadow-[0_24px_75px_rgba(2,6,23,0.55)]">
+      <div className="relative w-full max-w-md min-w-[320px] overflow-hidden rounded-3xl border border-white/30 bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800 p-6 text-slate-100 shadow-[0_24px_75px_rgba(2,6,23,0.55)]">
         <div className="pointer-events-none absolute -right-14 -top-14 h-32 w-32 rounded-full bg-rose-400/35 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-12 left-6 h-28 w-28 rounded-full bg-cyan-400/25 blur-3xl" />
         <div className="relative">
@@ -63,6 +73,7 @@ export function ConfirmModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

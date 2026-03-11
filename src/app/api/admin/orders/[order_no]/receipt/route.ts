@@ -13,6 +13,7 @@ type ReceiptRouteProps = {
 };
 
 const READY_ORDER_STATUSES = new Set(["paid", "processing", "shipped", "completed"]);
+const RECEIPT_CONTACT_EMAIL = "kittisapsumaruvai@gmail.com";
 
 function isReceiptReady(status: string, paymentStatus: string) {
   return paymentStatus.trim().toLowerCase() === "paid" || READY_ORDER_STATUSES.has(status.trim().toLowerCase());
@@ -49,7 +50,7 @@ export async function GET(_request: Request, { params }: ReceiptRouteProps) {
       name: storefront.brandName || adminSettings.storeName || "Kittisap ATV",
       address: storefront.contactAddressTh || storefront.contactAddressEn || "-",
       phone: storefront.contactPhone || adminSettings.supportPhone || "-",
-      email: adminSettings.email || "-",
+      email: RECEIPT_CONTACT_EMAIL,
       taxId: "-",
     };
 
