@@ -1215,20 +1215,24 @@ function CreateUserSettingItem({
 
     setSubmitting(true);
     try {
+      const createPayload: Record<string, string | boolean | undefined> = {
+        displayName: displayName.trim(),
+        email: email.trim(),
+        password: password.trim(),
+        role,
+        developerPin: role === "developer" ? developerPin.trim() : undefined,
+      };
+      if (canViewCustomerKyc || Boolean(createKycPin)) {
+        createPayload.canViewCustomerKyc = canViewCustomerKyc;
+        createPayload.kycViewPin = createKycPin || undefined;
+      }
+
       const response = await fetchWithTimeout("/api/admin/users", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          displayName: displayName.trim(),
-          email: email.trim(),
-          password: password.trim(),
-          role,
-          developerPin: role === "developer" ? developerPin.trim() : undefined,
-          canViewCustomerKyc,
-          kycViewPin: canViewCustomerKyc ? createKycPin : undefined,
-        }),
+        body: JSON.stringify(createPayload),
       });
 
       const result = (await response.json()) as { code?: string; error?: string };
@@ -1295,24 +1299,29 @@ function CreateUserSettingItem({
     const userId = editingUser.id;
     setSavingUserId(userId);
     try {
+      const updatePayload: Record<string, string | boolean | undefined> = {
+        userId,
+        role: editRole,
+        displayName: editDisplayName.trim(),
+        email: editEmail.trim(),
+        password: editPassword.trim() || undefined,
+        developerPin:
+          editingUser.role === "developer" || editRole === "developer"
+            ? editDeveloperPin.trim()
+            : undefined,
+      };
+      const kycAccessChanged = editCanViewCustomerKyc !== editingUser.canViewCustomerKyc || Boolean(nextKycPin);
+      if (kycAccessChanged) {
+        updatePayload.canViewCustomerKyc = editCanViewCustomerKyc;
+        updatePayload.kycViewPin = nextKycPin || undefined;
+      }
+
       const response = await fetchWithTimeout("/api/admin/users", {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          userId,
-          role: editRole,
-          displayName: editDisplayName.trim(),
-          email: editEmail.trim(),
-          password: editPassword.trim() || undefined,
-          developerPin:
-            editingUser.role === "developer" || editRole === "developer"
-              ? editDeveloperPin.trim()
-              : undefined,
-          canViewCustomerKyc: editCanViewCustomerKyc,
-          kycViewPin: editCanViewCustomerKyc ? (nextKycPin || undefined) : undefined,
-        }),
+        body: JSON.stringify(updatePayload),
       });
       const result = (await response.json()) as { code?: string; error?: string };
       if (!response.ok) {
