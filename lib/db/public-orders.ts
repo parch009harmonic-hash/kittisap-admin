@@ -7,6 +7,7 @@ import { getPaymentSettings } from "./payment-settings";
 import { getSupabaseServerClient } from "../supabase/server";
 import { getSupabaseServiceRoleClient } from "../supabase/service";
 import { validatePublicCoupon } from "./public-coupons";
+import { inspectSlipFile, type SlipInspectionResult } from "../slip/inspection";
 
 const DEFAULT_PROMPTPAY_BASE_URL = "https://promptpay.io";
 
@@ -85,6 +86,22 @@ function formatPromptpayAmount(amount: number) {
     return String(Math.round(amount));
   }
   return fixed.replace(/0+$/, "").replace(/\.$/, "");
+}
+
+function buildSlipAutoNote(inspection: SlipInspectionResult) {
+  const failCount = inspection.checks.filter((item) => item.status === "fail").length;
+  const warnCount = inspection.checks.filter((item) => item.status === "warn").length;
+  const flag = failCount > 0 ? "REVIEW_REQUIRED" : "AUTO_OK";
+  const source = inspection.source === "gemini" ? "GEMINI" : "NONE";
+  const issues = inspection.checks
+    .filter((item) => item.status === "fail" || item.status === "warn")
+    .map((item) => `${item.key}:${item.status}`)
+    .join(", ");
+
+  return [`[AUTO_CHECK:${flag}]`, `source=${source}`, `fails=${failCount}`, `warns=${warnCount}`, inspection.summary, issues]
+    .filter(Boolean)
+    .join(" | ")
+    .slice(0, 900);
 }
 
 type DbClient = Awaited<ReturnType<typeof getSupabaseServerClient>>;
@@ -430,7 +447,7 @@ export async function uploadPublicOrderSlip(orderNo: string, file: File) {
 
   const { data: orderRow, error: orderError } = await supabase
     .from("orders")
-    .select("id,order_no,customer_id")
+    .select("id,order_no,customer_id,grand_total,bank_account_name_snapshot,bank_account_no_snapshot")
     .eq("order_no", normalizedOrderNo)
     .eq("customer_id", actor.user.id)
     .maybeSingle();
@@ -461,6 +478,15 @@ export async function uploadPublicOrderSlip(orderNo: string, file: File) {
     throw new PublicOrderError(500, "SLIP_URL_FAILED", signed.error.message);
   }
 
+  const expectedAmount = Number((orderRow as Record<string, unknown>).grand_total ?? 0);
+  const expectedAccountName = String((orderRow as Record<string, unknown>).bank_account_name_snapshot ?? "");
+  const expectedAccountNo = String((orderRow as Record<string, unknown>).bank_account_no_snapshot ?? "");
+  const inspection = await inspectSlipFile(file, {
+    expectedAmount,
+    expectedAccountName,
+    expectedAccountNo,
+  });
+
   const { error: slipError } = await supabase.from("payment_slips").insert({
     order_id: String(orderRow.id),
     order_no: String(orderRow.order_no),
@@ -468,6 +494,7 @@ export async function uploadPublicOrderSlip(orderNo: string, file: File) {
     file_path: filePath,
     file_url: signed.data.signedUrl,
     status: "pending_review",
+    note: buildSlipAutoNote(inspection),
   });
 
   if (slipError) {
@@ -486,6 +513,7 @@ export async function uploadPublicOrderSlip(orderNo: string, file: File) {
   return {
     order_no: String(orderRow.order_no),
     status: "pending_review",
+    inspection,
   };
 }
 

@@ -90,6 +90,41 @@ type OrderDetailPayload = {
   };
 };
 
+type SlipCheckStatus = "pass" | "warn" | "fail" | "unknown";
+
+type SlipCheckItem = {
+  key: "file" | "amount" | "account_name" | "account_no" | "datetime";
+  status: SlipCheckStatus;
+  detail: string;
+  expected: string | number | null;
+  actual: string | number | null;
+};
+
+type SlipInspectionPayload = {
+  available: boolean;
+  source: "gemini" | "none";
+  pass: boolean;
+  summary: string;
+  checks: SlipCheckItem[];
+  extracted: {
+    amountThb: number | null;
+    accountName: string | null;
+    accountNo: string | null;
+    transferDateTime: string | null;
+  };
+  checkedAt: string;
+};
+
+type UploadSlipPayload = {
+  ok?: boolean;
+  error?: string;
+  data?: {
+    order_no?: string;
+    status?: string;
+    inspection?: SlipInspectionPayload | null;
+  };
+};
+
 function t(locale: AppLocale) {
   if (locale === "th") {
     return {
@@ -167,6 +202,22 @@ function t(locale: AppLocale) {
       editShippingNow: "กรอกข้อมูลตอนนี้",
       closePopup: "ปิด",
       errorShippingRequired: "กรุณากรอกข้อมูลจัดส่งให้ครบก่อนชำระเงิน",
+      uploadPopupTitle: "กำลังอัปโหลดสลิป",
+      uploadPopupDesc: "ระบบกำลังอัปโหลดและตรวจสอบสลิปเบื้องต้น โปรดรอสักครู่",
+      slipReviewTitle: "ผลตรวจสลิปเบื้องต้น",
+      slipReviewSubtitle: "ระบบตรวจยอดเงิน ชื่อบัญชี เลขบัญชี รูปไฟล์ และวันที่เวลาโอนแบบอัตโนมัติ",
+      slipReviewPass: "ผ่าน",
+      slipReviewWarn: "เตือน",
+      slipReviewFail: "ไม่ผ่าน",
+      slipReviewUnknown: "ไม่ทราบผล",
+      slipReviewCheckFile: "ไฟล์สลิป",
+      slipReviewCheckAmount: "ยอดเงิน",
+      slipReviewCheckAccountName: "ชื่อบัญชี",
+      slipReviewCheckAccountNo: "เลขบัญชี",
+      slipReviewCheckDateTime: "วันเวลาโอน",
+      slipReviewExpected: "คาดหวัง",
+      slipReviewActual: "ตรวจพบ",
+      slipReviewClose: "ปิด",
     };
   }
 
@@ -246,6 +297,22 @@ function t(locale: AppLocale) {
       editShippingNow: "ກອກຂໍ້ມູນຕອນນີ້",
       closePopup: "ປິດ",
       errorShippingRequired: "ກະລຸນາກອກຂໍ້ມູນຈັດສົ່ງໃຫ້ຄົບກ່ອນຊຳລະ",
+      uploadPopupTitle: "ກຳລັງອັບໂຫຼດສະລິບ",
+      uploadPopupDesc: "ລະບົບກຳລັງອັບໂຫຼດ ແລະ ກວດສອບສະລິບເບື້ອງຕົ້ນ, ກະລຸນາລໍຖ້າ",
+      slipReviewTitle: "ຜົນກວດສະລິບເບື້ອງຕົ້ນ",
+      slipReviewSubtitle: "ລະບົບກວດຈຳນວນເງິນ, ຊື່ບັນຊີ, ເລກບັນຊີ, ໄຟລ໌ຮູບ ແລະ ເວລາໂອນເງິນ",
+      slipReviewPass: "ຜ່ານ",
+      slipReviewWarn: "ເຕືອນ",
+      slipReviewFail: "ບໍ່ຜ່ານ",
+      slipReviewUnknown: "ບໍ່ຮູ້ຜົນ",
+      slipReviewCheckFile: "ໄຟລ໌ສະລິບ",
+      slipReviewCheckAmount: "ຈຳນວນເງິນ",
+      slipReviewCheckAccountName: "ຊື່ບັນຊີ",
+      slipReviewCheckAccountNo: "ເລກບັນຊີ",
+      slipReviewCheckDateTime: "ວັນເວລາໂອນ",
+      slipReviewExpected: "ຄ່າທີ່ຄາດໝາຍ",
+      slipReviewActual: "ຄ່າທີ່ພົບ",
+      slipReviewClose: "ປິດ",
     };
   }
 
@@ -324,6 +391,22 @@ function t(locale: AppLocale) {
     editShippingNow: "Fill shipping now",
     closePopup: "Close",
     errorShippingRequired: "Please complete shipping information before payment.",
+    uploadPopupTitle: "Uploading slip",
+    uploadPopupDesc: "Uploading and running preliminary slip checks. Please wait.",
+    slipReviewTitle: "Preliminary slip check",
+    slipReviewSubtitle: "System checks amount, account name, account number, file quality, and transfer date/time.",
+    slipReviewPass: "Pass",
+    slipReviewWarn: "Warning",
+    slipReviewFail: "Fail",
+    slipReviewUnknown: "Unknown",
+    slipReviewCheckFile: "Slip file",
+    slipReviewCheckAmount: "Amount",
+    slipReviewCheckAccountName: "Account name",
+    slipReviewCheckAccountNo: "Account number",
+    slipReviewCheckDateTime: "Transfer date/time",
+    slipReviewExpected: "Expected",
+    slipReviewActual: "Detected",
+    slipReviewClose: "Close",
   };
 }
 
@@ -355,6 +438,15 @@ function parsePromptpayAmount(promptpayUrl: string) {
 function humanFileSize(size: number) {
   if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
   return `${(size / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+function formatInspectionValue(value: string | number | null | undefined) {
+  if (value === null || value === undefined || value === "") return "-";
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) return "-";
+    return value.toLocaleString();
+  }
+  return value;
 }
 
 async function loadProfile() {
@@ -442,6 +534,10 @@ export function CheckoutClient({
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   const [cancelConfirmMounted, setCancelConfirmMounted] = useState(false);
   const [cancelConfirmVisible, setCancelConfirmVisible] = useState(false);
+  const [slipInspection, setSlipInspection] = useState<SlipInspectionPayload | null>(null);
+  const [slipReviewOpen, setSlipReviewOpen] = useState(false);
+  const [slipReviewMounted, setSlipReviewMounted] = useState(false);
+  const [slipReviewVisible, setSlipReviewVisible] = useState(false);
 
   const selectedItems = useMemo(() => {
     const lookup = new Set(selectedIds);
@@ -486,6 +582,14 @@ export function CheckoutClient({
     profileShipping.fullName.trim().length > 0
     && profileShipping.address.trim().length > 0
     && profileShipping.phone.trim().length > 0;
+  const slipFailCount = useMemo(
+    () => (slipInspection?.checks ?? []).filter((item) => item.status === "fail").length,
+    [slipInspection],
+  );
+  const slipWarnCount = useMemo(
+    () => (slipInspection?.checks ?? []).filter((item) => item.status === "warn").length,
+    [slipInspection],
+  );
 
   useEffect(() => {
     void loadProfile().then((profile) => {
@@ -540,6 +644,19 @@ export function CheckoutClient({
     const timer = window.setTimeout(() => setCancelConfirmMounted(false), 220);
     return () => window.clearTimeout(timer);
   }, [cancelConfirmMounted, cancelConfirmOpen]);
+
+  useEffect(() => {
+    if (slipReviewOpen) {
+      setSlipReviewMounted(true);
+      const frame = window.requestAnimationFrame(() => setSlipReviewVisible(true));
+      return () => window.cancelAnimationFrame(frame);
+    }
+
+    if (!slipReviewMounted) return;
+    setSlipReviewVisible(false);
+    const timer = window.setTimeout(() => setSlipReviewMounted(false), 220);
+    return () => window.clearTimeout(timer);
+  }, [slipReviewMounted, slipReviewOpen]);
 
   useEffect(() => {
     if (!orderNo || createdItems.length > 0) return;
@@ -754,6 +871,8 @@ export function CheckoutClient({
     if (!ensureShippingInfo()) return;
 
     setUploading(true);
+    setSlipReviewOpen(false);
+    setSlipInspection(null);
     setError(null);
 
     try {
@@ -768,15 +887,19 @@ export function CheckoutClient({
         body: formData,
       });
 
-      const payload = (await response.json()) as { ok?: boolean; error?: string };
+      const payload = (await response.json()) as UploadSlipPayload;
       if (!response.ok || !payload.ok) {
         throw new Error(payload.error ?? text.errorUploadSlip);
       }
 
       setFile(null);
       setPaidSubmitted(true);
-      setOrderStatus("pending_review");
+      setOrderStatus(String(payload.data?.status ?? "pending_review"));
       setPaymentStatus("pending_verify");
+      if (payload.data?.inspection) {
+        setSlipInspection(payload.data.inspection);
+        setSlipReviewOpen(true);
+      }
       setToast(text.successSlip);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : text.errorUploadSlip);
@@ -863,11 +986,104 @@ export function CheckoutClient({
     setSelectedIds((prev) => prev.filter((id) => id !== productId));
   }
 
+  function slipStatusText(status: SlipCheckStatus) {
+    if (status === "pass") return text.slipReviewPass;
+    if (status === "warn") return text.slipReviewWarn;
+    if (status === "fail") return text.slipReviewFail;
+    return text.slipReviewUnknown;
+  }
+
+  function slipStatusClass(status: SlipCheckStatus) {
+    if (status === "pass") return "border-emerald-200 bg-emerald-50 text-emerald-700";
+    if (status === "warn") return "border-amber-200 bg-amber-50 text-amber-700";
+    if (status === "fail") return "border-rose-200 bg-rose-50 text-rose-700";
+    return "border-slate-200 bg-slate-100 text-slate-600";
+  }
+
+  function slipCheckLabel(key: SlipCheckItem["key"]) {
+    if (key === "file") return text.slipReviewCheckFile;
+    if (key === "amount") return text.slipReviewCheckAmount;
+    if (key === "account_name") return text.slipReviewCheckAccountName;
+    if (key === "account_no") return text.slipReviewCheckAccountNo;
+    return text.slipReviewCheckDateTime;
+  }
+
   return (
     <main className="min-h-screen bg-[#f4f6fb] text-slate-900">
       {toast ? (
         <div className="fixed right-3 top-20 z-50 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 shadow-sm">
           {toast}
+        </div>
+      ) : null}
+
+      {uploading ? (
+        <div className="fixed inset-0 z-[71] grid place-items-center bg-slate-950/45 p-4 backdrop-blur-[2px]">
+          <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_24px_80px_rgba(2,6,23,0.28)]">
+            <div className="flex items-center gap-3">
+              <span className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-amber-200 bg-amber-50 text-amber-700">
+                <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden>
+                  <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" className="opacity-25" />
+                  <path d="M12 3a9 9 0 0 1 9 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="opacity-90" />
+                </svg>
+              </span>
+              <div>
+                <p className="text-sm font-bold text-slate-900">{text.uploadPopupTitle}</p>
+                <p className="text-sm text-slate-600">{text.uploadPopupDesc}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {slipReviewMounted ? (
+        <div
+          className={`fixed inset-0 z-[73] grid place-items-center p-4 backdrop-blur-[2px] transition-opacity duration-200 ${
+            slipReviewVisible ? "bg-slate-900/50 opacity-100" : "bg-slate-900/0 opacity-0"
+          }`}
+        >
+          <div
+            className={`w-full max-w-2xl rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_24px_80px_rgba(2,6,23,0.28)] transition-all duration-200 ${
+              slipReviewVisible ? "translate-y-0 scale-100 opacity-100" : "translate-y-2 scale-95 opacity-0"
+            }`}
+          >
+            <div className="rounded-xl border border-sky-200 bg-gradient-to-r from-sky-50 via-white to-indigo-50 p-3.5">
+              <p className="text-base font-bold text-slate-900">{text.slipReviewTitle}</p>
+              <p className="mt-1 text-sm text-slate-700">{slipInspection?.summary || text.slipReviewSubtitle}</p>
+              <div className="mt-2 flex flex-wrap gap-2 text-xs font-semibold">
+                <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-1 text-rose-700">{text.slipReviewFail}: {slipFailCount}</span>
+                <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-amber-700">{text.slipReviewWarn}: {slipWarnCount}</span>
+              </div>
+            </div>
+
+            <div className="mt-4 max-h-[48vh] space-y-2 overflow-y-auto pr-1">
+              {(slipInspection?.checks ?? []).map((check, index) => (
+                <div key={`${check.key}-${index}`} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm font-semibold text-slate-900">{slipCheckLabel(check.key)}</p>
+                    <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${slipStatusClass(check.status)}`}>
+                      {slipStatusText(check.status)}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-slate-700">{check.detail}</p>
+                  {(check.expected !== null || check.actual !== null) ? (
+                    <p className="mt-1 text-[11px] text-slate-500">
+                      {text.slipReviewExpected}: {formatInspectionValue(check.expected)} | {text.slipReviewActual}: {formatInspectionValue(check.actual)}
+                    </p>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setSlipReviewOpen(false)}
+                className="app-press h-10 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700"
+              >
+                {text.slipReviewClose}
+              </button>
+            </div>
+          </div>
         </div>
       ) : null}
 

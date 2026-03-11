@@ -176,6 +176,7 @@ function copy(locale: AccountLocale) {
       failedRemoveAvatar: "Failed to remove profile photo",
       statusPendingReview: "Pending review",
       statusPendingPayment: "Pending payment",
+      statusPaymentRejected: "Slip rejected",
       statusCancelled: "Cancelled",
       statusPaid: "Paid",
       receiptLabel: "Receipt",
@@ -278,6 +279,7 @@ function copy(locale: AccountLocale) {
       failedRemoveAvatar: "ລົບຮູບໂປຣໄຟລ໌ບໍ່ສຳເລັດ",
       statusPendingReview: "ລໍກວດສອບ",
       statusPendingPayment: "ລໍຊຳລະເງິນ",
+      statusPaymentRejected: "ປະຕິເສດສະລິບ",
       statusCancelled: "ຍົກເລີກ",
       statusPaid: "ຊຳລະແລ້ວ",
       receiptLabel: "ໃບຮັບເງິນ",
@@ -379,6 +381,7 @@ function copy(locale: AccountLocale) {
     failedRemoveAvatar: "ลบรูปโปรไฟล์ไม่สำเร็จ",
     statusPendingReview: "รอตรวจสอบ",
     statusPendingPayment: "รอชำระเงิน",
+    statusPaymentRejected: "สลิปถูกปฏิเสธ",
     statusCancelled: "ยกเลิกแล้ว",
     statusPaid: "ชำระแล้ว",
     receiptLabel: "ใบเสร็จ",
@@ -389,8 +392,9 @@ function copy(locale: AccountLocale) {
 function statusLabel(locale: AccountLocale, status: string, paymentStatus: string) {
   const t = copy(locale);
   if (status === "pending_review" || paymentStatus === "pending_verify") return t.statusPendingReview;
-  if (status === "pending_payment") return t.statusPendingPayment;
   if (status === "cancelled") return t.statusCancelled;
+  if (paymentStatus === "failed") return t.statusPaymentRejected;
+  if (status === "pending_payment") return t.statusPendingPayment;
   if (status === "completed" || paymentStatus === "paid") return t.statusPaid;
   return status || paymentStatus || "-";
 }
@@ -410,6 +414,9 @@ function canOpenReceipt(status: string, paymentStatus: string) {
 function statusBadgeClass(status: string, paymentStatus: string) {
   if (status === "pending_review" || paymentStatus === "pending_verify") {
     return "border-emerald-400/40 bg-emerald-500/15 text-emerald-200";
+  }
+  if (paymentStatus === "failed") {
+    return "border-rose-400/40 bg-rose-500/15 text-rose-200";
   }
   if (status === "pending_payment") {
     return "border-amber-400/40 bg-amber-500/15 text-amber-200";
@@ -557,7 +564,11 @@ export function CustomerAccountClient() {
   const pendingOrders = useMemo(
     () =>
       orders.filter(
-        (item) => item.status === "pending_payment" || item.status === "pending_review" || item.payment_status === "pending_verify",
+        (item) =>
+          item.status === "pending_payment"
+          || item.status === "pending_review"
+          || item.payment_status === "pending_verify"
+          || item.payment_status === "failed",
       ).length,
     [orders],
   );
