@@ -38,6 +38,58 @@ export type AdminPaymentSlipRow = {
 
 const HISTORY_ORDER_STATUSES = new Set(["paid", "processing", "shipped", "completed"]);
 const HISTORY_PAYMENT_STATUSES = new Set(["paid"]);
+const RECEIPT_REFERENCE_RE = /[^A-Z0-9]/gi;
+const ADDRESS_NOTE_PREFIX_RE = /^address\s*:/i;
+
+function toMoney(value: unknown, fallback = 0) {
+  const normalized = Number(value);
+  if (!Number.isFinite(normalized)) {
+    return Number(fallback.toFixed(2));
+  }
+  return Number(normalized.toFixed(2));
+}
+
+function extractAddressFromNote(note: unknown) {
+  const text = typeof note === "string" ? note : "";
+  if (!text.trim()) {
+    return "";
+  }
+
+  const lines = text.split(/\r?\n/).map((line) => line.trim());
+  const addressLine = lines.find((line) => ADDRESS_NOTE_PREFIX_RE.test(line));
+  if (!addressLine) {
+    return "";
+  }
+
+  return addressLine.replace(ADDRESS_NOTE_PREFIX_RE, "").trim();
+}
+
+function buildReceiptNo(orderNo: string) {
+  const compact = orderNo.trim().toUpperCase().replace(RECEIPT_REFERENCE_RE, "");
+  return `RE-${compact || "UNKNOWN"}`;
+}
+
+function resolveReceiptIssuedAt(
+  slips: Array<{ status: string; reviewed_at: string | null }>,
+  fallbackCreatedAt: string,
+) {
+  const approved = slips.find((slip) => slip.status === "approved" && slip.reviewed_at);
+  if (approved?.reviewed_at) {
+    return approved.reviewed_at;
+  }
+  return fallbackCreatedAt;
+}
+
+function resolveShippingFee(inputFee: number | undefined, fallbackFee: number) {
+  if (inputFee === undefined) {
+    return toMoney(fallbackFee);
+  }
+  const normalized = toMoney(inputFee);
+  if (!Number.isFinite(normalized) || normalized < 0 || normalized > 1_000_000) {
+    throw new Error("Shipping fee must be between 0 and 1,000,000");
+  }
+  return normalized;
+}
 
 export function shouldKeepOrderForHistory(status: string, paymentStatus: string) {
   return (
@@ -149,7 +201,7 @@ export async function getAdminOrderDetail(orderNo: string) {
   const { data: orderRow, error: orderError } = await supabase
     .from("orders")
     .select(
-      "id,order_no,customer_id,customer_name_snapshot,customer_phone_snapshot,customer_email_snapshot,sub_total,discount_total,shipping_fee,grand_total,status,payment_status,payment_method,promptpay_link_snapshot,created_at",
+      "id,order_no,customer_id,customer_name_snapshot,customer_phone_snapshot,customer_email_snapshot,sub_total,discount_total,shipping_fee,grand_total,status,payment_status,payment_method,promptpay_link_snapshot,created_at,note",
     )
     .eq("order_no", normalized)
     .maybeSingle();
@@ -203,6 +255,28 @@ export async function getAdminOrderDetail(orderNo: string) {
     note: row.note ? String(row.note) : null,
   })) as AdminPaymentSlipRow[];
 
+  const customerId = String((orderRow as Record<string, unknown>).customer_id ?? "");
+  let profileAddress = "";
+  if (customerId) {
+    const { data: profileRow, error: profileError } = await supabase
+      .from("customer_profiles")
+      .select("address")
+      .eq("id", customerId)
+      .maybeSingle();
+
+    if (profileError) {
+      throw new Error(profileError.message);
+    }
+
+    profileAddress = String(((profileRow ?? {}) as Record<string, unknown>).address ?? "").trim();
+  }
+
+  const note = String((orderRow as Record<string, unknown>).note ?? "").trim();
+  const shippingAddress = extractAddressFromNote(note) || profileAddress;
+  const createdAt = String((orderRow as Record<string, unknown>).created_at ?? "");
+  const receiptNo = buildReceiptNo(String((orderRow as Record<string, unknown>).order_no ?? ""));
+  const receiptIssuedAt = resolveReceiptIssuedAt(slips, createdAt);
+
   return {
     id: orderId,
     order_no: String((orderRow as Record<string, unknown>).order_no ?? ""),
@@ -218,7 +292,11 @@ export async function getAdminOrderDetail(orderNo: string) {
     grand_total: Number((orderRow as Record<string, unknown>).grand_total ?? 0),
     status: String((orderRow as Record<string, unknown>).status ?? "pending_payment"),
     payment_status: String((orderRow as Record<string, unknown>).payment_status ?? "unpaid"),
-    created_at: String((orderRow as Record<string, unknown>).created_at ?? ""),
+    created_at: createdAt,
+    note,
+    shipping_address: shippingAddress,
+    receipt_no: receiptNo,
+    receipt_issued_at: receiptIssuedAt,
     items,
     slips,
   };
@@ -228,6 +306,7 @@ export async function reviewAdminOrderSlip(input: {
   orderNo: string;
   slipId: string;
   action: "approve" | "reject";
+  shippingFee?: number;
   note?: string;
 }) {
   const actor = await requireAdminApi();
@@ -241,7 +320,7 @@ export async function reviewAdminOrderSlip(input: {
 
   const { data: orderRow, error: orderError } = await supabase
     .from("orders")
-    .select("id")
+    .select("id,sub_total,discount_total,shipping_fee")
     .eq("order_no", orderNo)
     .maybeSingle();
 
@@ -257,6 +336,14 @@ export async function reviewAdminOrderSlip(input: {
   const nextSlipStatus = input.action === "approve" ? "approved" : "rejected";
   const nextOrderStatus = input.action === "approve" ? "paid" : "pending_payment";
   const nextPaymentStatus = input.action === "approve" ? "paid" : "failed";
+  const currentShippingFee = toMoney((orderRow as Record<string, unknown>).shipping_fee ?? 0);
+  const nextShippingFee =
+    input.action === "approve"
+      ? resolveShippingFee(input.shippingFee, currentShippingFee)
+      : currentShippingFee;
+  const subTotal = toMoney((orderRow as Record<string, unknown>).sub_total ?? 0);
+  const discountTotal = toMoney((orderRow as Record<string, unknown>).discount_total ?? 0);
+  const nextGrandTotal = toMoney(Math.max(0, subTotal - discountTotal + nextShippingFee));
 
   const { error: slipError } = await supabase
     .from("payment_slips")
@@ -273,12 +360,18 @@ export async function reviewAdminOrderSlip(input: {
     throw new Error(slipError.message);
   }
 
+  const orderPatch: Record<string, unknown> = {
+    status: nextOrderStatus,
+    payment_status: nextPaymentStatus,
+  };
+  if (input.action === "approve") {
+    orderPatch.shipping_fee = nextShippingFee;
+    orderPatch.grand_total = nextGrandTotal;
+  }
+
   const { error: orderUpdateError } = await supabase
     .from("orders")
-    .update({
-      status: nextOrderStatus,
-      payment_status: nextPaymentStatus,
-    })
+    .update(orderPatch)
     .eq("id", orderId);
 
   if (orderUpdateError) {
@@ -290,6 +383,9 @@ export async function reviewAdminOrderSlip(input: {
     status: nextOrderStatus,
     payment_status: nextPaymentStatus,
     slip_status: nextSlipStatus,
+    shipping_fee: nextShippingFee,
+    grand_total: nextGrandTotal,
+    receipt_no: input.action === "approve" ? buildReceiptNo(orderNo) : null,
   };
 }
 

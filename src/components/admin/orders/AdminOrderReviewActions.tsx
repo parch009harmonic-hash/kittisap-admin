@@ -12,6 +12,14 @@ type AdminOrderReviewActionsProps = {
   locale: "th" | "en";
 };
 
+function parseMoneyInput(value: string) {
+  const normalized = Number(value.replaceAll(",", "").trim());
+  if (!Number.isFinite(normalized) || normalized < 0) {
+    return null;
+  }
+  return Number(normalized.toFixed(2));
+}
+
 export function AdminOrderReviewActions({
   orderNo,
   slipId,
@@ -27,6 +35,12 @@ export function AdminOrderReviewActions({
   const deleteLabel = locale === "th" ? "ลบออเดอร์" : "Delete order";
   const historyLockedLabel = locale === "th" ? "เก็บย้อนหลัง" : "Keep history";
   const reviewFailedText = locale === "th" ? "ตรวจสอบสลิปไม่สำเร็จ" : "Review failed";
+  const invalidShippingFeeText =
+    locale === "th" ? "กรุณากรอกค่าขนส่งเป็นตัวเลขตั้งแต่ 0 ขึ้นไป" : "Shipping fee must be a valid number >= 0";
+  const shippingPromptText =
+    locale === "th"
+      ? "กรอกค่าขนส่ง (บาท) สำหรับออกใบเสร็จออเดอร์นี้"
+      : "Enter shipping fee (THB) for this order receipt";
   const deleteFailedText = locale === "th" ? "ลบออเดอร์ไม่สำเร็จ" : "Delete failed";
   const deleteSuccessText = locale === "th" ? "ลบคำสั่งซื้อสำเร็จ" : "Order deleted successfully";
   const deleteConfirmText =
@@ -35,12 +49,30 @@ export function AdminOrderReviewActions({
       : "Delete this order permanently? (only for non-purchased orders)";
 
   const submitReview = async (action: "approve" | "reject") => {
+    if (!slipId) {
+      return;
+    }
+
+    let shippingFee: number | undefined;
+    if (action === "approve") {
+      const input = window.prompt(shippingPromptText, "0");
+      if (input === null) {
+        return;
+      }
+      const parsed = parseMoneyInput(input);
+      if (parsed === null) {
+        setToast({ type: "error", message: invalidShippingFeeText });
+        return;
+      }
+      shippingFee = parsed;
+    }
+
     setLoading(action);
     try {
       const response = await fetch(`/api/admin/orders/${encodeURIComponent(orderNo)}/review`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slipId, action }),
+        body: JSON.stringify({ slipId, action, shippingFee }),
       });
 
       const payload = (await response.json()) as { ok?: boolean; error?: string };
@@ -138,3 +170,4 @@ export function AdminOrderReviewActions({
     </>
   );
 }
+

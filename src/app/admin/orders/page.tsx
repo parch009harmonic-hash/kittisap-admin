@@ -71,6 +71,7 @@ export default async function AdminOrdersPage({ searchParams }: AdminOrdersPageP
     historyBadge: locale === "th" ? "เก็บย้อนหลัง" : "Keep history",
     actions: locale === "th" ? "จัดการ" : "Actions",
     view: locale === "th" ? "ดู" : "View",
+    receipt: locale === "th" ? "ใบเสร็จ" : "Receipt",
     noOrdersTitle: locale === "th" ? "ยังไม่มีคำสั่งซื้อ" : "No orders yet",
     noOrdersText:
       locale === "th"
@@ -175,6 +176,16 @@ export default async function AdminOrdersPage({ searchParams }: AdminOrdersPageP
                       >
                         {text.view}
                       </Link>
+                      {order.payment_status === "paid" || ["paid", "processing", "shipped", "completed"].includes(order.status) ? (
+                        <a
+                          href={`/api/admin/orders/${encodeURIComponent(order.order_no)}/receipt`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
+                        >
+                          {text.receipt}
+                        </a>
+                      ) : null}
                       <AdminOrderReviewActions
                         orderNo={order.order_no}
                         slipId={order.latest_pending_slip_id}

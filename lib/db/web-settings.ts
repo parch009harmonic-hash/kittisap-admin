@@ -176,6 +176,7 @@ const WebBrandGuaranteeInputSchema = z.object({
 
 const WebStorefrontInputSchema = z.object({
   brandName: z.string().trim().min(1).max(120),
+  storefrontLogoUrl: z.string().trim().max(1000),
   callButtonLabel: z.string().trim().min(1).max(80),
   callPhone: z.string().trim().min(1).max(40),
   footerTitle: z.string().trim().min(1).max(120),
@@ -451,6 +452,7 @@ function mapStorefront(row: Record<string, unknown> | null | undefined): WebStor
 
   return {
     brandName: String(row.storefront_brand_name ?? defaults.brandName),
+    storefrontLogoUrl: String(row.storefront_logo_url ?? defaults.storefrontLogoUrl),
     callButtonLabel: String(row.storefront_call_button_label ?? defaults.callButtonLabel),
     callPhone: String(row.storefront_call_phone ?? defaults.callPhone),
     footerTitle: String(row.storefront_footer_title ?? defaults.footerTitle),
@@ -1034,6 +1036,7 @@ export async function updateWebStorefrontSettingsApi(input: unknown) {
   const payload = {
     id: "default",
     storefront_brand_name: parsed.brandName,
+    storefront_logo_url: parsed.storefrontLogoUrl,
     storefront_call_button_label: parsed.callButtonLabel,
     storefront_call_phone: parsed.callPhone,
     storefront_footer_title: parsed.footerTitle,

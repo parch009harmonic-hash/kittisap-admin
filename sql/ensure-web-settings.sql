@@ -159,6 +159,8 @@ alter table public.web_settings
 alter table public.web_settings
   add column if not exists storefront_brand_name text not null default 'Kittisap';
 alter table public.web_settings
+  add column if not exists storefront_logo_url text not null default '';
+alter table public.web_settings
   add column if not exists storefront_call_button_label text not null default 'โทรหาเรา';
 alter table public.web_settings
   add column if not exists storefront_call_phone text not null default '+66843374982';

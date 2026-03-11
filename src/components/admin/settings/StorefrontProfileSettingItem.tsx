@@ -49,20 +49,20 @@ export function StorefrontProfileSettingItem({
     () =>
       locale === "th"
         ? {
-            title: "ข้อมูลร้านค้าที่แสดงบนหน้าเว็บไซต์",
-            subtitle: "แก้ไขเมนูบน ปุ่มโทรหาเรา หน้า Contact และ Footer ให้เชื่อมกันทั้งระบบ",
-            loadFailed: "โหลดข้อมูลร้านค้าไม่สำเร็จ",
-            saveFailed: "บันทึกข้อมูลร้านค้าไม่สำเร็จ",
-            saved: "บันทึกข้อมูลร้านค้าเรียบร้อย",
-            loading: "กำลังโหลดข้อมูล...",
-            save: "บันทึกการตั้งค่าเว็บไซต์",
-            saving: "กำลังบันทึก...",
-            topbar: "แถบบนเว็บไซต์",
-            footer: "ส่วนท้ายเว็บไซต์",
-            contact: "หน้า ติดต่อเรา",
-            previewPhone: "ทดสอบโทร:",
-            migrationTitle: "ยังไม่พร้อมบันทึก: ขาดตาราง web_settings",
-            migrationBody: "กรุณารันไฟล์ sql/ensure-web-settings.sql ใน Supabase SQL Editor ก่อน แล้วรีเฟรชหน้า",
+            title: "เธเนเธญเธกเธนเธฅเธฃเนเธฒเธเธเนเธฒเธ—เธตเนเนเธชเธ”เธเธเธเธซเธเนเธฒเน€เธงเนเธเนเธเธ•เน",
+            subtitle: "เนเธเนเนเธเน€เธกเธเธนเธเธ เธเธธเนเธกเนเธ—เธฃเธซเธฒเน€เธฃเธฒ เธซเธเนเธฒ Contact เนเธฅเธฐ Footer เนเธซเนเน€เธเธทเนเธญเธกเธเธฑเธเธ—เธฑเนเธเธฃเธฐเธเธ",
+            loadFailed: "เนเธซเธฅเธ”เธเนเธญเธกเธนเธฅเธฃเนเธฒเธเธเนเธฒเนเธกเนเธชเธณเน€เธฃเนเธ",
+            saveFailed: "เธเธฑเธเธ—เธถเธเธเนเธญเธกเธนเธฅเธฃเนเธฒเธเธเนเธฒเนเธกเนเธชเธณเน€เธฃเนเธ",
+            saved: "เธเธฑเธเธ—เธถเธเธเนเธญเธกเธนเธฅเธฃเนเธฒเธเธเนเธฒเน€เธฃเธตเธขเธเธฃเนเธญเธข",
+            loading: "เธเธณเธฅเธฑเธเนเธซเธฅเธ”เธเนเธญเธกเธนเธฅ...",
+            save: "เธเธฑเธเธ—เธถเธเธเธฒเธฃเธ•เธฑเนเธเธเนเธฒเน€เธงเนเธเนเธเธ•เน",
+            saving: "เธเธณเธฅเธฑเธเธเธฑเธเธ—เธถเธ...",
+            topbar: "เนเธ–เธเธเธเน€เธงเนเธเนเธเธ•เน",
+            footer: "เธชเนเธงเธเธ—เนเธฒเธขเน€เธงเนเธเนเธเธ•เน",
+            contact: "เธซเธเนเธฒ เธ•เธดเธ”เธ•เนเธญเน€เธฃเธฒ",
+            previewPhone: "เธ—เธ”เธชเธญเธเนเธ—เธฃ:",
+            migrationTitle: "เธขเธฑเธเนเธกเนเธเธฃเนเธญเธกเธเธฑเธเธ—เธถเธ: เธเธฒเธ”เธ•เธฒเธฃเธฒเธ web_settings",
+            migrationBody: "เธเธฃเธธเธ“เธฒเธฃเธฑเธเนเธเธฅเน sql/ensure-web-settings.sql เนเธ Supabase SQL Editor เธเนเธญเธ เนเธฅเนเธงเธฃเธตเน€เธเธฃเธเธซเธเนเธฒ",
           }
         : {
             title: "Storefront profile settings",
@@ -84,45 +84,46 @@ export function StorefrontProfileSettingItem({
   );
 
   const topFields: FieldDef[] = [
-    { key: "brandName", label: locale === "th" ? "ชื่อแบรนด์ (ซ้ายบน)" : "Brand name" },
-    { key: "callButtonLabel", label: locale === "th" ? "ข้อความปุ่มโทรหาเรา" : "Call button label" },
-    { key: "callPhone", label: locale === "th" ? "เบอร์โทรปุ่มโทรหาเรา" : "Call phone", type: "tel" },
+    { key: "brandName", label: locale === "th" ? "เธเธทเนเธญเนเธเธฃเธเธ”เน (เธเนเธฒเธขเธเธ)" : "Brand name" },
+    { key: "storefrontLogoUrl", label: locale === "th" ? "ลิงก์โลโก้ร้าน" : "Store logo URL", type: "url" },
+    { key: "callButtonLabel", label: locale === "th" ? "เธเนเธญเธเธงเธฒเธกเธเธธเนเธกเนเธ—เธฃเธซเธฒเน€เธฃเธฒ" : "Call button label" },
+    { key: "callPhone", label: locale === "th" ? "เน€เธเธญเธฃเนเนเธ—เธฃเธเธธเนเธกเนเธ—เธฃเธซเธฒเน€เธฃเธฒ" : "Call phone", type: "tel" },
   ];
 
   const footerFields: FieldDef[] = [
-    { key: "footerTitle", label: locale === "th" ? "หัวข้อ Footer" : "Footer title" },
-    { key: "footerDescription1", label: locale === "th" ? "คำอธิบายบรรทัดที่ 1" : "Footer description line 1", type: "textarea" },
-    { key: "footerDescription2", label: locale === "th" ? "คำอธิบายบรรทัดที่ 2" : "Footer description line 2", type: "textarea" },
-    { key: "footerContactTitle", label: locale === "th" ? "หัวข้อ Contact ใน Footer" : "Footer contact title" },
-    { key: "footerCallLabel", label: locale === "th" ? "ข้อความลิงก์โทร" : "Footer call label" },
-    { key: "footerLineLabel", label: locale === "th" ? "ข้อความลิงก์ LINE" : "Footer LINE label" },
-    { key: "footerFacebookLabel", label: locale === "th" ? "ข้อความลิงก์ Facebook" : "Footer Facebook label" },
-    { key: "lineUrl", label: locale === "th" ? "ลิงก์ LINE" : "LINE URL", type: "url" },
-    { key: "facebookUrl", label: locale === "th" ? "ลิงก์ Facebook" : "Facebook URL", type: "url" },
+    { key: "footerTitle", label: locale === "th" ? "เธซเธฑเธงเธเนเธญ Footer" : "Footer title" },
+    { key: "footerDescription1", label: locale === "th" ? "เธเธณเธญเธเธดเธเธฒเธขเธเธฃเธฃเธ—เธฑเธ”เธ—เธตเน 1" : "Footer description line 1", type: "textarea" },
+    { key: "footerDescription2", label: locale === "th" ? "เธเธณเธญเธเธดเธเธฒเธขเธเธฃเธฃเธ—เธฑเธ”เธ—เธตเน 2" : "Footer description line 2", type: "textarea" },
+    { key: "footerContactTitle", label: locale === "th" ? "เธซเธฑเธงเธเนเธญ Contact เนเธ Footer" : "Footer contact title" },
+    { key: "footerCallLabel", label: locale === "th" ? "เธเนเธญเธเธงเธฒเธกเธฅเธดเธเธเนเนเธ—เธฃ" : "Footer call label" },
+    { key: "footerLineLabel", label: locale === "th" ? "เธเนเธญเธเธงเธฒเธกเธฅเธดเธเธเน LINE" : "Footer LINE label" },
+    { key: "footerFacebookLabel", label: locale === "th" ? "เธเนเธญเธเธงเธฒเธกเธฅเธดเธเธเน Facebook" : "Footer Facebook label" },
+    { key: "lineUrl", label: locale === "th" ? "เธฅเธดเธเธเน LINE" : "LINE URL", type: "url" },
+    { key: "facebookUrl", label: locale === "th" ? "เธฅเธดเธเธเน Facebook" : "Facebook URL", type: "url" },
   ];
 
   const contactFields: FieldDef[] = [
-    { key: "contactTitle", label: locale === "th" ? "หัวข้อหน้า Contact" : "Contact title" },
-    { key: "contactSubtitle", label: locale === "th" ? "คำอธิบายหน้า Contact" : "Contact subtitle", type: "textarea" },
-    { key: "contactPhone", label: locale === "th" ? "เบอร์โทรติดต่อ" : "Contact phone", type: "tel" },
+    { key: "contactTitle", label: locale === "th" ? "เธซเธฑเธงเธเนเธญเธซเธเนเธฒ Contact" : "Contact title" },
+    { key: "contactSubtitle", label: locale === "th" ? "เธเธณเธญเธเธดเธเธฒเธขเธซเธเนเธฒ Contact" : "Contact subtitle", type: "textarea" },
+    { key: "contactPhone", label: locale === "th" ? "เน€เธเธญเธฃเนเนเธ—เธฃเธ•เธดเธ”เธ•เนเธญ" : "Contact phone", type: "tel" },
     { key: "contactLineId", label: locale === "th" ? "LINE ID" : "LINE ID" },
-    { key: "contactAddressTh", label: locale === "th" ? "ที่อยู่ (ไทย/ลาว)" : "Address (TH/LO)", type: "textarea" },
-    { key: "contactAddressEn", label: locale === "th" ? "ที่อยู่ (อังกฤษ)" : "Address (EN)", type: "textarea" },
+    { key: "contactAddressTh", label: locale === "th" ? "เธ—เธตเนเธญเธขเธนเน (เนเธ—เธข/เธฅเธฒเธง)" : "Address (TH/LO)", type: "textarea" },
+    { key: "contactAddressEn", label: locale === "th" ? "เธ—เธตเนเธญเธขเธนเน (เธญเธฑเธเธเธคเธฉ)" : "Address (EN)", type: "textarea" },
     {
       key: "contactMapEmbedUrl",
-      label: locale === "th" ? "ลิงก์แผนที่ Embed (วางลิงก์ Google Maps ได้)" : "Map embed URL (Google Maps link works)",
+      label: locale === "th" ? "เธฅเธดเธเธเนเนเธเธเธ—เธตเน Embed (เธงเธฒเธเธฅเธดเธเธเน Google Maps เนเธ”เน)" : "Map embed URL (Google Maps link works)",
       type: "url",
     },
-    { key: "contactMapOpenUrl", label: locale === "th" ? "ลิงก์เปิด Google Maps" : "Map open URL", type: "url" },
-    { key: "contactCallButtonLabel", label: locale === "th" ? "ข้อความปุ่มโทรทันที" : "Call button label" },
-    { key: "contactMapButtonLabel", label: locale === "th" ? "ข้อความปุ่มเปิดแผนที่" : "Map button label" },
-    { key: "contactLineButtonLabel", label: locale === "th" ? "ข้อความปุ่มเปิด LINE" : "LINE button label" },
-    { key: "contactHoursWeekdayLabel", label: locale === "th" ? "ชื่อวัน (จันทร์-ศุกร์)" : "Weekday label" },
-    { key: "contactHoursWeekdayTime", label: locale === "th" ? "เวลา (จันทร์-ศุกร์)" : "Weekday time" },
-    { key: "contactHoursSaturdayLabel", label: locale === "th" ? "ชื่อวัน (เสาร์)" : "Saturday label" },
-    { key: "contactHoursSaturdayTime", label: locale === "th" ? "เวลา (เสาร์)" : "Saturday time" },
-    { key: "contactHoursSundayLabel", label: locale === "th" ? "ชื่อวัน (อาทิตย์)" : "Sunday label" },
-    { key: "contactHoursSundayTime", label: locale === "th" ? "เวลา (อาทิตย์)" : "Sunday time" },
+    { key: "contactMapOpenUrl", label: locale === "th" ? "เธฅเธดเธเธเนเน€เธเธดเธ” Google Maps" : "Map open URL", type: "url" },
+    { key: "contactCallButtonLabel", label: locale === "th" ? "เธเนเธญเธเธงเธฒเธกเธเธธเนเธกเนเธ—เธฃเธ—เธฑเธเธ—เธต" : "Call button label" },
+    { key: "contactMapButtonLabel", label: locale === "th" ? "เธเนเธญเธเธงเธฒเธกเธเธธเนเธกเน€เธเธดเธ”เนเธเธเธ—เธตเน" : "Map button label" },
+    { key: "contactLineButtonLabel", label: locale === "th" ? "เธเนเธญเธเธงเธฒเธกเธเธธเนเธกเน€เธเธดเธ” LINE" : "LINE button label" },
+    { key: "contactHoursWeekdayLabel", label: locale === "th" ? "เธเธทเนเธญเธงเธฑเธ (เธเธฑเธเธ—เธฃเน-เธจเธธเธเธฃเน)" : "Weekday label" },
+    { key: "contactHoursWeekdayTime", label: locale === "th" ? "เน€เธงเธฅเธฒ (เธเธฑเธเธ—เธฃเน-เธจเธธเธเธฃเน)" : "Weekday time" },
+    { key: "contactHoursSaturdayLabel", label: locale === "th" ? "เธเธทเนเธญเธงเธฑเธ (เน€เธชเธฒเธฃเน)" : "Saturday label" },
+    { key: "contactHoursSaturdayTime", label: locale === "th" ? "เน€เธงเธฅเธฒ (เน€เธชเธฒเธฃเน)" : "Saturday time" },
+    { key: "contactHoursSundayLabel", label: locale === "th" ? "เธเธทเนเธญเธงเธฑเธ (เธญเธฒเธ—เธดเธ•เธขเน)" : "Sunday label" },
+    { key: "contactHoursSundayTime", label: locale === "th" ? "เน€เธงเธฅเธฒ (เธญเธฒเธ—เธดเธ•เธขเน)" : "Sunday time" },
   ];
 
   useEffect(() => {
@@ -278,3 +279,4 @@ export function StorefrontProfileSettingItem({
     </li>
   );
 }
+

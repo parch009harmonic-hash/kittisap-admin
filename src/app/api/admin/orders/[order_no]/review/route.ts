@@ -13,6 +13,7 @@ type ReviewRouteProps = {
 const ReviewPayloadSchema = z.object({
   slipId: z.string().trim().min(1),
   action: z.enum(["approve", "reject"]),
+  shippingFee: z.number().finite().min(0).max(1_000_000).optional(),
   note: z.string().trim().max(500).optional(),
 });
 
@@ -32,6 +33,7 @@ export async function POST(request: NextRequest, { params }: ReviewRouteProps) {
       orderNo: order_no,
       slipId: payload.slipId,
       action: payload.action,
+      shippingFee: payload.shippingFee,
       note: payload.note,
     });
 

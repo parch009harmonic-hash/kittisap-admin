@@ -141,6 +141,7 @@ export type WebBrandGuaranteeSettings = {
 
 export type WebStorefrontSettings = {
   brandName: string;
+  storefrontLogoUrl: string;
   callButtonLabel: string;
   callPhone: string;
   footerTitle: string;
@@ -313,6 +314,7 @@ export function getDefaultWebBrandGuaranteeSettings(): WebBrandGuaranteeSettings
 export function getDefaultWebStorefrontSettings(): WebStorefrontSettings {
   return {
     brandName: "Kittisap",
+    storefrontLogoUrl: "",
     callButtonLabel: "โทรหาเรา",
     callPhone: "+66843374982",
     footerTitle: "Kittisap",
