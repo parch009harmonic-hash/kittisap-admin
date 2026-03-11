@@ -178,6 +178,8 @@ function copy(locale: AccountLocale) {
       statusPendingPayment: "Pending payment",
       statusCancelled: "Cancelled",
       statusPaid: "Paid",
+      receiptLabel: "Receipt",
+      receiptTitle: "Open receipt",
     };
   }
 
@@ -278,6 +280,8 @@ function copy(locale: AccountLocale) {
       statusPendingPayment: "ລໍຊຳລະເງິນ",
       statusCancelled: "ຍົກເລີກ",
       statusPaid: "ຊຳລະແລ້ວ",
+      receiptLabel: "ໃບຮັບເງິນ",
+      receiptTitle: "ເປີດໃບຮັບເງິນ",
     };
   }
 
@@ -377,6 +381,8 @@ function copy(locale: AccountLocale) {
     statusPendingPayment: "รอชำระเงิน",
     statusCancelled: "ยกเลิกแล้ว",
     statusPaid: "ชำระแล้ว",
+    receiptLabel: "ใบเสร็จ",
+    receiptTitle: "พิมพ์ใบเสร็จ",
   };
 }
 
@@ -387,6 +393,18 @@ function statusLabel(locale: AccountLocale, status: string, paymentStatus: strin
   if (status === "cancelled") return t.statusCancelled;
   if (status === "completed" || paymentStatus === "paid") return t.statusPaid;
   return status || paymentStatus || "-";
+}
+
+function canOpenReceipt(status: string, paymentStatus: string) {
+  const normalizedStatus = status.trim().toLowerCase();
+  const normalizedPaymentStatus = paymentStatus.trim().toLowerCase();
+  return (
+    normalizedPaymentStatus === "paid"
+    || normalizedStatus === "paid"
+    || normalizedStatus === "processing"
+    || normalizedStatus === "shipped"
+    || normalizedStatus === "completed"
+  );
 }
 
 function statusBadgeClass(status: string, paymentStatus: string) {
@@ -1717,18 +1735,41 @@ export function CustomerAccountClient() {
 
                   {!ordersLoading && orders.length > 0 ? (
                     <div className="mt-4 max-h-[520px] space-y-3 overflow-y-auto pr-1">
-                      {orders.map((order) => (
-                        <article key={order.id} className="rounded-2xl border border-amber-300/20 bg-black/35 p-4">
-                          <div className="flex flex-wrap items-center justify-between gap-2">
-                            <p className="text-sm font-semibold text-amber-100 md:text-base">{order.order_no}</p>
-                            <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${statusBadgeClass(order.status, order.payment_status)}`}>
-                              {statusLabel(locale, order.status, order.payment_status)}
-                            </span>
-                          </div>
-                          <p className="mt-2 text-base font-semibold text-sky-200">{formatTHB(order.grand_total ?? 0, locale)}</p>
-                          <p className="mt-1 text-xs text-slate-300/65">{formatDateTime(order.created_at, locale)}</p>
-                        </article>
-                      ))}
+                      {orders.map((order) => {
+                        const showReceipt = canOpenReceipt(order.status, order.payment_status);
+                        const receiptUrl = `/api/customer/orders/${encodeURIComponent(order.order_no)}/receipt?locale=${encodeURIComponent(locale)}`;
+
+                        return (
+                          <article key={order.id} className="rounded-2xl border border-amber-300/20 bg-black/35 p-4">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <p className="text-sm font-semibold text-amber-100 md:text-base">{order.order_no}</p>
+                              <div className="flex items-center gap-2">
+                                <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${statusBadgeClass(order.status, order.payment_status)}`}>
+                                  {statusLabel(locale, order.status, order.payment_status)}
+                                </span>
+                                {showReceipt ? (
+                                  <a
+                                    href={receiptUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    title={t.receiptTitle}
+                                    aria-label={`${t.receiptTitle} ${order.order_no}`}
+                                    className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-sky-300/40 bg-sky-500/15 text-sky-100 transition hover:bg-sky-500/25"
+                                  >
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4" aria-hidden>
+                                      <path d="M7 3h8l4 4v13a1 1 0 0 1-1 1h-3v-3H9v3H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" />
+                                      <path d="M15 3v5h5" />
+                                      <path d="M9 12h6M9 15h6" />
+                                    </svg>
+                                  </a>
+                                ) : null}
+                              </div>
+                            </div>
+                            <p className="mt-2 text-base font-semibold text-sky-200">{formatTHB(order.grand_total ?? 0, locale)}</p>
+                            <p className="mt-1 text-xs text-slate-300/65">{formatDateTime(order.created_at, locale)}</p>
+                          </article>
+                        );
+                      })}
                     </div>
                   ) : null}
                 </div>
