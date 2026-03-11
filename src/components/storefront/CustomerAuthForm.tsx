@@ -22,8 +22,34 @@ type CustomerAuthFormProps = {
 const EMAIL_RECOVERY_OTP_MIN_LENGTH = 6;
 const EMAIL_RECOVERY_OTP_MAX_LENGTH = 16;
 
+type FaceDetectorBox = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
 function normalizeOtpDigits(value: string) {
   return value.replace(/\D/g, "").slice(0, EMAIL_RECOVERY_OTP_MAX_LENGTH);
+}
+
+function toFaceDetectorBox(face: unknown): FaceDetectorBox | null {
+  if (!face || typeof face !== "object" || !("boundingBox" in face)) {
+    return null;
+  }
+  const box = (face as { boundingBox?: unknown }).boundingBox;
+  if (!box || typeof box !== "object") {
+    return null;
+  }
+  const raw = box as Record<string, unknown>;
+  const x = Number(raw.x);
+  const y = Number(raw.y);
+  const width = Number(raw.width);
+  const height = Number(raw.height);
+  if (![x, y, width, height].every(Number.isFinite) || width <= 0 || height <= 0) {
+    return null;
+  }
+  return { x, y, width, height };
 }
 
 function text(mode: Mode, locale: AppLocale) {
@@ -769,27 +795,115 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
       if (!context) {
         throw new Error(t.recoverByFaceFailed);
       }
-      context.drawImage(video, 0, 0, width, height);
-
-      let scanMethod = "camera";
-      let detected = true;
 
       const windowWithFaceDetector = window as Window & {
         FaceDetector?: new (options?: { fastMode?: boolean; maxDetectedFaces?: number }) => {
           detect: (input: HTMLCanvasElement) => Promise<Array<unknown>>;
         };
       };
-      if (windowWithFaceDetector.FaceDetector) {
-        scanMethod = "camera+facedetector";
-        const detector = new windowWithFaceDetector.FaceDetector({ fastMode: true, maxDetectedFaces: 1 });
-        const faces = await detector.detect(canvas);
-        detected = Array.isArray(faces) && faces.length > 0;
-      }
-
-      if (!detected) {
+      const detector = windowWithFaceDetector.FaceDetector
+        ? new windowWithFaceDetector.FaceDetector({ fastMode: true, maxDetectedFaces: 1 })
+        : null;
+      const fallbackCanvas = document.createElement("canvas");
+      fallbackCanvas.width = 96;
+      fallbackCanvas.height = 96;
+      const fallbackContext = fallbackCanvas.getContext("2d");
+      if (!fallbackContext) {
         throw new Error(t.recoverByFaceFailed);
       }
 
+      const frameCount = 10;
+      let validFrames = 0;
+      let movingFrames = 0;
+      let areaRatioTotal = 0;
+      let previousCenter: { x: number; y: number } | null = null;
+      let fallbackReadableFrames = 0;
+      let previousLumaFrame: Float32Array | null = null;
+
+      for (let index = 0; index < frameCount; index += 1) {
+        context.drawImage(video, 0, 0, width, height);
+
+        if (detector) {
+          const faces = await detector.detect(canvas);
+          const face = Array.isArray(faces) && faces.length === 1 ? faces[0] : null;
+          const box = toFaceDetectorBox(face);
+          if (box) {
+            const areaRatio = (box.width * box.height) / (width * height);
+            if (areaRatio >= 0.05 && areaRatio <= 0.65) {
+              validFrames += 1;
+              areaRatioTotal += areaRatio;
+              const center = {
+                x: (box.x + (box.width / 2)) / width,
+                y: (box.y + (box.height / 2)) / height,
+              };
+              if (previousCenter) {
+                const deltaX = center.x - previousCenter.x;
+                const deltaY = center.y - previousCenter.y;
+                if (Math.hypot(deltaX, deltaY) > 0.012) {
+                  movingFrames += 1;
+                }
+              }
+              previousCenter = center;
+            }
+          }
+        } else {
+          fallbackContext.drawImage(video, 0, 0, fallbackCanvas.width, fallbackCanvas.height);
+          const frame = fallbackContext.getImageData(0, 0, fallbackCanvas.width, fallbackCanvas.height);
+          const pixelCount = fallbackCanvas.width * fallbackCanvas.height;
+          const currentLumaFrame = new Float32Array(pixelCount);
+          let brightnessSum = 0;
+          let varianceSum = 0;
+          let motionSum = 0;
+
+          for (let p = 0, idx = 0; p < frame.data.length; p += 4, idx += 1) {
+            const luma = (
+              frame.data[p] * 0.299
+              + frame.data[p + 1] * 0.587
+              + frame.data[p + 2] * 0.114
+            );
+            currentLumaFrame[idx] = luma;
+            brightnessSum += luma;
+          }
+
+          const avgBrightness = brightnessSum / pixelCount;
+          for (let idx = 0; idx < currentLumaFrame.length; idx += 1) {
+            const diff = currentLumaFrame[idx] - avgBrightness;
+            varianceSum += diff * diff;
+            if (previousLumaFrame) {
+              motionSum += Math.abs(currentLumaFrame[idx] - previousLumaFrame[idx]);
+            }
+          }
+
+          const variance = varianceSum / pixelCount;
+          const meanMotion = previousLumaFrame ? motionSum / pixelCount : 0;
+          if (avgBrightness >= 35 && avgBrightness <= 225 && variance >= 160) {
+            fallbackReadableFrames += 1;
+          }
+          if (previousLumaFrame && meanMotion >= 4.2) {
+            movingFrames += 1;
+          }
+          previousLumaFrame = currentLumaFrame;
+        }
+
+        if (index < frameCount - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 140));
+        }
+      }
+
+      const usingFallback = !detector;
+      if (usingFallback) {
+        validFrames = fallbackReadableFrames;
+      }
+      const validRatio = validFrames / frameCount;
+      const averageAreaRatio = validFrames > 0 ? areaRatioTotal / validFrames : 0;
+      if (
+        (usingFallback && (validFrames < 6 || validRatio < 0.6 || movingFrames < 2))
+        || (!usingFallback && (validFrames < 6 || movingFrames < 2 || averageAreaRatio < 0.08 || averageAreaRatio > 0.5))
+      ) {
+        throw new Error(t.recoverByFaceFailed);
+      }
+
+      const scanMethod = detector ? "camera+facedetector-live" : "camera+motion-live-fallback";
       setFaceScanPassed(true);
       setFaceScanMethod(scanMethod);
       setMessage(t.recoverByFaceScanned);
@@ -835,7 +949,7 @@ export function CustomerAuthForm({ mode, locale = "th", useLocalePrefix = false 
           email: normalizedEmail,
           password: normalizedPassword,
           faceScanPassed: true,
-          faceScanMethod: faceScanMethod || "camera",
+          faceScanMethod,
         }),
       });
 

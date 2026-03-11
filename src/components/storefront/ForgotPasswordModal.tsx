@@ -213,13 +213,6 @@ export function ForgotPasswordModal({
         ? "ຢືນຢັນ OTP ທາງອີເມວ, ສະແກນໃບໜ້າ ແລ້ວຕັ້ງລະຫັດໃໝ່."
         : "ยืนยัน OTP ทางอีเมล สแกนใบหน้า แล้วตั้งรหัสผ่านใหม่")
     : t.subtitle;
-  const faceDetectorRequiredMessage =
-    locale === "en"
-      ? "This browser cannot run human-face validation. Please use Chrome or Edge."
-      : locale === "lo"
-        ? "ເບຣາວເຊີນີ້ບໍ່ຮອງຮັບການກວດໃບໜ້າ. ກະລຸນາໃຊ້ Chrome ຫຼື Edge."
-        : "เบราว์เซอร์นี้ไม่รองรับการตรวจใบหน้ามนุษย์ กรุณาใช้ Chrome หรือ Edge";
-
   const [email, setEmail] = useState(initialEmail.trim());
   const [otp, setOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
@@ -416,9 +409,6 @@ export function ForgotPasswordModal({
           detect: (input: HTMLCanvasElement) => Promise<Array<unknown>>;
         };
       };
-      if (!withFaceDetector.FaceDetector) {
-        throw new Error(faceDetectorRequiredMessage);
-      }
 
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
@@ -446,36 +436,85 @@ export function ForgotPasswordModal({
       if (!context) {
         throw new Error(t.scanFailed);
       }
-
-      const detector = new withFaceDetector.FaceDetector({ fastMode: true, maxDetectedFaces: 1 });
+      const detector = withFaceDetector.FaceDetector
+        ? new withFaceDetector.FaceDetector({ fastMode: true, maxDetectedFaces: 1 })
+        : null;
+      const fallbackCanvas = document.createElement("canvas");
+      fallbackCanvas.width = 96;
+      fallbackCanvas.height = 96;
+      const fallbackContext = fallbackCanvas.getContext("2d");
+      if (!fallbackContext) {
+        throw new Error(t.scanFailed);
+      }
       const frameCount = 10;
       let validFrames = 0;
       let movingFrames = 0;
       let areaRatioTotal = 0;
       let previousCenter: { x: number; y: number } | null = null;
+      let fallbackReadableFrames = 0;
+      let previousLumaFrame: Float32Array | null = null;
 
       for (let index = 0; index < frameCount; index += 1) {
         context.drawImage(preview, 0, 0, width, height);
-        const faces = await detector.detect(canvas);
-        const face = Array.isArray(faces) && faces.length === 1 ? toFaceDetectorBox(faces[0]) : null;
-        if (face) {
-          const areaRatio = (face.width * face.height) / (width * height);
-          if (areaRatio >= 0.05 && areaRatio <= 0.65) {
-            validFrames += 1;
-            areaRatioTotal += areaRatio;
-            const center = {
-              x: (face.x + (face.width / 2)) / width,
-              y: (face.y + (face.height / 2)) / height,
-            };
-            if (previousCenter) {
-              const deltaX = center.x - previousCenter.x;
-              const deltaY = center.y - previousCenter.y;
-              if (Math.hypot(deltaX, deltaY) > 0.012) {
-                movingFrames += 1;
+        if (detector) {
+          const faces = await detector.detect(canvas);
+          const face = Array.isArray(faces) && faces.length === 1 ? toFaceDetectorBox(faces[0]) : null;
+          if (face) {
+            const areaRatio = (face.width * face.height) / (width * height);
+            if (areaRatio >= 0.05 && areaRatio <= 0.65) {
+              validFrames += 1;
+              areaRatioTotal += areaRatio;
+              const center = {
+                x: (face.x + (face.width / 2)) / width,
+                y: (face.y + (face.height / 2)) / height,
+              };
+              if (previousCenter) {
+                const deltaX = center.x - previousCenter.x;
+                const deltaY = center.y - previousCenter.y;
+                if (Math.hypot(deltaX, deltaY) > 0.012) {
+                  movingFrames += 1;
+                }
               }
+              previousCenter = center;
             }
-            previousCenter = center;
           }
+        } else {
+          fallbackContext.drawImage(preview, 0, 0, fallbackCanvas.width, fallbackCanvas.height);
+          const frame = fallbackContext.getImageData(0, 0, fallbackCanvas.width, fallbackCanvas.height);
+          const pixelCount = fallbackCanvas.width * fallbackCanvas.height;
+          const currentLumaFrame = new Float32Array(pixelCount);
+          let brightnessSum = 0;
+          let varianceSum = 0;
+          let motionSum = 0;
+
+          for (let p = 0, idx = 0; p < frame.data.length; p += 4, idx += 1) {
+            const luma = (
+              frame.data[p] * 0.299
+              + frame.data[p + 1] * 0.587
+              + frame.data[p + 2] * 0.114
+            );
+            currentLumaFrame[idx] = luma;
+            brightnessSum += luma;
+          }
+
+          const avgBrightness = brightnessSum / pixelCount;
+          for (let idx = 0; idx < currentLumaFrame.length; idx += 1) {
+            const diff = currentLumaFrame[idx] - avgBrightness;
+            varianceSum += diff * diff;
+            if (previousLumaFrame) {
+              motionSum += Math.abs(currentLumaFrame[idx] - previousLumaFrame[idx]);
+            }
+          }
+
+          const variance = varianceSum / pixelCount;
+          const meanMotion = previousLumaFrame ? motionSum / pixelCount : 0;
+          if (avgBrightness >= 35 && avgBrightness <= 225 && variance >= 160) {
+            fallbackReadableFrames += 1;
+          }
+          if (previousLumaFrame && meanMotion >= 4.2) {
+            movingFrames += 1;
+          }
+          previousLumaFrame = currentLumaFrame;
         }
         setScanProgress(Math.round(((index + 1) / frameCount) * 100));
         setScanDetail(t.scanningFace);
@@ -484,8 +523,16 @@ export function ForgotPasswordModal({
         }
       }
 
+      const usingFallback = !detector;
+      if (usingFallback) {
+        validFrames = fallbackReadableFrames;
+      }
+      const validRatio = validFrames / frameCount;
       const averageAreaRatio = validFrames > 0 ? areaRatioTotal / validFrames : 0;
-      if (validFrames < 6 || movingFrames < 2 || averageAreaRatio < 0.08 || averageAreaRatio > 0.5) {
+      if (
+        (usingFallback && (validFrames < 6 || validRatio < 0.6 || movingFrames < 2))
+        || (!usingFallback && (validFrames < 6 || movingFrames < 2 || averageAreaRatio < 0.08 || averageAreaRatio > 0.5))
+      ) {
         throw new Error(t.scanFailed);
       }
 
@@ -711,3 +758,4 @@ export function ForgotPasswordModal({
     </div>
   );
 }
+

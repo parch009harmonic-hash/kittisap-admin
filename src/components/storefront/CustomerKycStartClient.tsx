@@ -269,7 +269,6 @@ export function CustomerKycStartClient() {
         openingCamera: "Opening camera...",
         scanningFace: "System is scanning your face...",
         detectingFace: "Detecting human face...",
-        detectorUnavailable: "This browser cannot validate human face. Please use Chrome/Edge on a modern device.",
         humanFaceRequired: "No valid human face detected. Please keep one real face inside the frame and try again.",
         moveSlightly: "Please move your face slightly to confirm liveness.",
       };
@@ -279,7 +278,6 @@ export function CustomerKycStartClient() {
         openingCamera: "ກຳລັງເປີດກ້ອງ...",
         scanningFace: "ລະບົບກຳລັງສະແກນໃບໜ້າ...",
         detectingFace: "ກຳລັງກວດຈັບໃບໜ້າມະນຸດ...",
-        detectorUnavailable: "ເບຣາວເຊີນີ້ບໍ່ຮອງຮັບການກວດໃບໜ້າ. ກະລຸນາໃຊ້ Chrome/Edge.",
         humanFaceRequired: "ບໍ່ພົບໃບໜ້າມະນຸດທີ່ຖືກຕ້ອງ. ກະລຸນາສະແກນໃບໜ້າຄົນຈິງ 1 ຄົນ.",
         moveSlightly: "ກະລຸນາຂະຍັບໃບໜ້າເລັກນ້ອຍເພື່ອຢືນຢັນຄວາມມີຊີວິດ.",
       };
@@ -288,7 +286,6 @@ export function CustomerKycStartClient() {
       openingCamera: "กำลังเปิดกล้อง...",
       scanningFace: "ระบบกำลังสแกนใบหน้า...",
       detectingFace: "กำลังตรวจจับใบหน้ามนุษย์...",
-      detectorUnavailable: "เบราว์เซอร์นี้ยังไม่รองรับการตรวจจับใบหน้ามนุษย์ กรุณาใช้ Chrome/Edge รุ่นใหม่",
       humanFaceRequired: "ไม่พบใบหน้าคนที่ถูกต้อง กรุณาใช้ใบหน้าคนจริง 1 คนในกรอบแล้วลองใหม่",
       moveSlightly: "กรุณาขยับใบหน้าเล็กน้อยเพื่อยืนยันว่าเป็นบุคคลจริง",
     };
@@ -608,7 +605,6 @@ export function CustomerKycStartClient() {
     s.sessionExpired,
     s.success,
     s.working,
-    scanUiText.detectorUnavailable,
     scanUiText.humanFaceRequired,
     scanUiText.moveSlightly,
     scanUiText.openingCamera,

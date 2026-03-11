@@ -9,6 +9,11 @@ const ANONYMIZED_CUSTOMER_NAME = "Deleted Customer";
 const ANONYMIZED_CUSTOMER_PHONE = "";
 const ANONYMIZED_CUSTOMER_EMAIL = "";
 const BLOCKING_ORDER_STATUSES = ["pending_payment", "pending_review", "paid", "processing", "shipped"] as const;
+const ALLOWED_FACE_SCAN_METHODS = new Set([
+  "camera+facedetector-live",
+  "camera+facedetector",
+  "camera+motion-live-fallback",
+]);
 
 export class CustomerAccountDeletionError extends Error {
   readonly status: number;
@@ -443,6 +448,10 @@ export async function recoverCustomerAccountDeletion(input: {
   if (!input.faceScanPassed) {
     throw new CustomerAccountDeletionError(400, "FACE_SCAN_REQUIRED", "Face scan verification is required");
   }
+  const normalizedFaceScanMethod = String(input.faceScanMethod ?? "").trim().toLowerCase();
+  if (!ALLOWED_FACE_SCAN_METHODS.has(normalizedFaceScanMethod)) {
+    throw new CustomerAccountDeletionError(400, "FACE_SCAN_REQUIRED", "Valid face scan verification method is required");
+  }
 
   const profileRow = await getCustomerProfileDeletionRow(customerId);
   const status = String(profileRow.deletion_status ?? "active").trim().toLowerCase();
@@ -486,7 +495,7 @@ export async function recoverCustomerAccountDeletion(input: {
     action: "recover",
     actorUserId: customerId,
     metadata: {
-      faceScanMethod: input.faceScanMethod?.trim() || "camera",
+      faceScanMethod: normalizedFaceScanMethod,
       scheduledFor: profileRow.deletion_scheduled_for ?? null,
       ip: input.ipAddress ?? null,
       userAgent: input.userAgent ?? null,
