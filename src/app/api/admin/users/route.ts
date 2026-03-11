@@ -53,6 +53,15 @@ function mapStatus(message: string) {
   ) {
     return 403;
   }
+  if (
+    message.includes("KYC view PIN is required") ||
+    message.includes("KYC view PIN must be exactly 6 digits")
+  ) {
+    return 400;
+  }
+  if (message.includes("ensure-admin-kyc-access.sql")) {
+    return 503;
+  }
   return 500;
 }
 

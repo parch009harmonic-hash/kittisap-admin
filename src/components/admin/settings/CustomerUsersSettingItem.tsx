@@ -37,9 +37,32 @@ type AdminCustomerUserLogRecord = {
   metadata: Record<string, unknown>;
 };
 
+type AdminCustomerKycAccessGrant = {
+  accessToken: string;
+  expiresAt: string;
+};
+
+type AdminCustomerKycViewData = {
+  customerId: string;
+  displayName: string;
+  email: string;
+  phone: string;
+  kycStatus: string;
+  kycApprovedAt: string | null;
+  kycRejectedReason: string | null;
+  provider: string;
+  faceImagePath: string | null;
+  faceCapturedAt: string | null;
+  faceImageSignedUrl: string | null;
+};
+
 type StatusFilter = "all" | "normal" | "pending_delete" | "purged" | "other";
 type KycFilter = "all" | "kyc_done" | "not_kyc";
 type DateFieldFilter = "createdAt" | "deletionScheduledFor" | "recoveredAt";
+
+type RequestError = Error & {
+  code?: string;
+};
 
 type Props = {
   locale: "th" | "en";
@@ -137,6 +160,25 @@ function getKycStatusClass(status: CustomerKycStatus) {
     return "border-rose-200 bg-rose-50 text-rose-700";
   }
   return "border-amber-200 bg-amber-50 text-amber-700";
+}
+
+function normalizeKycStatus(value: string): CustomerKycStatus {
+  if (value === "approved" || value === "not_started" || value === "in_progress" || value === "pending_review" || value === "rejected" || value === "blocked") {
+    return value;
+  }
+  return "unknown";
+}
+
+function isSixDigitPin(value: string) {
+  return /^\d{6}$/.test(value);
+}
+
+function isTokenExpired(expiresAt: string) {
+  const expiresMs = Date.parse(expiresAt);
+  if (Number.isNaN(expiresMs)) {
+    return true;
+  }
+  return expiresMs <= Date.now();
 }
 
 function matchesKycFilter(user: AdminCustomerUserRecord, filter: KycFilter) {
@@ -267,6 +309,22 @@ export function CustomerUsersSettingItem({
   onError,
 }: Props) {
   const t = {
+    viewKycButton: locale === "th" ? "ดู KYC" : "View KYC",
+    viewKycLoading: locale === "th" ? "กำลังโหลด KYC..." : "Loading KYC...",
+    kycPinTitle: locale === "th" ? "ยืนยัน PIN เพื่อดู KYC" : "Confirm PIN to view KYC",
+    kycPinLabel: locale === "th" ? "PIN 6 หลัก" : "6-digit PIN",
+    kycPinHint: locale === "th" ? "กรอก PIN ของบัญชีทีมงานนี้" : "Enter this team user's PIN.",
+    kycPinSubmit: locale === "th" ? "ยืนยัน PIN" : "Confirm PIN",
+    kycPinRequired: locale === "th" ? "กรุณากรอก PIN 6 หลักก่อนดำเนินการ" : "Please enter a 6-digit PIN before continuing.",
+    kycPinInvalid: locale === "th" ? "PIN ต้องเป็นตัวเลข 6 หลัก" : "PIN must be exactly 6 digits.",
+    kycAccessFailed: locale === "th" ? "ยืนยัน PIN เพื่อดู KYC ไม่สำเร็จ" : "Failed to verify PIN for KYC access.",
+    kycViewFailed: locale === "th" ? "โหลดข้อมูล KYC ไม่สำเร็จ" : "Failed to load KYC details.",
+    kycViewTokenExpired: locale === "th" ? "โทเคนหมดอายุ กรุณายืนยัน PIN อีกครั้ง" : "Access token expired. Please confirm PIN again.",
+    kycModalTitle: locale === "th" ? "ข้อมูล KYC ลูกค้า" : "Customer KYC Data",
+    kycProvider: locale === "th" ? "ผู้ให้บริการ KYC" : "KYC Provider",
+    kycFaceCapturedAt: locale === "th" ? "เวลาสแกนใบหน้า" : "Face Captured At",
+    kycFaceImage: locale === "th" ? "ภาพใบหน้า" : "Face Image",
+    kycNoFaceImage: locale === "th" ? "ไม่พบภาพใบหน้า" : "No face image available.",
     listTitle: locale === "th" ? "จัดการผู้ใช้ลูกค้า" : "Customer User Management",
     listSubtitle:
       locale === "th"
@@ -376,6 +434,12 @@ export function CustomerUsersSettingItem({
   const [detailUser, setDetailUser] = useState<AdminCustomerUserRecord | null>(null);
   const [detailLogs, setDetailLogs] = useState<AdminCustomerUserLogRecord[]>([]);
   const [loadingDetailLogs, setLoadingDetailLogs] = useState(false);
+  const [kycPinUser, setKycPinUser] = useState<AdminCustomerUserRecord | null>(null);
+  const [kycPinInput, setKycPinInput] = useState("");
+  const [submittingKycPin, setSubmittingKycPin] = useState(false);
+  const [loadingKycViewUserId, setLoadingKycViewUserId] = useState<string | null>(null);
+  const [kycViewData, setKycViewData] = useState<AdminCustomerKycViewData | null>(null);
+  const [kycAccessByUserId, setKycAccessByUserId] = useState<Record<string, AdminCustomerKycAccessGrant>>({});
 
   const [editDisplayName, setEditDisplayName] = useState("");
   const [editEmail, setEditEmail] = useState("");
@@ -485,6 +549,12 @@ export function CustomerUsersSettingItem({
     setDetailUser(null);
     setDetailLogs([]);
     setLoadingDetailLogs(false);
+    setKycPinUser(null);
+    setKycPinInput("");
+    setSubmittingKycPin(false);
+    setLoadingKycViewUserId(null);
+    setKycViewData(null);
+    setKycAccessByUserId({});
     setSearchKeyword("");
     setStatusFilter("all");
     setKycFilter("all");
@@ -766,6 +836,144 @@ export function CustomerUsersSettingItem({
     }
   };
 
+  const createRequestError = (code: string | undefined, message: string) => {
+    const error = new Error(message) as RequestError;
+    error.code = code;
+    return error;
+  };
+
+  const requestKycAccess = useCallback(
+    async (customerId: string, pin: string) => {
+      const response = await fetchWithTimeout(
+        "/api/admin/customer-users/kyc-access",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            customerId,
+            pin,
+          }),
+        },
+        20000,
+      );
+
+      const result = (await response.json()) as {
+        code?: string;
+        error?: string;
+        data?: AdminCustomerKycAccessGrant;
+      };
+
+      if (!response.ok || !result.data?.accessToken) {
+        const parsedError = parseAdminApiError(result, t.kycAccessFailed, locale);
+        throw createRequestError(result.code, parsedError.message);
+      }
+
+      return result.data;
+    },
+    [locale, t.kycAccessFailed],
+  );
+
+  const fetchKycView = useCallback(
+    async (customerId: string, accessToken: string) => {
+      const response = await fetchWithTimeout(
+        `/api/admin/customer-users/${encodeURIComponent(customerId)}/kyc-view`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        },
+        20000,
+      );
+
+      const result = (await response.json()) as {
+        code?: string;
+        error?: string;
+        data?: AdminCustomerKycViewData;
+      };
+
+      if (!response.ok || !result.data) {
+        const parsedError = parseAdminApiError(result, t.kycViewFailed, locale);
+        throw createRequestError(result.code, parsedError.message);
+      }
+
+      return result.data;
+    },
+    [locale, t.kycViewFailed],
+  );
+
+  const openKycViewWithToken = useCallback(
+    async (user: AdminCustomerUserRecord, accessToken: string) => {
+      setLoadingKycViewUserId(user.id);
+      try {
+        const data = await fetchKycView(user.id, accessToken);
+        setKycViewData(data);
+      } catch (error) {
+        const errorWithCode = error as RequestError;
+        if (errorWithCode.code === "TOKEN_INVALID" || errorWithCode.code === "TOKEN_REQUIRED") {
+          setKycAccessByUserId((prev) => {
+            const next = { ...prev };
+            delete next[user.id];
+            return next;
+          });
+          setKycPinUser(user);
+          setKycPinInput("");
+          onError(t.kycViewTokenExpired);
+          return;
+        }
+        onError(toRequestErrorMessage(error, t.kycViewFailed));
+      } finally {
+        setLoadingKycViewUserId(null);
+      }
+    },
+    [fetchKycView, onError, t.kycViewFailed, t.kycViewTokenExpired],
+  );
+
+  const openKycView = async (user: AdminCustomerUserRecord) => {
+    const activeGrant = kycAccessByUserId[user.id];
+    if (activeGrant && !isTokenExpired(activeGrant.expiresAt)) {
+      await openKycViewWithToken(user, activeGrant.accessToken);
+      return;
+    }
+    setKycPinUser(user);
+    setKycPinInput("");
+  };
+
+  const submitKycPin = async () => {
+    if (!kycPinUser) {
+      return;
+    }
+
+    const pin = kycPinInput.trim();
+    if (!pin) {
+      onError(t.kycPinRequired);
+      return;
+    }
+    if (!isSixDigitPin(pin)) {
+      onError(t.kycPinInvalid);
+      return;
+    }
+
+    setSubmittingKycPin(true);
+    try {
+      const grant = await requestKycAccess(kycPinUser.id, pin);
+      setKycAccessByUserId((prev) => ({
+        ...prev,
+        [kycPinUser.id]: grant,
+      }));
+      const selectedUser = kycPinUser;
+      setKycPinUser(null);
+      setKycPinInput("");
+      await openKycViewWithToken(selectedUser, grant.accessToken);
+    } catch (error) {
+      onError(toRequestErrorMessage(error, t.kycAccessFailed));
+    } finally {
+      setSubmittingKycPin(false);
+    }
+  };
+
   const exportCsv = async () => {
     if (filteredUsers.length === 0) {
       onError(t.noData);
@@ -1038,6 +1246,14 @@ export function CustomerUsersSettingItem({
                     </button>
                     <button
                       type="button"
+                      onClick={() => void openKycView(user)}
+                      disabled={savingUserId === user.id || loadingKycViewUserId === user.id || user.kycStatus !== "approved"}
+                      className="rounded-lg border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs font-semibold text-cyan-700 transition hover:bg-cyan-100 disabled:opacity-60"
+                    >
+                      {loadingKycViewUserId === user.id ? t.viewKycLoading : t.viewKycButton}
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => openEdit(user)}
                       disabled={savingUserId === user.id}
                       className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 transition hover:bg-blue-100 disabled:opacity-60"
@@ -1136,6 +1352,14 @@ export function CustomerUsersSettingItem({
                             className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 disabled:opacity-60"
                           >
                             {t.detailButton}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void openKycView(user)}
+                            disabled={savingUserId === user.id || loadingKycViewUserId === user.id || user.kycStatus !== "approved"}
+                            className="rounded-lg border border-cyan-200 bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-700 transition hover:bg-cyan-100 disabled:opacity-60"
+                          >
+                            {loadingKycViewUserId === user.id ? t.viewKycLoading : t.viewKycButton}
                           </button>
                           <button
                             type="button"
@@ -1469,6 +1693,14 @@ export function CustomerUsersSettingItem({
               >
                 {t.otpButton}
               </button>
+              <button
+                type="button"
+                onClick={() => void openKycView(detailUser)}
+                disabled={savingUserId === detailUser.id || loadingKycViewUserId === detailUser.id || detailUser.kycStatus !== "approved"}
+                className="rounded-lg border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold text-cyan-700 hover:bg-cyan-100 disabled:opacity-60"
+              >
+                {loadingKycViewUserId === detailUser.id ? t.viewKycLoading : t.viewKycButton}
+              </button>
             </div>
 
             <div className="mt-4 rounded-xl border border-slate-200">
@@ -1508,6 +1740,137 @@ export function CustomerUsersSettingItem({
             </div>
           </div>
         </div>
+        </div>
+      ) : null}
+
+      {kycPinUser ? (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-900/35 p-4 backdrop-blur-sm">
+          <div className={`w-full rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl ${isMobileMode ? "max-w-md" : "max-w-lg"}`}>
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-lg font-semibold text-slate-900">{t.kycPinTitle}</p>
+                <p className="text-xs text-slate-500">{kycPinUser.displayName || kycPinUser.email}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setKycPinUser(null);
+                  setKycPinInput("");
+                }}
+                className="rounded-lg border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                {t.closeButton}
+              </button>
+            </div>
+
+            <label className="space-y-1">
+              <span className="text-xs font-semibold text-slate-600">{t.kycPinLabel}</span>
+              <input
+                type="password"
+                value={kycPinInput}
+                inputMode="numeric"
+                maxLength={6}
+                onChange={(event) => setKycPinInput(event.target.value.replace(/\D/g, "").slice(0, 6))}
+                className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-100"
+              />
+              <p className="text-xs text-slate-500">{t.kycPinHint}</p>
+            </label>
+
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setKycPinUser(null);
+                  setKycPinInput("");
+                }}
+                className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                {t.closeButton}
+              </button>
+              <button
+                type="button"
+                onClick={() => void submitKycPin()}
+                disabled={submittingKycPin}
+                className="rounded-lg border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold text-cyan-700 hover:bg-cyan-100 disabled:opacity-60"
+              >
+                {submittingKycPin ? t.viewKycLoading : t.kycPinSubmit}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {kycViewData ? (
+        <div className="fixed inset-0 z-[120] overflow-y-auto bg-slate-900/35 p-3 backdrop-blur-sm sm:p-4">
+          <div className="flex min-h-full items-start justify-center py-2 sm:items-center sm:py-4">
+            <div className={`w-full rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl ${isMobileMode ? "max-w-lg" : "max-w-3xl"}`}>
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <p className="text-lg font-semibold text-slate-900">{t.kycModalTitle}</p>
+                  <p className="text-xs text-slate-500">{kycViewData.customerId}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setKycViewData(null)}
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  {t.closeButton}
+                </button>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                  <p className="text-xs font-semibold text-slate-600">{nameLabel}</p>
+                  <p className="mt-1 text-sm text-slate-900">{kycViewData.displayName || "-"}</p>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                  <p className="text-xs font-semibold text-slate-600">{emailLabel}</p>
+                  <p className="mt-1 break-all text-sm text-slate-900">{kycViewData.email || "-"}</p>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                  <p className="text-xs font-semibold text-slate-600">{t.phoneLabel}</p>
+                  <p className="mt-1 text-sm text-slate-900">{kycViewData.phone || "-"}</p>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                  <p className="text-xs font-semibold text-slate-600">{t.kycStatus}</p>
+                  <div className="mt-1">
+                    <span className={`inline-flex rounded-full border px-2 py-1 text-xs font-semibold ${getKycStatusClass(normalizeKycStatus(kycViewData.kycStatus))}`}>
+                      {getKycStatusLabel(locale, normalizeKycStatus(kycViewData.kycStatus))}
+                    </span>
+                  </div>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                  <p className="text-xs font-semibold text-slate-600">{t.kycApprovedAt}</p>
+                  <p className="mt-1 text-sm text-slate-900">{formatDate(kycViewData.kycApprovedAt)}</p>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                  <p className="text-xs font-semibold text-slate-600">{t.kycProvider}</p>
+                  <p className="mt-1 text-sm text-slate-900">{kycViewData.provider || "-"}</p>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                  <p className="text-xs font-semibold text-slate-600">{t.kycFaceCapturedAt}</p>
+                  <p className="mt-1 text-sm text-slate-900">{formatDate(kycViewData.faceCapturedAt)}</p>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 md:col-span-2">
+                  <p className="text-xs font-semibold text-slate-600">{t.kycRejectedReasonLabel}</p>
+                  <p className="mt-1 whitespace-pre-wrap text-sm text-slate-900">{kycViewData.kycRejectedReason || "-"}</p>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 md:col-span-2">
+                  <p className="text-xs font-semibold text-slate-600">{t.kycFaceImage}</p>
+                  {kycViewData.faceImageSignedUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={kycViewData.faceImageSignedUrl}
+                      alt={`kyc-face-${kycViewData.customerId}`}
+                      className="mt-2 max-h-96 w-auto rounded-lg border border-slate-200 object-contain"
+                    />
+                  ) : (
+                    <p className="mt-1 text-sm text-slate-900">{t.kycNoFaceImage}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       ) : null}
 

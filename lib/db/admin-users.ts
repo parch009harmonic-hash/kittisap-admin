@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { getAdminActor, requireAdminApi } from "../auth/admin";
 import { assertUiWriteAllowed } from "../maintenance/ui-maintenance-guard";
+import { hashPin, isSixDigitPin } from "../security/pin-hash";
 import { getSupabaseServiceRoleClient } from "../supabase/service";
 
 export type AdminUserRecord = {
@@ -13,7 +14,16 @@ export type AdminUserRecord = {
   displayName: string;
   role: "admin" | "staff" | "developer" | "customer";
   createdAt: string | null;
+  canViewCustomerKyc: boolean;
 };
+
+const ADMIN_KYC_SECURITY_SCHEMA_HINT =
+  "Admin KYC access schema is incomplete. Please run sql/ensure-admin-kyc-access.sql and try again.";
+
+const KycViewPinSchema = z
+  .string()
+  .trim()
+  .regex(/^\d{6}$/, "KYC view PIN must be exactly 6 digits");
 
 const CreateAdminUserSchema = z.object({
   displayName: z
@@ -29,6 +39,8 @@ const CreateAdminUserSchema = z.object({
     .max(128, "รหัสผ่านยาวเกินไป / Password is too long"),
   role: z.enum(["admin", "staff", "developer", "customer"]),
   developerPin: z.string().trim().min(4).max(64).optional(),
+  canViewCustomerKyc: z.boolean().optional(),
+  kycViewPin: KycViewPinSchema.optional(),
 });
 
 const UpdateAdminUserSchema = z.object({
@@ -38,6 +50,8 @@ const UpdateAdminUserSchema = z.object({
   email: z.string().trim().email().optional(),
   password: z.string().trim().min(6).max(128).optional(),
   developerPin: z.string().trim().min(4).max(64).optional(),
+  canViewCustomerKyc: z.boolean().optional(),
+  kycViewPin: KycViewPinSchema.optional(),
 });
 
 const DeleteAdminUserSchema = z.object({
@@ -81,6 +95,33 @@ function isMissingProfileColumnError(error: unknown) {
 function isProfilesRoleConstraintError(error: unknown) {
   const message = errorText(error, "").toLowerCase();
   return message.includes("profiles_role_check") || (message.includes("check constraint") && message.includes("role"));
+}
+
+function isMissingAdminUserSecurityTableError(error: unknown) {
+  const message = errorText(error, "").toLowerCase();
+  return message.includes("admin_user_security")
+    && (message.includes("does not exist") || message.includes("schema cache") || message.includes("could not find"));
+}
+
+type AdminUserSecurityRow = {
+  userId: string;
+  canViewCustomerKyc: boolean;
+  kycPinHash: string | null;
+};
+
+function toAdminUserSecurityRow(row: Record<string, unknown>): AdminUserSecurityRow | null {
+  const userId = String(row.user_id ?? "").trim();
+  if (!userId) {
+    return null;
+  }
+  return {
+    userId,
+    canViewCustomerKyc: Boolean(row.can_view_customer_kyc),
+    kycPinHash:
+      typeof row.kyc_pin_hash === "string" && row.kyc_pin_hash.trim()
+        ? row.kyc_pin_hash.trim()
+        : null,
+  };
 }
 
 function profilesRoleConstraintHint() {
@@ -128,6 +169,90 @@ function assertDeveloperPin(pin: string | undefined) {
   }
 }
 
+async function loadAdminUserSecurityMap(
+  supabase: ReturnType<typeof getSupabaseServiceRoleClient>,
+  userIds: string[],
+) {
+  const map = new Map<string, AdminUserSecurityRow>();
+  if (userIds.length === 0) {
+    return map;
+  }
+
+  const rows = await supabase
+    .from("admin_user_security")
+    .select("user_id,can_view_customer_kyc,kyc_pin_hash")
+    .in("user_id", userIds);
+
+  if (rows.error) {
+    if (isMissingAdminUserSecurityTableError(rows.error)) {
+      return map;
+    }
+    throw new Error(`Failed to load admin user security: ${errorText(rows.error, "Unknown error")}`);
+  }
+
+  for (const raw of (rows.data ?? []) as Array<Record<string, unknown>>) {
+    const row = toAdminUserSecurityRow(raw);
+    if (!row) {
+      continue;
+    }
+    map.set(row.userId, row);
+  }
+  return map;
+}
+
+async function getAdminUserSecurityRowByUserId(
+  supabase: ReturnType<typeof getSupabaseServiceRoleClient>,
+  userId: string,
+) {
+  const row = await supabase
+    .from("admin_user_security")
+    .select("user_id,can_view_customer_kyc,kyc_pin_hash")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (row.error) {
+    if (isMissingAdminUserSecurityTableError(row.error)) {
+      throw new Error(ADMIN_KYC_SECURITY_SCHEMA_HINT);
+    }
+    throw new Error(`Failed to load admin user security: ${errorText(row.error, "Unknown error")}`);
+  }
+
+  if (!row.data || typeof row.data !== "object") {
+    return null;
+  }
+
+  return toAdminUserSecurityRow(row.data as Record<string, unknown>);
+}
+
+async function upsertAdminUserSecurityByUserId(
+  supabase: ReturnType<typeof getSupabaseServiceRoleClient>,
+  input: {
+    userId: string;
+    canViewCustomerKyc: boolean;
+    pinHash: string | null;
+  },
+) {
+  const payload: Record<string, unknown> = {
+    user_id: input.userId,
+    can_view_customer_kyc: input.canViewCustomerKyc,
+    kyc_pin_hash: input.pinHash,
+    kyc_pin_updated_at: input.pinHash ? new Date().toISOString() : null,
+    failed_attempts: 0,
+    locked_until: null,
+  };
+
+  const result = await supabase
+    .from("admin_user_security")
+    .upsert(payload, { onConflict: "user_id" });
+
+  if (result.error) {
+    if (isMissingAdminUserSecurityTableError(result.error)) {
+      throw new Error(ADMIN_KYC_SECURITY_SCHEMA_HINT);
+    }
+    throw new Error(`Failed to update admin user security: ${errorText(result.error, "Unknown error")}`);
+  }
+}
+
 export async function createAdminUser(input: unknown) {
   const actor = await assertAdminRole();
   await assertUiWriteAllowed({
@@ -135,8 +260,15 @@ export async function createAdminUser(input: unknown) {
     actorRole: actor.role,
   });
   const parsed = CreateAdminUserSchema.parse(input);
+  const wantsKycViewAccess = parsed.canViewCustomerKyc === true || Boolean(parsed.kycViewPin);
   if (parsed.role === "developer") {
     assertDeveloperPin(parsed.developerPin);
+  }
+  if (wantsKycViewAccess && !parsed.kycViewPin) {
+    throw new Error("KYC view PIN is required");
+  }
+  if (parsed.kycViewPin && !isSixDigitPin(parsed.kycViewPin)) {
+    throw new Error("KYC view PIN must be exactly 6 digits");
   }
   const supabase = getSupabaseServiceRoleClient();
 
@@ -213,6 +345,20 @@ export async function createAdminUser(input: unknown) {
     throw new Error(
       `Failed to assign role in profiles: ${errorText(upsertError, "Unknown error")}`,
     );
+  }
+
+  if (parsed.role === "customer") {
+    await upsertAdminUserSecurityByUserId(supabase, {
+      userId,
+      canViewCustomerKyc: false,
+      pinHash: null,
+    });
+  } else if (wantsKycViewAccess) {
+    await upsertAdminUserSecurityByUserId(supabase, {
+      userId,
+      canViewCustomerKyc: true,
+      pinHash: parsed.kycViewPin ? await hashPin(parsed.kycViewPin) : null,
+    });
   }
 
   return {
@@ -417,8 +563,17 @@ export async function listAdminUsers(): Promise<AdminUserRecord[]> {
       displayName: namesByUserId.get(user.id) || nameFromMetadata,
       role: roleFromMetadata ?? rolesByUserId.get(user.id) ?? "staff",
       createdAt: user.created_at ?? createdAtByUserId.get(user.id) ?? null,
+      canViewCustomerKyc: false,
     };
   });
+
+  const securityByUserId = await loadAdminUserSecurityMap(
+    supabase,
+    mappedFromAuth.map((item) => item.id),
+  );
+  for (const item of mappedFromAuth) {
+    item.canViewCustomerKyc = Boolean(securityByUserId.get(item.id)?.canViewCustomerKyc);
+  }
 
   // Fallback: if auth list is empty/incomplete, include users from profiles table directly.
   const profileRows = await supabase
@@ -439,6 +594,7 @@ export async function listAdminUsers(): Promise<AdminUserRecord[]> {
         displayName: toDisplayName(row.display_name, toDisplayName(row.full_name, userId)),
         role: toRole(row.role),
         createdAt: typeof row.created_at === "string" ? row.created_at : null,
+        canViewCustomerKyc: Boolean(securityByUserId.get(userId)?.canViewCustomerKyc),
       });
       knownIds.add(userId);
     }
@@ -459,6 +615,18 @@ export async function updateAdminUser(input: unknown) {
     assertDeveloperPin(parsed.developerPin);
   }
   const supabase = getSupabaseServiceRoleClient();
+  const hasSecurityUpdate =
+    parsed.canViewCustomerKyc !== undefined || parsed.kycViewPin !== undefined || parsed.role === "customer";
+  const currentSecurity = hasSecurityUpdate
+    ? await getAdminUserSecurityRowByUserId(supabase, parsed.userId)
+    : null;
+
+  if (parsed.kycViewPin && !isSixDigitPin(parsed.kycViewPin)) {
+    throw new Error("KYC view PIN must be exactly 6 digits");
+  }
+  if (parsed.canViewCustomerKyc === true && !parsed.kycViewPin && !currentSecurity?.kycPinHash) {
+    throw new Error("KYC view PIN is required");
+  }
 
   const profilePayloads: Array<Record<string, unknown>> = [
     {
@@ -535,6 +703,25 @@ export async function updateAdminUser(input: unknown) {
     if (updatedAuth.error) {
       throw new Error(`Failed to update auth profile: ${errorText(updatedAuth.error, "Unknown error")}`);
     }
+  }
+
+  if (parsed.role === "customer") {
+    await upsertAdminUserSecurityByUserId(supabase, {
+      userId: parsed.userId,
+      canViewCustomerKyc: false,
+      pinHash: null,
+    });
+  } else if (hasSecurityUpdate) {
+    const nextCanView = parsed.canViewCustomerKyc ?? currentSecurity?.canViewCustomerKyc ?? false;
+    const nextPinHash = parsed.kycViewPin
+      ? await hashPin(parsed.kycViewPin)
+      : (currentSecurity?.kycPinHash ?? null);
+
+    await upsertAdminUserSecurityByUserId(supabase, {
+      userId: parsed.userId,
+      canViewCustomerKyc: nextCanView,
+      pinHash: nextCanView ? nextPinHash : null,
+    });
   }
 
   return { ok: true };

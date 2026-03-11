@@ -106,6 +106,7 @@ type AdminUserRecord = {
   displayName: string;
   role: UserRole;
   createdAt: string | null;
+  canViewCustomerKyc: boolean;
 };
 
 const THEME_CLASS_NAMES = [
@@ -1102,6 +1103,21 @@ function CreateUserSettingItem({
     newPassword: locale === "th" ? "รหัสผ่านใหม่" : "New Password",
     newPasswordHint:
       locale === "th" ? "เว้นว่างไว้หากไม่ต้องการเปลี่ยนรหัสผ่าน" : "Leave blank to keep current password.",
+    kycAccess: locale === "th" ? "สิทธิ์ดู KYC ลูกค้า" : "Customer KYC Access",
+    kycAccessEnable: locale === "th" ? "อนุญาตให้ดู KYC ลูกค้า" : "Allow viewing customer KYC",
+    kycAccessEnabled: locale === "th" ? "เปิดสิทธิ์" : "Enabled",
+    kycAccessDisabled: locale === "th" ? "ปิดสิทธิ์" : "Disabled",
+    kycViewPin: locale === "th" ? "PIN สำหรับดู KYC (6 หลัก)" : "KYC View PIN (6 digits)",
+    kycViewPinHint:
+      locale === "th"
+        ? "กำหนด PIN 6 หลักสำหรับผู้ใช้คนนี้ (ใช้เฉพาะตอนเปิดดูข้อมูล KYC ลูกค้า)"
+        : "Set a 6-digit PIN for this user to access customer KYC details.",
+    kycViewPinOptionalHint:
+      locale === "th"
+        ? "เว้นว่างได้ถ้าไม่ต้องการเปลี่ยน PIN เดิม"
+        : "Leave blank to keep the existing PIN.",
+    kycViewPinRequired: locale === "th" ? "กรุณากรอก PIN สำหรับดู KYC" : "KYC view PIN is required.",
+    kycViewPinInvalid: locale === "th" ? "PIN สำหรับดู KYC ต้องเป็นตัวเลข 6 หลัก" : "KYC view PIN must be exactly 6 digits.",
   };
   const refreshFailedText = locale === "th" ? "โหลดรายการผู้ใช้ไม่สำเร็จ" : "Failed to load users.";
 
@@ -1118,11 +1134,15 @@ function CreateUserSettingItem({
   const [password, setPassword] = useState("");
   const [developerPin, setDeveloperPin] = useState("");
   const [role, setRole] = useState<UserRole>("staff");
+  const [canViewCustomerKyc, setCanViewCustomerKyc] = useState(false);
+  const [kycViewPin, setKycViewPin] = useState("");
   const [editDisplayName, setEditDisplayName] = useState("");
   const [editEmail, setEditEmail] = useState("");
   const [editRole, setEditRole] = useState<UserRole>("staff");
   const [editPassword, setEditPassword] = useState("");
   const [editDeveloperPin, setEditDeveloperPin] = useState("");
+  const [editCanViewCustomerKyc, setEditCanViewCustomerKyc] = useState(false);
+  const [editKycViewPin, setEditKycViewPin] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const loadUsers = useCallback(async () => {
@@ -1158,11 +1178,15 @@ function CreateUserSettingItem({
     setPassword("");
     setDeveloperPin("");
     setRole("staff");
+    setCanViewCustomerKyc(false);
+    setKycViewPin("");
     setEditDisplayName("");
     setEditEmail("");
     setEditRole("staff");
     setEditPassword("");
     setEditDeveloperPin("");
+    setEditCanViewCustomerKyc(false);
+    setEditKycViewPin("");
     void loadUsers();
   };
 
@@ -1179,6 +1203,15 @@ function CreateUserSettingItem({
       onError(locale === "th" ? "กรุณากรอก PIN นักพัฒนา" : "Developer PIN is required.");
       return;
     }
+    const createKycPin = kycViewPin.trim();
+    if (canViewCustomerKyc && !createKycPin) {
+      onError(t.kycViewPinRequired);
+      return;
+    }
+    if (createKycPin && !/^\d{6}$/.test(createKycPin)) {
+      onError(t.kycViewPinInvalid);
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -1193,6 +1226,8 @@ function CreateUserSettingItem({
           password: password.trim(),
           role,
           developerPin: role === "developer" ? developerPin.trim() : undefined,
+          canViewCustomerKyc,
+          kycViewPin: canViewCustomerKyc ? createKycPin : undefined,
         }),
       });
 
@@ -1207,6 +1242,8 @@ function CreateUserSettingItem({
       setPassword("");
       setDeveloperPin("");
       setRole("staff");
+      setCanViewCustomerKyc(false);
+      setKycViewPin("");
       setCreatingOpen(false);
       onSuccess(text.createUserSuccess);
       void loadUsers();
@@ -1225,6 +1262,8 @@ function CreateUserSettingItem({
     setEditRole(user.role);
     setEditPassword("");
     setEditDeveloperPin("");
+    setEditCanViewCustomerKyc(Boolean(user.canViewCustomerKyc));
+    setEditKycViewPin("");
   };
 
   const updateUser = async () => {
@@ -1241,6 +1280,15 @@ function CreateUserSettingItem({
     }
     if ((editingUser.role === "developer" || editRole === "developer") && !editDeveloperPin.trim()) {
       onError(locale === "th" ? "กรุณากรอก PIN นักพัฒนาเพื่อยืนยัน" : "Developer PIN is required for this action.");
+      return;
+    }
+    const nextKycPin = editKycViewPin.trim();
+    if (editCanViewCustomerKyc && !nextKycPin && !editingUser.canViewCustomerKyc) {
+      onError(t.kycViewPinRequired);
+      return;
+    }
+    if (nextKycPin && !/^\d{6}$/.test(nextKycPin)) {
+      onError(t.kycViewPinInvalid);
       return;
     }
 
@@ -1262,6 +1310,8 @@ function CreateUserSettingItem({
             editingUser.role === "developer" || editRole === "developer"
               ? editDeveloperPin.trim()
               : undefined,
+          canViewCustomerKyc: editCanViewCustomerKyc,
+          kycViewPin: editCanViewCustomerKyc ? (nextKycPin || undefined) : undefined,
         }),
       });
       const result = (await response.json()) as { code?: string; error?: string };
@@ -1380,6 +1430,17 @@ function CreateUserSettingItem({
                       </span>
                       <span>{formatDate(user.createdAt)}</span>
                     </div>
+                    <div className="mt-2">
+                      <span
+                        className={`inline-flex rounded-full border px-2 py-1 text-[11px] font-semibold ${
+                          user.canViewCustomerKyc
+                            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                            : "border-slate-200 bg-slate-50 text-slate-600"
+                        }`}
+                      >
+                        {t.kycAccess}: {user.canViewCustomerKyc ? t.kycAccessEnabled : t.kycAccessDisabled}
+                      </span>
+                    </div>
                     <div className="mt-3 grid grid-cols-2 gap-2">
                       <button
                         type="button"
@@ -1414,6 +1475,7 @@ function CreateUserSettingItem({
                     <th className="px-3 py-2 text-left font-semibold">{text.createUserName}</th>
                     <th className="px-3 py-2 text-left font-semibold">{text.createUserEmail}</th>
                     <th className="px-3 py-2 text-left font-semibold">{text.createUserRole}</th>
+                    <th className="px-3 py-2 text-left font-semibold">{t.kycAccess}</th>
                     <th className="px-3 py-2 text-left font-semibold">{t.createdAt}</th>
                     <th className="px-3 py-2 text-left font-semibold">{t.action}</th>
                   </tr>
@@ -1421,13 +1483,13 @@ function CreateUserSettingItem({
                 <tbody>
                   {loadingUsers ? (
                     <tr>
-                      <td colSpan={5} className="px-3 py-4 text-center text-slate-500">
+                      <td colSpan={6} className="px-3 py-4 text-center text-slate-500">
                         {t.loading}
                       </td>
                     </tr>
                   ) : users.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="px-3 py-4 text-center text-slate-500">
+                      <td colSpan={6} className="px-3 py-4 text-center text-slate-500">
                         {t.noData}
                       </td>
                     </tr>
@@ -1444,6 +1506,17 @@ function CreateUserSettingItem({
                               : user.role === "customer"
                                 ? t.roleCustomer
                               : t.roleStaff}
+                        </td>
+                        <td className="px-3 py-2 text-slate-700">
+                          <span
+                            className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold ${
+                              user.canViewCustomerKyc
+                                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                                : "border-slate-200 bg-slate-50 text-slate-600"
+                            }`}
+                          >
+                            {user.canViewCustomerKyc ? t.kycAccessEnabled : t.kycAccessDisabled}
+                          </span>
                         </td>
                         <td className="px-3 py-2 text-slate-600">{formatDate(user.createdAt)}</td>
                         <td className="px-3 py-2">
@@ -1552,6 +1625,37 @@ function CreateUserSettingItem({
                   <p className="text-xs text-slate-500">{text.developerPinHint}</p>
                 </label>
               ) : null}
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 md:col-span-2">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={canViewCustomerKyc}
+                    onChange={(event) => {
+                      const nextChecked = event.target.checked;
+                      setCanViewCustomerKyc(nextChecked);
+                      if (!nextChecked) {
+                        setKycViewPin("");
+                      }
+                    }}
+                    className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-200"
+                  />
+                  <span className="text-xs font-semibold text-slate-700">{t.kycAccessEnable}</span>
+                </label>
+                {canViewCustomerKyc ? (
+                  <label className="mt-2 block space-y-1">
+                    <span className="text-xs font-semibold text-slate-600">{t.kycViewPin}</span>
+                    <input
+                      type="password"
+                      value={kycViewPin}
+                      inputMode="numeric"
+                      maxLength={6}
+                      onChange={(event) => setKycViewPin(event.target.value.replace(/\D/g, "").slice(0, 6))}
+                      className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                    />
+                    <p className="text-xs text-slate-500">{t.kycViewPinHint}</p>
+                  </label>
+                ) : null}
+              </div>
             </div>
 
             <div className="mt-5 flex justify-end gap-2">
@@ -1637,6 +1741,39 @@ function CreateUserSettingItem({
                   <p className="text-xs text-slate-500">{text.developerPinHint}</p>
                 </label>
               ) : null}
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 md:col-span-2">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={editCanViewCustomerKyc}
+                    onChange={(event) => {
+                      const nextChecked = event.target.checked;
+                      setEditCanViewCustomerKyc(nextChecked);
+                      if (!nextChecked) {
+                        setEditKycViewPin("");
+                      }
+                    }}
+                    className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-200"
+                  />
+                  <span className="text-xs font-semibold text-slate-700">{t.kycAccessEnable}</span>
+                </label>
+                {editCanViewCustomerKyc ? (
+                  <label className="mt-2 block space-y-1">
+                    <span className="text-xs font-semibold text-slate-600">{t.kycViewPin}</span>
+                    <input
+                      type="password"
+                      value={editKycViewPin}
+                      inputMode="numeric"
+                      maxLength={6}
+                      onChange={(event) => setEditKycViewPin(event.target.value.replace(/\D/g, "").slice(0, 6))}
+                      className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                    />
+                    <p className="text-xs text-slate-500">
+                      {editingUser.canViewCustomerKyc ? t.kycViewPinOptionalHint : t.kycViewPinHint}
+                    </p>
+                  </label>
+                ) : null}
+              </div>
 
               <label className="space-y-1">
                 <span className="text-xs font-semibold text-slate-600">{t.newPassword}</span>
